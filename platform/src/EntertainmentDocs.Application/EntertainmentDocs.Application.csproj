@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><RootNamespace>EntertainmentDocs.Application</RootNamespace></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\EntertainmentDocs.Domain\EntertainmentDocs.Domain.csproj" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+</Project>
