@@ -1,8 +1,8 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
 
 namespace EntertainmentDocs.Infrastructure.Identity;
 
@@ -11,21 +11,42 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options) : ITokenServic
     public string CreateAccessToken(ApplicationUser user, IReadOnlyCollection<string> roles)
     {
         var settings = options.Value;
-        var claims = new List<Claim>
+        var now = DateTimeOffset.UtcNow;
+        var expires = now.AddMinutes(settings.AccessTokenMinutes);
+
+        var header = new Dictionary<string, object>
         {
-            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new(JwtRegisteredClaimNames.UniqueName, user.UserName ?? string.Empty),
-            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new(ClaimTypes.Name, user.DisplayName)
+            ["alg"] = "HS256",
+            ["typ"] = "JWT"
         };
-        claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
-        var credentials = new SigningCredentials(
-            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.SigningKey)),
-            SecurityAlgorithms.HmacSha256);
+        var payload = new Dictionary<string, object?>
+        {
+            ["iss"] = settings.Issuer,
+            ["aud"] = settings.Audience,
+            ["sub"] = user.Id.ToString(),
+            ["jti"] = Guid.NewGuid().ToString("N"),
+            ["iat"] = now.ToUnixTimeSeconds(),
+            ["nbf"] = now.ToUnixTimeSeconds(),
+            ["exp"] = expires.ToUnixTimeSeconds(),
+            [ClaimTypes.NameIdentifier] = user.Id.ToString(),
+            [ClaimTypes.Name] = user.DisplayName,
+            [ClaimTypes.Email] = user.Email,
+            [ClaimTypes.Role] = roles.ToArray()
+        };
 
-        var token = new JwtSecurityToken(settings.Issuer, settings.Audience, claims,
-            expires: DateTime.UtcNow.AddMinutes(settings.AccessTokenMinutes), signingCredentials: credentials);
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        var encodedHeader = EncodeJson(header);
+        var encodedPayload = EncodeJson(payload);
+        var unsignedToken = $"{encodedHeader}.{encodedPayload}";
+
+        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(settings.SigningKey));
+        var signature = Base64UrlEncode(hmac.ComputeHash(Encoding.UTF8.GetBytes(unsignedToken)));
+        return $"{unsignedToken}.{signature}";
     }
+
+    private static string EncodeJson<T>(T value) =>
+        Base64UrlEncode(JsonSerializer.SerializeToUtf8Bytes(value));
+
+    private static string Base64UrlEncode(byte[] value) =>
+        Convert.ToBase64String(value).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 }
