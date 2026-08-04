@@ -28,6 +28,7 @@ public sealed class DocumentService(
         var document = await repository.GetAsync(id, ct);
         if (document is null) return Result<Guid>.Failure("Document was not found.");
         var item = document.AddVersion(version, content, userId, clock.UtcNow);
+        await repository.AddVersionAsync(item, ct);
         await unitOfWork.SaveChangesAsync(ct);
         return Result<Guid>.Success(item.Id);
     }
