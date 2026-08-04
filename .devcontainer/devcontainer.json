@@ -1,0 +1,38 @@
+{
+  "name": "Entertainment Docs Full Stack",
+  "image": "mcr.microsoft.com/devcontainers/dotnet:1-8.0-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "moby": true,
+      "dockerDashComposeVersion": "v2"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "forwardPorts": [8080, 5432],
+  "portsAttributes": {
+    "8080": {
+      "label": "Entertainment Docs Platform",
+      "onAutoForward": "openBrowser",
+      "visibility": "private"
+    },
+    "5432": {
+      "label": "PostgreSQL Test Database",
+      "onAutoForward": "silent",
+      "visibility": "private"
+    }
+  },
+  "postCreateCommand": "chmod +x platform/scripts/*.sh && dotnet restore platform/EntertainmentDocs.sln",
+  "postStartCommand": "bash platform/scripts/start-test-stack.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csharp",
+        "ms-dotnettools.csdevkit",
+        "ms-azuretools.vscode-docker",
+        "eamodio.gitlens"
+      ]
+    }
+  },
+  "remoteUser": "vscode"
+}
