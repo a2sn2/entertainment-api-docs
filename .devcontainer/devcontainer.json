@@ -5,25 +5,20 @@
     "ghcr.io/devcontainers/features/docker-in-docker:2": {
       "version": "latest",
       "moby": true,
-      "dockerDashComposeVersion": "v2"
+      "dockerComposeVersion": "v2"
     },
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
-  "forwardPorts": [8080, 5432],
+  "forwardPorts": [8080],
   "portsAttributes": {
     "8080": {
       "label": "Entertainment Docs Platform",
-      "onAutoForward": "openBrowser",
-      "visibility": "private"
-    },
-    "5432": {
-      "label": "PostgreSQL Test Database",
-      "onAutoForward": "silent",
+      "onAutoForward": "notify",
       "visibility": "private"
     }
   },
   "postCreateCommand": "chmod +x platform/scripts/*.sh && dotnet restore platform/EntertainmentDocs.sln",
-  "postStartCommand": "bash platform/scripts/start-test-stack.sh",
+  "postAttachCommand": "printf '\nCodespace ready. Start the full platform from Terminal > Run Task > Platform: Start full test stack\n\n'",
   "customizations": {
     "vscode": {
       "extensions": [
