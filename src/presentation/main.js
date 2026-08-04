@@ -1,0 +1,37 @@
+import { StaticDocumentationRepository } from '../infrastructure/repositories/static-documentation-repository.js';
+import { BrowserPreferences } from '../infrastructure/storage/browser-preferences.js';
+import { buildSearchIndex, searchDocumentation } from '../application/use-cases/search-documentation.js';
+import { renderShell } from './components/app-shell.js';
+import { initCommandPalette } from './components/command-palette.js';
+import { initGlobalInteractions } from './components/interactions.js';
+import { renderHomePage } from './pages/home-page.js';
+import { renderQuickStartPage, initQuickStartPage } from './pages/quick-start-page.js';
+import { renderPurchaseFlowPage, initPurchaseFlowPage } from './pages/purchase-flow-page.js';
+import { renderApiReferencePage } from './pages/api-reference-page.js';
+import { renderPlaygroundPage, initPlaygroundPage } from './pages/playground-page.js';
+import { renderErrorAssistantPage, initErrorAssistantPage } from './pages/error-assistant-page.js';
+import { renderTestCoveragePage, initTestCoveragePage } from './pages/test-coverage-page.js';
+import { renderGovernancePage } from './pages/governance-page.js';
+import { renderKnownLimitationsPage } from './pages/known-limitations-page.js';
+import { renderOpenQuestionsPage } from './pages/open-questions-page.js';
+
+const repository = new StaticDocumentationRepository();
+const page = document.body.dataset.page ?? 'home';
+const root = document.body.dataset.root ?? '.';
+const preferred = BrowserPreferences.getTheme() ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+document.documentElement.dataset.theme = preferred;
+renderShell({ root, page, repository });
+const renderers = {home:renderHomePage,'quick-start':renderQuickStartPage,'purchase-flow':renderPurchaseFlowPage,'api-reference':renderApiReferencePage,playground:renderPlaygroundPage,'error-assistant':renderErrorAssistantPage,'test-coverage':renderTestCoveragePage,governance:renderGovernancePage,'known-limitations':renderKnownLimitationsPage,'open-questions':renderOpenQuestionsPage};
+const rootElement = document.getElementById('page-root');
+const renderer = renderers[page] ?? renderHomePage;
+rootElement.innerHTML = renderer(root, repository);
+initGlobalInteractions(BrowserPreferences);
+const searchIndex = buildSearchIndex(repository);
+initCommandPalette({ root, index: searchIndex, search: searchDocumentation });
+BrowserPreferences.setLastPage(page);
+if (page === 'quick-start') initQuickStartPage();
+if (page === 'purchase-flow') initPurchaseFlowPage(repository);
+if (page === 'playground') initPlaygroundPage();
+if (page === 'error-assistant') initErrorAssistantPage(repository);
+if (page === 'test-coverage') initTestCoveragePage(repository);
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) { addEventListener('load', () => navigator.serviceWorker.register(new URL('../../sw.js', import.meta.url)).catch(() => {})); }

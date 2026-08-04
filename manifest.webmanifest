@@ -1,0 +1,11 @@
+{
+  "name": "Entertainment Services API Documentation",
+  "short_name": "Entertainment APIs",
+  "description": "Interactive documentation for the Entertainment Services API.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#06111f",
+  "theme_color": "#071b33",
+  "icons": []
+}

@@ -1,0 +1,2 @@
+import { escapeHtml } from '../components/dom-utils.js';
+export function renderOpenQuestionsPage(root,repository){return `<header class="page-header page-enter"><div class="page-kicker">Pending backend confirmation</div><h1 class="page-title">Open Questions</h1><p class="page-lead">These questions must be confirmed by the backend or system owner before they become integration guarantees.</p></header><ol class="question-list page-enter">${repository.getOpenQuestions().map((question)=>`<li>${escapeHtml(question)}</li>`).join('')}</ol>`;}
