@@ -1,0 +1,18 @@
+@page "/"
+@inject EntertainmentDocs.Client.Services.DocumentationApiClient Api
+
+<PageTitle>Entertainment API Documentation</PageTitle>
+<h1>Entertainment Services API Documentation</h1>
+<p>Published documentation is loaded from the platform API.</p>
+
+@if (_documents is null) { <p>Loading…</p> }
+else if (_documents.Count == 0) { <p>No published documents are available.</p> }
+else
+{
+  <ul>@foreach (var item in _documents) { <li><a href="@($"/documents/{item.Slug}")">@item.Title</a> <small>@item.Reference</small></li> }</ul>
+}
+
+@code {
+  private IReadOnlyList<DocumentSummary> _documents = [];
+  protected override async Task OnInitializedAsync() => _documents = await Api.ListAsync();
+}
