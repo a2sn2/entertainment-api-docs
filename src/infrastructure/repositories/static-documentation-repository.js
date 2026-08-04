@@ -11,6 +11,7 @@ const navigation = Object.freeze([
   {label:'Offline Playground',url:'pages/playground.html',page:'playground',keywords:'json builder simulation'},
   {label:'Error Assistant',url:'pages/error-assistant.html',page:'error-assistant',keywords:'timeout token reservation permission'},
   {label:'Test Coverage',url:'pages/test-coverage.html',page:'test-coverage',keywords:'qa tested observed pending'},
+  {label:'Platform Architecture',url:'pages/platform-architecture.html',page:'platform-architecture',keywords:'production clean architecture ddd database api users roles admin client'},
   {label:'Governance',url:'pages/governance.html',page:'governance',keywords:'document control revision approval'},
   {label:'Known Limitations',url:'pages/known-limitations.html',page:'known-limitations',keywords:'confirmed observed inference pending'},
   {label:'Open Questions',url:'pages/open-questions.html',page:'open-questions',keywords:'backend confirmation'}

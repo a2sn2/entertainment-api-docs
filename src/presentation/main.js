@@ -14,6 +14,7 @@ import { renderTestCoveragePage, initTestCoveragePage } from './pages/test-cover
 import { renderGovernancePage } from './pages/governance-page.js';
 import { renderKnownLimitationsPage } from './pages/known-limitations-page.js';
 import { renderOpenQuestionsPage } from './pages/open-questions-page.js';
+import { renderPlatformArchitecturePage } from './pages/platform-architecture-page.js';
 
 const repository = new StaticDocumentationRepository();
 const page = document.body.dataset.page ?? 'home';
@@ -21,7 +22,12 @@ const root = document.body.dataset.root ?? '.';
 const preferred = BrowserPreferences.getTheme() ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 document.documentElement.dataset.theme = preferred;
 renderShell({ root, page, repository });
-const renderers = {home:renderHomePage,'quick-start':renderQuickStartPage,'purchase-flow':renderPurchaseFlowPage,'api-reference':renderApiReferencePage,playground:renderPlaygroundPage,'error-assistant':renderErrorAssistantPage,'test-coverage':renderTestCoveragePage,governance:renderGovernancePage,'known-limitations':renderKnownLimitationsPage,'open-questions':renderOpenQuestionsPage};
+const renderers = {
+  home:renderHomePage,'quick-start':renderQuickStartPage,'purchase-flow':renderPurchaseFlowPage,
+  'api-reference':renderApiReferencePage,playground:renderPlaygroundPage,'error-assistant':renderErrorAssistantPage,
+  'test-coverage':renderTestCoveragePage,'platform-architecture':renderPlatformArchitecturePage,
+  governance:renderGovernancePage,'known-limitations':renderKnownLimitationsPage,'open-questions':renderOpenQuestionsPage
+};
 const rootElement = document.getElementById('page-root');
 const renderer = renderers[page] ?? renderHomePage;
 rootElement.innerHTML = renderer(root, repository);
@@ -34,4 +40,6 @@ if (page === 'purchase-flow') initPurchaseFlowPage(repository);
 if (page === 'playground') initPlaygroundPage();
 if (page === 'error-assistant') initErrorAssistantPage(repository);
 if (page === 'test-coverage') initTestCoveragePage(repository);
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) { addEventListener('load', () => navigator.serviceWorker.register(new URL('../../sw.js', import.meta.url)).catch(() => {})); }
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  addEventListener('load', () => navigator.serviceWorker.register(new URL('../../sw.js', import.meta.url)).catch(() => {}));
+}
