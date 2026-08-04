@@ -1,14 +1,8 @@
 {
   "name": "Entertainment Docs Full Stack",
   "image": "mcr.microsoft.com/devcontainers/dotnet:1-8.0-bookworm",
-  "privileged": true,
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {
-      "version": "latest",
-      "moby": true,
-      "dockerDashComposeVersion": "v2",
-      "installDockerBuildx": true
-    },
+    "ghcr.io/devcontainers/features/docker-in-docker:4": {},
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
   "forwardPorts": [8080],
@@ -19,8 +13,8 @@
       "visibility": "private"
     }
   },
-  "postCreateCommand": "chmod +x platform/scripts/*.sh && docker --version && docker compose version && dotnet restore platform/EntertainmentDocs.sln",
-  "postAttachCommand": "printf '\nCodespace ready. Start the full platform from Terminal > Run Task > Platform: Start full test stack\n\n'",
+  "postCreateCommand": "chmod +x platform/scripts/*.sh && dotnet restore platform/EntertainmentDocs.sln",
+  "postAttachCommand": "printf '\nCodespace ready. Run: bash platform/scripts/start-test-stack.sh\n\n'",
   "customizations": {
     "vscode": {
       "extensions": [
