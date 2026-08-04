@@ -1,0 +1,114 @@
+name: entertainment-docs-test
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: entertainment_docs_test
+      POSTGRES_USER: entdocs_test
+      POSTGRES_PASSWORD: test-only-password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-test-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U entdocs_test -d entertainment_docs_test"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Testing
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=entertainment_docs_test;Username=entdocs_test;Password=test-only-password
+      Jwt__Issuer: EntertainmentDocs.Test
+      Jwt__Audience: EntertainmentDocs.Web
+      Jwt__SigningKey: test-only-signing-key-2026-at-least-32-characters
+      BootstrapAdmin__Email: admin@test.local
+      BootstrapAdmin__Password: TestAdmin!2026
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  admin:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.blazor
+      args:
+        PROJECT: apps/EntertainmentDocs.Admin/EntertainmentDocs.Admin.csproj
+        BASE_PATH: admin
+    depends_on:
+      api:
+        condition: service_healthy
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  client:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.blazor
+      args:
+        PROJECT: apps/EntertainmentDocs.Client/EntertainmentDocs.Client.csproj
+        BASE_PATH: client
+    depends_on:
+      api:
+        condition: service_healthy
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  docs:
+    build:
+      context: ../..
+      dockerfile: platform/deploy/Dockerfile.docs
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  gateway:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./nginx-gateway.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "8080:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+      admin:
+        condition: service_healthy
+      client:
+        condition: service_healthy
+      docs:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/healthz >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  postgres-test-data:
