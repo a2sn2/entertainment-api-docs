@@ -1,17 +1,43 @@
-name: Platform CI
+name: Platform CI and Full-Stack Test
 
 on:
   push:
+    branches: [main]
     paths:
       - "platform/**"
+      - ".devcontainer/**"
       - ".github/workflows/platform-ci.yml"
+      - "index.html"
+      - "404.html"
+      - "manifest.webmanifest"
+      - "sw.js"
+      - "assets/**"
+      - "pages/**"
+      - "src/**"
   pull_request:
     paths:
       - "platform/**"
+      - ".devcontainer/**"
       - ".github/workflows/platform-ci.yml"
+      - "index.html"
+      - "404.html"
+      - "manifest.webmanifest"
+      - "sw.js"
+      - "assets/**"
+      - "pages/**"
+      - "src/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-test:
+    name: Build and unit tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -21,6 +47,52 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
-      - run: dotnet restore EntertainmentDocs.sln
-      - run: dotnet build EntertainmentDocs.sln --configuration Release --no-restore
-      - run: dotnet test EntertainmentDocs.sln --configuration Release --no-build
+          cache: true
+          cache-dependency-path: platform/**/*.csproj
+      - name: Restore
+        run: dotnet restore EntertainmentDocs.sln
+      - name: Build
+        run: dotnet build EntertainmentDocs.sln --configuration Release --no-restore
+      - name: Test
+        run: dotnet test EntertainmentDocs.sln --configuration Release --no-build --logger "trx;LogFileName=tests.trx"
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: platform/**/TestResults/*.trx
+          if-no-files-found: ignore
+
+  full-stack:
+    name: PostgreSQL, API, Admin, Client and Docs
+    runs-on: ubuntu-latest
+    needs: build-test
+    env:
+      TEST_ADMIN_EMAIL: admin@test.local
+      TEST_ADMIN_PASSWORD: TestAdmin!2026
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare scripts
+        run: chmod +x platform/scripts/*.sh
+      - name: Validate Docker Compose
+        run: docker compose -f platform/deploy/docker-compose.test.yml config
+      - name: Build and start repository stack
+        run: docker compose -f platform/deploy/docker-compose.test.yml up --build -d
+      - name: Wait for gateway
+        run: |
+          for attempt in {1..90}; do
+            if curl --fail --silent http://localhost:8080/healthz >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose -f platform/deploy/docker-compose.test.yml ps
+          exit 1
+      - name: Run end-to-end smoke test
+        run: platform/scripts/smoke-test.sh
+      - name: Print service logs on failure
+        if: failure()
+        run: docker compose -f platform/deploy/docker-compose.test.yml logs --no-color --tail=300
+      - name: Stop test stack
+        if: always()
+        run: docker compose -f platform/deploy/docker-compose.test.yml down --volumes --remove-orphans
