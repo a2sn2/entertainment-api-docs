@@ -27,4 +27,7 @@ public sealed class DocumentRepository(AppDbContext dbContext) : IDocumentReposi
 
     public Task AddAsync(DocumentationDocument document, CancellationToken ct) =>
         dbContext.Documents.AddAsync(document, ct).AsTask();
+
+    public Task AddVersionAsync(DocumentVersion version, CancellationToken ct) =>
+        dbContext.Set<DocumentVersion>().AddAsync(version, ct).AsTask();
 }
