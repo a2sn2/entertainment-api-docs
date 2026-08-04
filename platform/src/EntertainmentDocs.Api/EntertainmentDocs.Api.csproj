@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup><RootNamespace>EntertainmentDocs.Api</RootNamespace></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\EntertainmentDocs.Application\EntertainmentDocs.Application.csproj" />
+    <ProjectReference Include="..\EntertainmentDocs.Infrastructure\EntertainmentDocs.Infrastructure.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
+    <PackageReference Include="Swashbuckle.AspNetCore" />
+  </ItemGroup>
+</Project>
