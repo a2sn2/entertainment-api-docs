@@ -23,26 +23,40 @@ builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(options => options.AddPolicy("WebClients", policy =>
-    policy.WithOrigins(builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? [])
-        .AllowAnyHeader().AllowAnyMethod()));
+{
+    var origins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? [];
+    if (origins.Length == 0)
+        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+    else
+        policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod();
+}));
 
 var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
+if (string.IsNullOrWhiteSpace(jwt.SigningKey) || jwt.SigningKey.Length < 32)
+    throw new InvalidOperationException("Jwt:SigningKey must contain at least 32 characters.");
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer = true, ValidateAudience = true, ValidateLifetime = true, ValidateIssuerSigningKey = true,
-        ValidIssuer = jwt.Issuer, ValidAudience = jwt.Audience,
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwt.Issuer,
+        ValidAudience = jwt.Audience,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SigningKey)),
         ClockSkew = TimeSpan.FromSeconds(30)
     };
 });
+
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy(Policies.ManageContent, policy => policy.RequireRole(SystemRoles.Administrator, SystemRoles.Editor));
     options.AddPolicy(Policies.PublishContent, policy => policy.RequireRole(SystemRoles.Administrator, SystemRoles.Reviewer));
     options.AddPolicy(Policies.ManageUsers, policy => policy.RequireRole(SystemRoles.Administrator));
 });
+
 builder.Services.AddRateLimiter(options => options.AddFixedWindowLimiter("api", limiter =>
 {
     limiter.PermitLimit = 120;
@@ -52,21 +66,41 @@ builder.Services.AddRateLimiter(options => options.AddFixedWindowLimiter("api", 
 
 var app = builder.Build();
 app.UseExceptionHandler();
-app.UseHttpsRedirection();
+if (!app.Environment.IsEnvironment("Testing"))
+    app.UseHttpsRedirection();
 app.UseCors("WebClients");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
-if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
+
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.MapGet("/", () => Results.Ok(new
+{
+    service = "EntertainmentDocs.Api",
+    environment = app.Environment.EnvironmentName,
+    status = "running"
+}));
 app.MapHealthChecks("/health");
 app.MapAuthEndpoints();
 app.MapDocumentEndpoints();
 app.MapAdminDocumentEndpoints();
 app.MapAdminUserEndpoints();
+
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.MigrateAsync();
+    if (app.Environment.IsEnvironment("Testing"))
+        await db.Database.EnsureCreatedAsync();
+    else
+        await db.Database.MigrateAsync();
 }
+
 await IdentitySeeder.SeedAsync(app.Services, app.Configuration);
 app.Run();
+
+public partial class Program;
