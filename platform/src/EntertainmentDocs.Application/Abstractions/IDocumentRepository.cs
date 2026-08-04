@@ -10,4 +10,5 @@ public interface IDocumentRepository
     Task<DocumentationDocument?> GetPublishedBySlugAsync(string slug, CancellationToken cancellationToken);
     Task<IReadOnlyList<DocumentationDocument>> ListPublishedAsync(CancellationToken cancellationToken);
     Task AddAsync(DocumentationDocument document, CancellationToken cancellationToken);
+    Task AddVersionAsync(DocumentVersion version, CancellationToken cancellationToken);
 }
