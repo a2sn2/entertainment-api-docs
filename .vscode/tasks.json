@@ -1,0 +1,53 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Platform: Start full test stack",
+      "type": "shell",
+      "command": "bash platform/scripts/start-test-stack.sh",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Platform: Stop full test stack",
+      "type": "shell",
+      "command": "bash platform/scripts/stop-test-stack.sh",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Platform: Show service status",
+      "type": "shell",
+      "command": "docker compose -f platform/deploy/docker-compose.test.yml ps",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Platform: Run end-to-end smoke test",
+      "type": "shell",
+      "command": "TEST_ADMIN_EMAIL=admin@test.local TEST_ADMIN_PASSWORD='TestAdmin!2026' bash platform/scripts/smoke-test.sh",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}
