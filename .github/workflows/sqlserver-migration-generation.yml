@@ -1,0 +1,65 @@
+name: Generate SQL Server Initial Migration
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "platform/**"
+      - ".github/workflows/sqlserver-migration-generation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate-migration:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Install EF Core CLI
+        run: dotnet tool install --global dotnet-ef --version 8.0.0
+
+      - name: Restore
+        run: dotnet restore EntertainmentDocs.sln
+
+      - name: Generate initial SQL Server migration when absent
+        shell: bash
+        run: |
+          if find src/EntertainmentDocs.Infrastructure/Persistence/Migrations -name '*InitialSqlServerSchema*.cs' -print -quit 2>/dev/null | grep -q .; then
+            echo "Initial SQL Server migration already exists."
+            exit 0
+          fi
+
+          dotnet ef migrations add InitialSqlServerSchema \
+            --project src/EntertainmentDocs.Infrastructure/EntertainmentDocs.Infrastructure.csproj \
+            --startup-project src/EntertainmentDocs.Api/EntertainmentDocs.Api.csproj \
+            --context AppDbContext \
+            --output-dir Persistence/Migrations
+
+      - name: Commit generated migration
+        shell: bash
+        run: |
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No migration changes to commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/EntertainmentDocs.Infrastructure/Persistence/Migrations
+          git commit -m "Add initial SQL Server EF Core migration"
+          git push origin HEAD:${{ github.head_ref || github.ref_name }}
