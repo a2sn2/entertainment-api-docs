@@ -9,7 +9,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 var configuredApiBase = builder.Configuration["ApiBaseUrl"];
 var applicationBase = new Uri(builder.HostEnvironment.BaseAddress);
 var apiBase = string.IsNullOrWhiteSpace(configuredApiBase)
-    ? new Uri(applicationBase, "../api/")
+    ? new Uri(applicationBase, "../")
     : Uri.TryCreate(configuredApiBase, UriKind.Absolute, out var absoluteApiBase)
         ? absoluteApiBase
         : new Uri(applicationBase, configuredApiBase);

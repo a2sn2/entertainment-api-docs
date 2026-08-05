@@ -25,7 +25,7 @@ src/
 
 ## Production platform foundation
 
-A separate .NET platform scaffold now exists under `platform/`:
+A separate .NET platform exists under `platform/`:
 
 ```text
 platform/
@@ -38,17 +38,34 @@ platform/
 
 It introduces:
 
-- PostgreSQL persistence;
+- Microsoft SQL Server persistence through EF Core;
+- versioned EF Core migrations;
 - ASP.NET Core API;
 - business logic isolated in Domain and Application layers;
 - ASP.NET Core Identity and JWT authentication;
 - Administrator, Editor, Reviewer, and Reader roles;
 - separate Client and Admin applications;
-- Docker Compose and CI;
+- SQL Server integration testing through Docker Compose and CI;
 - versioned documentation workflow.
 
-See `platform/docs/ARCHITECTURE.md` and `platform/docs/PRODUCTION-READINESS.md`.
+## Local Visual Studio setup
+
+1. Open `platform/EntertainmentDocs.sln`.
+2. Ensure the local SQL Server service is running.
+3. From the repository root run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\platform\scripts\setup-local-sqlserver.ps1
+```
+
+4. Start `EntertainmentDocs.Api`, `EntertainmentDocs.Client`, and `EntertainmentDocs.Admin` using their `http` launch profiles.
+
+See:
+
+- `platform/docs/ARCHITECTURE.md`
+- `platform/docs/LOCAL-SQLSERVER.md`
+- `platform/docs/PRODUCTION-READINESS.md`
 
 ## Security
 
-The repository is public. Never add credentials, tokens, production URLs, personal data, real player identifiers, or internal secrets.
+The repository is public. Never add production credentials, tokens, production connection strings, personal data, real player identifiers, or internal secrets. Development-only credentials are isolated to the Development environment and must never be reused elsewhere.

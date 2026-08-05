@@ -1,4 +1,4 @@
-const CACHE='entertainment-api-docs-v3-0';
+const CACHE='entertainment-api-docs-v3-1';
 const ROOT=new URL('./',self.location.href);
 const assets=[
   './','./index.html','./manifest.webmanifest',

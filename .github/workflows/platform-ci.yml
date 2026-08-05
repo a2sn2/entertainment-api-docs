@@ -64,7 +64,7 @@ jobs:
           if-no-files-found: ignore
 
   full-stack:
-    name: PostgreSQL, API, Admin, Client and Docs
+    name: SQL Server, API, Admin, Client and Docs
     runs-on: ubuntu-latest
     needs: build-test
     env:
@@ -80,7 +80,7 @@ jobs:
         run: docker compose -f platform/deploy/docker-compose.test.yml up --build -d
       - name: Wait for gateway
         run: |
-          for attempt in {1..90}; do
+          for attempt in {1..120}; do
             if curl --fail --silent http://localhost:8080/healthz >/dev/null; then
               exit 0
             fi

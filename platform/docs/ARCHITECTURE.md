@@ -22,12 +22,14 @@ The Domain project has no dependency on databases, HTTP, Identity, or UI framewo
 
 ```text
 Client Web ─────┐
-Admin Web ──────┼── HTTPS ──> ASP.NET Core API ──> PostgreSQL
+Admin Web ──────┼── HTTPS ──> ASP.NET Core API ──> Microsoft SQL Server
 External Tools ─┘                    │
                                     ├── Identity/RBAC
                                     ├── Audit
                                     └── Provider adapters (future)
 ```
+
+Microsoft SQL Server is the platform database provider. EF Core migrations own schema evolution. Local Development uses Windows Authentication; Testing uses an isolated SQL Server container; Production must use managed credentials or workload identity through a secret manager.
 
 GitHub Pages continues to host the public static documentation preview. Dynamic admin, identity, and database features require deployment of the API and web applications to an application host.
 
