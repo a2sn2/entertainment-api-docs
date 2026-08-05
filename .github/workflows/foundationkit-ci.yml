@@ -1,0 +1,53 @@
+name: FoundationKit Packages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "platform/core/**"
+      - "platform/tests/FoundationKit.Tests/**"
+      - "platform/scripts/pack-foundation.*"
+      - "platform/Directory.Packages.props"
+      - ".github/workflows/foundationkit-ci.yml"
+  pull_request:
+    paths:
+      - "platform/core/**"
+      - "platform/tests/FoundationKit.Tests/**"
+      - "platform/scripts/pack-foundation.*"
+      - "platform/Directory.Packages.props"
+      - ".github/workflows/foundationkit-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-packages:
+    name: Build, test and pack FoundationKit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+          cache: true
+          cache-dependency-path: platform/**/*.csproj
+      - name: Restore
+        run: dotnet restore EntertainmentDocs.sln
+      - name: Build
+        run: dotnet build EntertainmentDocs.sln --configuration Release --no-restore
+      - name: Test FoundationKit
+        run: dotnet test tests/FoundationKit.Tests/FoundationKit.Tests.csproj --configuration Release --no-build
+      - name: Pack
+        run: bash scripts/pack-foundation.sh Release artifacts/foundation
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: foundationkit-packages
+          path: |
+            platform/artifacts/foundation/*.nupkg
+            platform/artifacts/foundation/*.snupkg
+          if-no-files-found: error
