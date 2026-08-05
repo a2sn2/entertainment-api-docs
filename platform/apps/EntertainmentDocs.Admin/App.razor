@@ -1,4 +1,25 @@
-<Router AppAssembly="@typeof(App).Assembly">
-  <Found Context="routeData"><RouteView RouteData="@routeData" /></Found>
-  <NotFound><PageTitle>Not found</PageTitle><p>Page not found.</p></NotFound>
-</Router>
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                <NotAuthorized>
+                    <RedirectToLogin />
+                </NotAuthorized>
+                <Authorizing>
+                    <LayoutView Layout="@typeof(MainLayout)">
+                        <LoadingState Message="Checking your session..." />
+                    </LayoutView>
+                </Authorizing>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <PageTitle>Page not found</PageTitle>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <EmptyState Icon="@Icons.Material.Filled.SearchOff"
+                            Title="Page not found"
+                            Message="The requested administration page does not exist." />
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>
