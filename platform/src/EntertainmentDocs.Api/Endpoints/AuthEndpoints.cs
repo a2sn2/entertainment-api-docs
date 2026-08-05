@@ -1,3 +1,4 @@
+using EntertainmentDocs.Contracts.Authentication;
 using EntertainmentDocs.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 
@@ -7,7 +8,10 @@ public static class AuthEndpoints
 {
     public static IEndpointRouteBuilder MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/auth").WithTags("Authentication").RequireRateLimiting("api");
+        var group = app.MapGroup("/api/v1/auth")
+            .WithTags("Authentication")
+            .RequireRateLimiting("api");
+
         group.MapPost("/login", async (LoginRequest request, UserManager<ApplicationUser> users, ITokenService tokens) =>
         {
             var user = await users.FindByEmailAsync(request.Email);
@@ -15,10 +19,18 @@ public static class AuthEndpoints
                 return Results.Unauthorized();
 
             var roles = await users.GetRolesAsync(user);
-            return Results.Ok(new { accessToken = tokens.CreateAccessToken(user, roles.ToArray()), user = new { user.Id, user.DisplayName, user.Email }, roles });
-        });
+            var response = new LoginResponse(
+                tokens.CreateAccessToken(user, roles.ToArray()),
+                new AuthenticatedUserResponse(user.Id, user.DisplayName, user.Email),
+                roles.ToArray());
+
+            return Results.Ok(response);
+        })
+        .WithName("Login")
+        .WithSummary("Authenticate a platform user and issue a JWT access token.")
+        .Produces<LoginResponse>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status401Unauthorized);
+
         return app;
     }
-
-    public sealed record LoginRequest(string Email, string Password);
 }

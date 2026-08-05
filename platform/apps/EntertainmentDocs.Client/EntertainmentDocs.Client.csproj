@@ -1,7 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
-  <PropertyGroup><RootNamespace>EntertainmentDocs.Client</RootNamespace></PropertyGroup>
+  <PropertyGroup>
+    <RootNamespace>EntertainmentDocs.Client</RootNamespace>
+  </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\EntertainmentDocs.Ui\EntertainmentDocs.Ui.csproj" />
+    <ProjectReference Include="..\..\src\EntertainmentDocs.Contracts\EntertainmentDocs.Contracts.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer"><PrivateAssets>all</PrivateAssets></PackageReference>
+    <PackageReference Include="MudBlazor" />
   </ItemGroup>
 </Project>

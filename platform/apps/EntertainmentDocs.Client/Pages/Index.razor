@@ -1,30 +1,99 @@
 @page "/"
-@using EntertainmentDocs.Client.Services
 @inject DocumentationApiClient Api
 
 <PageTitle>Entertainment API Documentation</PageTitle>
-<h1>Entertainment Services API Documentation</h1>
-<p>Published documentation is loaded from the platform API.</p>
 
-@if (_documents is null)
+<PageHeader Title="Entertainment Services API Documentation"
+            Subtitle="Browse the latest published integration guides and versioned API references."
+            Icon="@Icons.Material.Filled.MenuBook" />
+
+<MudTextField T="string"
+              Label="Search documentation"
+              @bind-Value="_search"
+              Immediate="true"
+              Variant="Variant.Outlined"
+              Adornment="Adornment.Start"
+              AdornmentIcon="@Icons.Material.Filled.Search"
+              Class="mb-5" />
+
+@if (_loading)
 {
-  <p>Loading…</p>
+    <LoadingState Message="Loading published documentation..." />
 }
-else if (_documents.Count == 0)
+else if (!string.IsNullOrWhiteSpace(_error))
 {
-  <p>No published documents are available.</p>
+    <ErrorState Message="@_error" Retry="LoadAsync" />
+}
+else if (!FilteredDocuments.Any())
+{
+    <EmptyState Icon="@Icons.Material.Filled.AutoStories"
+                Title="No matching documentation"
+                Message="No published document matches the current search." />
 }
 else
 {
-  <ul>
-    @foreach (var item in _documents)
-    {
-      <li><a href="@($"documents/{item.Slug}")">@item.Title</a> <small>@item.Reference</small></li>
-    }
-  </ul>
+    <MudGrid Spacing="4">
+        @foreach (var document in FilteredDocuments)
+        {
+            <MudItem xs="12" md="6" lg="4">
+                <MudCard Style="height:100%;">
+                    <MudCardContent>
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.overline">@document.Reference</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Success">@document.Status</MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.h6">@document.Title</MudText>
+                            <MudText Typo="Typo.body2">Updated @document.UpdatedAt.LocalDateTime.ToString("yyyy-MM-dd HH:mm")</MudText>
+                        </MudStack>
+                    </MudCardContent>
+                    <MudCardActions>
+                        <MudButton Href="@($"/documents/{document.Slug}")"
+                                   Color="Color.Primary"
+                                   EndIcon="@Icons.Material.Filled.ArrowForward">
+                            Open documentation
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
 }
 
 @code {
-  private IReadOnlyList<DocumentSummary>? _documents;
-  protected override async Task OnInitializedAsync() => _documents = await Api.ListAsync();
+    private IReadOnlyList<DocumentSummaryResponse> _documents = [];
+    private bool _loading = true;
+    private string? _error;
+    private string _search = string.Empty;
+
+    private IEnumerable<DocumentSummaryResponse> FilteredDocuments =>
+        string.IsNullOrWhiteSpace(_search)
+            ? _documents
+            : _documents.Where(document =>
+                document.Title.Contains(_search, StringComparison.OrdinalIgnoreCase) ||
+                document.Reference.Contains(_search, StringComparison.OrdinalIgnoreCase) ||
+                document.Slug.Contains(_search, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            var result = await Api.ListAsync();
+            if (!result.Succeeded || result.Value is null)
+            {
+                _error = result.Error ?? "Documentation could not be loaded.";
+                return;
+            }
+
+            _documents = result.Value;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
 }

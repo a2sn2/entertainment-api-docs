@@ -1,0 +1,119 @@
+@page "/login"
+@layout EmptyLayout
+@attribute [AllowAnonymous]
+@inject AuthenticationApiClient Authentication
+@inject NavigationManager Navigation
+
+<PageTitle>Sign in - Entertainment Docs</PageTitle>
+
+<MudPaper Class="pa-8" Elevation="4" Style="width:100%;">
+    <MudStack Spacing="4">
+        <MudStack AlignItems="AlignItems.Center" Spacing="2">
+            <MudAvatar Color="Color.Primary" Size="Size.Large">
+                <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" />
+            </MudAvatar>
+            <MudText Typo="Typo.h4" Align="Align.Center">Administration sign in</MudText>
+            <MudText Typo="Typo.body2" Align="Align.Center">
+                Use an active platform account to manage documentation, users, roles, and publishing.
+            </MudText>
+        </MudStack>
+
+        @if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">@_error</MudAlert>
+        }
+
+        <MudForm @ref="_form" @bind-IsValid="_isValid">
+            <MudStack Spacing="3">
+                <MudTextField T="string"
+                              Label="Email"
+                              @bind-Value="_model.Email"
+                              InputType="InputType.Email"
+                              Required="true"
+                              RequiredError="Email is required."
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Email" />
+
+                <MudTextField T="string"
+                              Label="Password"
+                              @bind-Value="_model.Password"
+                              InputType="InputType.Password"
+                              Required="true"
+                              RequiredError="Password is required."
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Lock" />
+
+                <MudButton FullWidth="true"
+                           Size="Size.Large"
+                           Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Disabled="_submitting"
+                           StartIcon="@Icons.Material.Filled.Login"
+                           OnClick="SubmitAsync">
+                    @(_submitting ? "Signing in..." : "Sign in")
+                </MudButton>
+            </MudStack>
+        </MudForm>
+
+        <MudAlert Severity="Severity.Info" Dense="true">
+            Local Development: <strong>admin@local.test</strong> / <strong>LocalAdmin!2026</strong>
+        </MudAlert>
+    </MudStack>
+</MudPaper>
+
+@code {
+    private readonly LoginModel _model = new()
+    {
+        Email = "admin@local.test"
+    };
+
+    private MudForm? _form;
+    private bool _isValid;
+    private bool _submitting;
+    private string? _error;
+
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    private async Task SubmitAsync()
+    {
+        if (_form is null)
+            return;
+
+        await _form.Validate();
+        if (!_isValid)
+            return;
+
+        _submitting = true;
+        _error = null;
+        try
+        {
+            var result = await Authentication.LoginAsync(new LoginRequest(_model.Email, _model.Password));
+            if (!result.Succeeded)
+            {
+                _error = result.Error;
+                return;
+            }
+
+            var destination = IsSafeLocalUrl(ReturnUrl) ? ReturnUrl! : "/";
+            Navigation.NavigateTo(destination, replace: true);
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+
+    private static bool IsSafeLocalUrl(string? value) =>
+        !string.IsNullOrWhiteSpace(value) &&
+        value.StartsWith("/", StringComparison.Ordinal) &&
+        !value.StartsWith("//", StringComparison.Ordinal);
+
+    private sealed class LoginModel
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+}

@@ -1,9 +1,73 @@
 @page "/"
-<PageTitle>Documentation Administration</PageTitle>
-<h1>Documentation Administration</h1>
-<p>This shell is reserved for authenticated administrators, editors, and reviewers.</p>
-<ul>
-  <li>Administrators manage users, roles, and platform settings.</li>
-  <li>Editors create documents and versions.</li>
-  <li>Reviewers approve and publish reviewed content.</li>
-</ul>
+@attribute [Authorize]
+
+<PageTitle>Dashboard - Entertainment Docs</PageTitle>
+
+<PageHeader Title="Administration dashboard"
+            Subtitle="Manage documentation, publishing, users, and platform access from one workspace."
+            Icon="@Icons.Material.Filled.Dashboard" />
+
+<MudGrid Spacing="4">
+    <MudItem xs="12" md="6" lg="4">
+        <MudCard Style="height:100%;">
+            <MudCardContent>
+                <MudStack Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Description" Color="Color.Primary" Size="Size.Large" />
+                    <MudText Typo="Typo.h6">Documentation workflow</MudText>
+                    <MudText Typo="Typo.body2">
+                        Create document records, add versioned content, submit for review, and publish approved documentation.
+                    </MudText>
+                </MudStack>
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Href="/documents" Color="Color.Primary" EndIcon="@Icons.Material.Filled.ArrowForward">Open documents</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+
+    <AuthorizeView Roles="Administrator">
+        <MudItem xs="12" md="6" lg="4">
+            <MudCard Style="height:100%;">
+                <MudCardContent>
+                    <MudStack Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Color="Color.Secondary" Size="Size.Large" />
+                        <MudText Typo="Typo.h6">Users and roles</MudText>
+                        <MudText Typo="Typo.body2">
+                            Create platform accounts and assign Administrator, Editor, Reviewer, or Reader access.
+                        </MudText>
+                    </MudStack>
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Href="/users" Color="Color.Secondary" EndIcon="@Icons.Material.Filled.ArrowForward">Manage access</MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+    </AuthorizeView>
+
+    <MudItem xs="12" md="6" lg="4">
+        <MudCard Style="height:100%;">
+            <MudCardContent>
+                <MudStack Spacing="2">
+                    <MudIcon Icon="@Icons.Material.Filled.Terminal" Color="Color.Info" Size="Size.Large" />
+                    <MudText Typo="Typo.h6">API testing</MudText>
+                    <MudText Typo="Typo.body2">
+                        Review endpoint bodies, authorization requirements, Postman variables, and the recommended test order.
+                    </MudText>
+                </MudStack>
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Href="/api-reference" Color="Color.Info" EndIcon="@Icons.Material.Filled.ArrowForward">View requests</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+<MudPaper Class="pa-5 mt-6" Elevation="0" Outlined="true">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudIcon Icon="@Icons.Material.Filled.Verified" Color="Color.Success" />
+        <MudText Typo="Typo.subtitle1">Platform foundation is connected</MudText>
+    </MudStack>
+    <MudText Typo="Typo.body2" Class="mt-2">
+        Blazor WebAssembly, ASP.NET Core API, Entity Framework Core migrations, and Microsoft SQL Server are configured as one versioned platform.
+    </MudText>
+</MudPaper>

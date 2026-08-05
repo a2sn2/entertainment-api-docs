@@ -49,6 +49,10 @@ jobs:
           dotnet-version: "8.0.x"
           cache: true
           cache-dependency-path: platform/**/*.csproj
+      - name: Validate Postman JSON
+        run: |
+          python3 -m json.tool postman/EntertainmentDocs.postman_collection.json >/dev/null
+          python3 -m json.tool postman/EntertainmentDocs.Local.postman_environment.json >/dev/null
       - name: Restore
         run: dotnet restore EntertainmentDocs.sln
       - name: Build
