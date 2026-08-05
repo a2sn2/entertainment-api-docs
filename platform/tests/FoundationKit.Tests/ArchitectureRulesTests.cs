@@ -2,6 +2,7 @@ using System.Reflection;
 using EntertainmentDocs.Domain.Documents;
 using FoundationKit.Application.Results;
 using FoundationKit.Domain.Primitives;
+using FoundationKit.Infrastructure.Persistence;
 
 namespace FoundationKit.Tests;
 
@@ -17,6 +18,17 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.WebApi",
             "FoundationKit.Blazor",
             "Microsoft.EntityFrameworkCore",
+            "Microsoft.AspNetCore");
+    }
+
+    [Fact]
+    public void Foundation_infrastructure_is_database_provider_and_web_host_agnostic()
+    {
+        AssertDoesNotReference(
+            typeof(EfRepository<,,>).Assembly,
+            "Microsoft.EntityFrameworkCore.SqlServer",
+            "Npgsql.EntityFrameworkCore.PostgreSQL",
+            "Microsoft.EntityFrameworkCore.Sqlite",
             "Microsoft.AspNetCore");
     }
 
@@ -77,8 +89,7 @@ public sealed class ArchitectureRulesTests
     private static void AssertDoesNotReference(Assembly assembly, params string[] forbiddenAssemblies)
     {
         var references = assembly.GetReferencedAssemblies()
-            .Select(reference => reference.Name)
-            .Where(name => name is not null)
+            .Select(reference => reference.Name!)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         foreach (var forbidden in forbiddenAssemblies)
