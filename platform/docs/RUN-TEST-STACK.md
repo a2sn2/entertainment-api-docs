@@ -1,15 +1,6 @@
 # Run the Complete Test Platform
 
-The repository includes a repeatable full-stack test environment. It runs PostgreSQL, the ASP.NET Core API, Identity/RBAC, the Admin WebAssembly app, the Client WebAssembly app, the static documentation portal, and a single-origin Nginx gateway.
-
-## One-click GitHub Codespaces
-
-1. Open the repository on GitHub.
-2. Select **Code → Codespaces → Create codespace on main**.
-3. Wait for the container setup and Docker builds to complete.
-4. Open the forwarded port named **Entertainment Docs Platform**.
-
-The Codespace runs `platform/scripts/start-test-stack.sh` automatically.
+The repository includes a repeatable full-stack test environment. It runs Microsoft SQL Server, the ASP.NET Core API, Identity/RBAC, the Admin WebAssembly app, the Client WebAssembly app, the static documentation portal, and a single-origin Nginx gateway.
 
 ## Local Docker
 
@@ -32,7 +23,8 @@ Open:
 - Admin: `http://localhost:8080/admin/`
 - Documentation: `http://localhost:8080/docs/`
 - API health: `http://localhost:8080/api/health`
-- PostgreSQL: `localhost:5432`
+- SQL Server test instance: `localhost,14333`
+- Test database: `EntertainmentDocs_Test`
 
 Run the end-to-end test:
 
@@ -48,7 +40,7 @@ Stop the services:
 platform/scripts/stop-test-stack.sh
 ```
 
-Remove the test database volume as well:
+Remove the isolated test database volume as well:
 
 ```bash
 docker compose -f platform/deploy/docker-compose.test.yml down --volumes --remove-orphans
@@ -57,18 +49,23 @@ docker compose -f platform/deploy/docker-compose.test.yml down --volumes --remov
 ## What the smoke test verifies
 
 1. Gateway health.
-2. PostgreSQL-backed API health.
-3. Client, Admin, and static documentation availability.
-4. Bootstrap administrator login.
-5. JWT issuance.
-6. Role-protected document creation.
-7. Version creation.
-8. Review submission.
-9. Publishing authorization.
-10. Public retrieval of the published document.
+2. SQL Server-backed API health.
+3. EF Core migration application.
+4. Client, Admin, and static documentation availability.
+5. Bootstrap administrator login.
+6. JWT issuance.
+7. Role-protected document creation.
+8. Version creation.
+9. Review submission.
+10. Publishing authorization.
+11. Public retrieval of the published document.
+
+## GitHub Actions
+
+The same Compose stack is built and executed by `Platform CI and Full-Stack Test`. CI creates an isolated SQL Server database, applies the committed migrations, executes the complete workflow, and removes the database volume afterward.
 
 ## Security boundary
 
 All credentials in `docker-compose.test.yml` are explicitly test-only values for an isolated local or CI environment. Never reuse them in a shared, staging, or production environment.
 
-GitHub Pages continues to host only the static documentation portal. The complete dynamic platform runs in Codespaces, local Docker, or GitHub Actions because GitHub Pages cannot host an API or PostgreSQL database.
+GitHub Pages continues to host only the static documentation portal. The complete dynamic platform runs locally, in Docker, or in GitHub Actions because GitHub Pages cannot host an API or SQL Server database.

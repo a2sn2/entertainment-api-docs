@@ -83,6 +83,7 @@ app.MapGet("/", () => Results.Ok(new
 {
     service = "EntertainmentDocs.Api",
     environment = app.Environment.EnvironmentName,
+    databaseProvider = "Microsoft SQL Server",
     status = "running"
 }));
 app.MapHealthChecks("/health");
@@ -94,10 +95,16 @@ app.MapAdminUserEndpoints();
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    if (app.Environment.IsEnvironment("Testing"))
-        await db.Database.EnsureCreatedAsync();
-    else
+    var applyMigrations = app.Configuration.GetValue("Database:ApplyMigrationsOnStartup", true);
+
+    if (applyMigrations)
+    {
         await db.Database.MigrateAsync();
+    }
+    else if (app.Environment.IsEnvironment("Testing"))
+    {
+        await db.Database.EnsureCreatedAsync();
+    }
 }
 
 await IdentitySeeder.SeedAsync(app.Services, app.Configuration);
