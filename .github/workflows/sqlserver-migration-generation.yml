@@ -30,10 +30,10 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
-      - name: Install EF Core CLI
-        run: dotnet tool install --global dotnet-ef --version 8.0.0
+      - name: Restore local EF Core CLI
+        run: dotnet tool restore
 
-      - name: Restore
+      - name: Restore solution
         run: dotnet restore EntertainmentDocs.sln
 
       - name: Generate initial SQL Server migration when absent
