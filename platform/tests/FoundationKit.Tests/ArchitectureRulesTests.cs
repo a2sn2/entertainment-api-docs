@@ -1,7 +1,5 @@
 using System.Reflection;
-using EntertainmentDocs.Application;
 using EntertainmentDocs.Domain.Documents;
-using EntertainmentDocs.Infrastructure;
 using FoundationKit.Application.Results;
 using FoundationKit.Domain.Primitives;
 
@@ -38,7 +36,7 @@ public sealed class ArchitectureRulesTests
     public void Product_application_has_no_infrastructure_or_api_dependencies()
     {
         AssertDoesNotReference(
-            typeof(DependencyInjection).Assembly,
+            typeof(EntertainmentDocs.Application.DependencyInjection).Assembly,
             "EntertainmentDocs.Infrastructure",
             "EntertainmentDocs.Api",
             "Microsoft.EntityFrameworkCore.SqlServer");
