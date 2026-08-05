@@ -36,7 +36,7 @@ services:
       Jwt__SigningKey: test-only-signing-key-2026-at-least-32-characters
       BootstrapAdmin__Email: admin@test.local
       BootstrapAdmin__Password: TestAdmin!2026
-      Database__ApplyMigrationsOnStartup: "false"
+      Database__ApplyMigrationsOnStartup: "true"
     depends_on:
       sqlserver:
         condition: service_healthy
