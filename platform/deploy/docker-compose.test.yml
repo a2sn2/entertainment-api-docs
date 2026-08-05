@@ -1,21 +1,27 @@
 name: entertainment-docs-test
 
 services:
-  postgres:
-    image: postgres:16-alpine
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
-      POSTGRES_DB: entertainment_docs_test
-      POSTGRES_USER: entdocs_test
-      POSTGRES_PASSWORD: test-only-password
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: TestSql!2026_Change
     ports:
-      - "5432:5432"
+      - "14333:1433"
     volumes:
-      - postgres-test-data:/var/lib/postgresql/data
+      - sqlserver-test-data:/var/opt/mssql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U entdocs_test -d entertainment_docs_test"]
+      test:
+        - CMD-SHELL
+        - >-
+          (/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "SELECT 1"
+          || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -Q "SELECT 1")
+          >/dev/null 2>&1
       interval: 5s
-      timeout: 3s
-      retries: 20
+      timeout: 5s
+      retries: 40
+      start_period: 20s
 
   api:
     build:
@@ -24,14 +30,15 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Testing
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=entertainment_docs_test;Username=entdocs_test;Password=test-only-password
+      ConnectionStrings__SqlServer: Server=sqlserver,1433;Database=EntertainmentDocs_Test;User Id=sa;Password=TestSql!2026_Change;Encrypt=False;TrustServerCertificate=True;MultipleActiveResultSets=True
       Jwt__Issuer: EntertainmentDocs.Test
       Jwt__Audience: EntertainmentDocs.Web
       Jwt__SigningKey: test-only-signing-key-2026-at-least-32-characters
       BootstrapAdmin__Email: admin@test.local
       BootstrapAdmin__Password: TestAdmin!2026
+      Database__ApplyMigrationsOnStartup: "false"
     depends_on:
-      postgres:
+      sqlserver:
         condition: service_healthy
     expose:
       - "8080"
@@ -39,7 +46,7 @@ services:
       test: ["CMD-SHELL", "curl --fail --silent http://localhost:8080/health >/dev/null || exit 1"]
       interval: 5s
       timeout: 3s
-      retries: 30
+      retries: 40
 
   admin:
     build:
@@ -111,4 +118,4 @@ services:
       retries: 20
 
 volumes:
-  postgres-test-data:
+  sqlserver-test-data:
