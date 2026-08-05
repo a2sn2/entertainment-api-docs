@@ -23,7 +23,25 @@ Use the local SQL Server instance with Windows Authentication:
 powershell -ExecutionPolicy Bypass -File .\platform\scripts\setup-local-sqlserver.ps1
 ```
 
-Then run the API, Client, and Admin projects using their `http` launch profiles.
+Configure these projects as multiple startup projects using their `http` profiles:
+
+- `EntertainmentDocs.Api` — Start
+- `EntertainmentDocs.Client` — Start
+- `EntertainmentDocs.Admin` — Start
+
+The launch profiles intentionally do not open debugger-managed browser windows. This prevents Visual Studio from terminating the complete multi-project debug session when a browser process or tab closes.
+
+After the three services report that they are listening, open all local pages with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\platform\scripts\open-local-platform.ps1
+```
+
+Local URLs:
+
+- API Swagger: `http://localhost:5080/swagger`
+- Client: `http://localhost:5081`
+- Admin: `http://localhost:5082/login`
 
 See `docs/LOCAL-SQLSERVER.md` for the complete setup and SSMS verification steps.
 
