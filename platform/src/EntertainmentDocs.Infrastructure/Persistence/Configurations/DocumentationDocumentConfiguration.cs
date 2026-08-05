@@ -27,7 +27,7 @@ public sealed class DocumentVersionConfiguration : IEntityTypeConfiguration<Docu
         builder.ToTable("documentation_versions");
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Version).HasMaxLength(32).IsRequired();
-        builder.Property(x => x.Content).HasColumnType("text").IsRequired();
+        builder.Property(x => x.Content).HasColumnType("nvarchar(max)").IsRequired();
         builder.HasIndex(x => new { x.DocumentId, x.Version }).IsUnique();
     }
 }
