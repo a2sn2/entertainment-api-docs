@@ -14,4 +14,5 @@ public sealed record UserSummaryResponse(
     Guid Id,
     string DisplayName,
     string? Email,
-    bool IsActive);
+    bool IsActive,
+    IReadOnlyList<string> Roles);
