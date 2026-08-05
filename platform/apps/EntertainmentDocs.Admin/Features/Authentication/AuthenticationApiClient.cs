@@ -28,7 +28,7 @@ public sealed class AuthenticationApiClient(
                     "Authentication.InvalidCredentials",
                     "The email or password is incorrect, or the account is inactive.",
                     result.StatusCode,
-                    result.Error?.CorrelationId))
+                    result.ErrorDetails?.CorrelationId))
                 : result;
         }
 
