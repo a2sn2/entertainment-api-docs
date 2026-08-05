@@ -24,7 +24,7 @@ public sealed class AsyncState<T>
             if (result.IsSuccess)
                 Value = result.Value;
             else
-                Error = result.Error;
+                Error = result.ErrorDetails;
             return result;
         }
         finally
