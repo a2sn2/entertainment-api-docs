@@ -2,6 +2,7 @@ using EntertainmentDocs.Client;
 using EntertainmentDocs.Client.Services;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using MudBlazor.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -16,5 +17,7 @@ var apiBase = string.IsNullOrWhiteSpace(configuredApiBase)
         : new Uri(applicationBase, configuredApiBase);
 
 builder.Services.AddScoped(_ => new HttpClient { BaseAddress = apiBase });
+builder.Services.AddMudServices();
 builder.Services.AddScoped<DocumentationApiClient>();
+
 await builder.Build().RunAsync();
