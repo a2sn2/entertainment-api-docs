@@ -2,7 +2,7 @@ using FoundationKit.Domain.Primitives;
 
 namespace FoundationKit.Application.Persistence;
 
-public interface IReadRepository<TEntity, in TId>
+public interface IReadRepository<TEntity, TId>
     where TEntity : Entity<TId>
     where TId : notnull
 {
