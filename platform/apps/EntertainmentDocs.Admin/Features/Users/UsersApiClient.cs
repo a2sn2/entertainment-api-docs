@@ -17,7 +17,7 @@ public sealed class UsersApiClient(
         var result = await SendAsync<UserSummaryResponse[]>(request, cancellationToken);
         return result.IsSuccess
             ? ApiResult<IReadOnlyList<UserSummaryResponse>>.Success(result.Value ?? [], result.StatusCode)
-            : ApiResult<IReadOnlyList<UserSummaryResponse>>.Failure(result.Error!);
+            : ApiResult<IReadOnlyList<UserSummaryResponse>>.Failure(result.ErrorDetails!);
     }
 
     public async Task<ApiResult<CreatedUserResponse>> CreateAsync(
