@@ -3,7 +3,7 @@
     <RootNamespace>EntertainmentDocs.Ui</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
     <PackageReference Include="MudBlazor" />
   </ItemGroup>
 </Project>
