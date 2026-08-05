@@ -4,16 +4,18 @@ namespace FoundationKit.Blazor.Api;
 
 public class ApiResult
 {
-    protected ApiResult(bool isSuccess, ApiError? error, HttpStatusCode? statusCode)
+    protected ApiResult(bool isSuccess, ApiError? errorDetails, HttpStatusCode? statusCode)
     {
         IsSuccess = isSuccess;
-        Error = error;
+        ErrorDetails = errorDetails;
         StatusCode = statusCode;
     }
 
     public bool IsSuccess { get; }
     public bool IsFailure => !IsSuccess;
-    public ApiError? Error { get; }
+    public bool Succeeded => IsSuccess;
+    public ApiError? ErrorDetails { get; }
+    public string? Error => ErrorDetails?.Message;
     public HttpStatusCode? StatusCode { get; }
 
     public static ApiResult Success(HttpStatusCode? statusCode = null) => new(true, null, statusCode);
