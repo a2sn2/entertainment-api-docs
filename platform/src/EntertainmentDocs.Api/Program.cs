@@ -97,13 +97,13 @@ await using (var scope = app.Services.CreateAsyncScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var applyMigrations = app.Configuration.GetValue("Database:ApplyMigrationsOnStartup", true);
 
-    if (app.Environment.IsEnvironment("Testing"))
-    {
-        await db.Database.EnsureCreatedAsync();
-    }
-    else if (applyMigrations)
+    if (applyMigrations)
     {
         await db.Database.MigrateAsync();
+    }
+    else if (app.Environment.IsEnvironment("Testing"))
+    {
+        await db.Database.EnsureCreatedAsync();
     }
 }
 
