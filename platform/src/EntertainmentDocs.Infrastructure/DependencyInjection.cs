@@ -3,6 +3,7 @@ using EntertainmentDocs.Infrastructure.Identity;
 using EntertainmentDocs.Infrastructure.Persistence;
 using EntertainmentDocs.Infrastructure.Persistence.Repositories;
 using EntertainmentDocs.Infrastructure.Services;
+using FoundationKit.Infrastructure;
 using FoundationKit.Infrastructure.Events;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
