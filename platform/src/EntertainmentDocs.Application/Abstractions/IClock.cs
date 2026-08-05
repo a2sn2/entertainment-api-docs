@@ -1,3 +1,5 @@
 namespace EntertainmentDocs.Application.Abstractions;
 
-public interface IClock : FoundationKit.Application.Abstractions.IClock;
+public interface IClock : FoundationKit.Application.Abstractions.IClock
+{
+}
