@@ -12,12 +12,12 @@ $apiProject = Join-Path $platformRoot "src\EntertainmentDocs.Api\EntertainmentDo
 $infrastructureProject = Join-Path $platformRoot "src\EntertainmentDocs.Infrastructure\EntertainmentDocs.Infrastructure.csproj"
 
 if ([string]::IsNullOrWhiteSpace($Server)) {
-    throw "SQL Server name is required. Pass -Server 'SERVER\\INSTANCE' when using a named instance."
+    throw "SQL Server name is required. Pass -Server 'SERVER\INSTANCE' when using a named instance."
 }
 
 $connectionString = "Server=$Server;Database=$Database;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
 
-Write-Host "Entertainment Docs — SQL Server local setup" -ForegroundColor Cyan
+Write-Host "Entertainment Docs - SQL Server local setup" -ForegroundColor Cyan
 Write-Host "Server   : $Server"
 Write-Host "Database : $Database"
 Write-Host "Auth     : Windows Authentication"
@@ -63,7 +63,8 @@ try {
     }
     else {
         Write-Host "Next: set EntertainmentDocs.Api as Startup Project and press F5, or run:" -ForegroundColor Cyan
-        Write-Host "dotnet run --project `"$apiProject`" --launch-profile http"
+        $runCommand = 'dotnet run --project "{0}" --launch-profile http' -f $apiProject
+        Write-Host $runCommand
     }
 }
 finally {
