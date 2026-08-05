@@ -1,38 +1,47 @@
+using System.Net;
 using System.Net.Http.Json;
-using EntertainmentDocs.Admin.Infrastructure.Api;
 using EntertainmentDocs.Admin.Infrastructure.Authentication;
 using EntertainmentDocs.Contracts.Authentication;
+using FoundationKit.Blazor.Api;
 
 namespace EntertainmentDocs.Admin.Features.Authentication;
 
 public sealed class AuthenticationApiClient(
     HttpClient httpClient,
     JwtAuthenticationStateProvider authenticationStateProvider)
+    : ApiClientBase(httpClient)
 {
-    public async Task<ApiResult<LoginResponse>> LoginAsync(LoginRequest request, CancellationToken ct = default)
+    public async Task<ApiResult<LoginResponse>> LoginAsync(
+        LoginRequest request,
+        CancellationToken cancellationToken = default)
     {
-        try
+        using var message = new HttpRequestMessage(HttpMethod.Post, "api/v1/auth/login")
         {
-            using var response = await httpClient.PostAsJsonAsync("api/v1/auth/login", request, ct);
-            if (!response.IsSuccessStatusCode)
-            {
-                var message = response.StatusCode == System.Net.HttpStatusCode.Unauthorized
-                    ? "The email or password is incorrect, or the account is inactive."
-                    : await ApiResponseReader.ReadErrorAsync(response, ct);
-                return ApiResult<LoginResponse>.Failure(message, response.StatusCode);
-            }
+            Content = JsonContent.Create(request)
+        };
 
-            var payload = await response.Content.ReadFromJsonAsync<LoginResponse>(cancellationToken: ct);
-            if (payload is null || string.IsNullOrWhiteSpace(payload.AccessToken))
-                return ApiResult<LoginResponse>.Failure("The login response did not contain an access token.", response.StatusCode);
-
-            await authenticationStateProvider.SetAuthenticatedAsync(payload.AccessToken);
-            return ApiResult<LoginResponse>.Success(payload, response.StatusCode);
-        }
-        catch (HttpRequestException exception)
+        var result = await SendAsync<LoginResponse>(message, cancellationToken);
+        if (result.IsFailure)
         {
-            return ApiResult<LoginResponse>.Failure($"The API could not be reached: {exception.Message}");
+            return result.StatusCode == HttpStatusCode.Unauthorized
+                ? ApiResult<LoginResponse>.Failure(new ApiError(
+                    "Authentication.InvalidCredentials",
+                    "The email or password is incorrect, or the account is inactive.",
+                    result.StatusCode,
+                    result.ErrorDetails?.CorrelationId))
+                : result;
         }
+
+        if (result.Value is null || string.IsNullOrWhiteSpace(result.Value.AccessToken))
+        {
+            return ApiResult<LoginResponse>.Failure(new ApiError(
+                "Authentication.TokenMissing",
+                "The login response did not contain an access token.",
+                result.StatusCode));
+        }
+
+        await authenticationStateProvider.SetAuthenticatedAsync(result.Value.AccessToken);
+        return result;
     }
 
     public Task LogoutAsync() => authenticationStateProvider.SignOutAsync();

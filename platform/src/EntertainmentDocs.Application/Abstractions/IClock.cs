@@ -1,6 +1,5 @@
 namespace EntertainmentDocs.Application.Abstractions;
 
-public interface IClock
+public interface IClock : FoundationKit.Application.Abstractions.IClock
 {
-    DateTimeOffset UtcNow { get; }
 }

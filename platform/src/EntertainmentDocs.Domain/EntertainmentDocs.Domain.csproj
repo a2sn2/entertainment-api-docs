@@ -1,3 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><RootNamespace>EntertainmentDocs.Domain</RootNamespace></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\core\FoundationKit.Domain\FoundationKit.Domain.csproj" />
+  </ItemGroup>
 </Project>

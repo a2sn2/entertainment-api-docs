@@ -1,6 +1,5 @@
-using Microsoft.AspNetCore.RateLimiting;
-using System.Threading.RateLimiting;
 using System.Text;
+using System.Threading.RateLimiting;
 using EntertainmentDocs.Api.Authorization;
 using EntertainmentDocs.Api.Endpoints;
 using EntertainmentDocs.Api.Services;
@@ -9,26 +8,37 @@ using EntertainmentDocs.Application.Abstractions;
 using EntertainmentDocs.Infrastructure;
 using EntertainmentDocs.Infrastructure.Identity;
 using EntertainmentDocs.Infrastructure.Persistence;
+using FoundationKit.WebApi;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddFoundationWebApi();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
-builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(options => options.AddPolicy("WebClients", policy =>
 {
     var origins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? [];
-    if (origins.Length == 0)
-        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
-    else
+    if (origins.Length > 0)
+    {
         policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod();
+        return;
+    }
+
+    if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"))
+    {
+        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+        return;
+    }
+
+    throw new InvalidOperationException("AllowedOrigins must be configured outside Development and Testing.");
 }));
 
 var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
@@ -65,9 +75,14 @@ builder.Services.AddRateLimiter(options => options.AddFixedWindowLimiter("api", 
 }));
 
 var app = builder.Build();
+app.UseFoundationRequestPipeline();
 app.UseExceptionHandler();
+
+if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing"))
+    app.UseHsts();
 if (!app.Environment.IsEnvironment("Testing"))
     app.UseHttpsRedirection();
+
 app.UseCors("WebClients");
 app.UseRateLimiter();
 app.UseAuthentication();
@@ -98,13 +113,9 @@ await using (var scope = app.Services.CreateAsyncScope())
     var applyMigrations = app.Configuration.GetValue("Database:ApplyMigrationsOnStartup", true);
 
     if (applyMigrations)
-    {
         await db.Database.MigrateAsync();
-    }
     else if (app.Environment.IsEnvironment("Testing"))
-    {
         await db.Database.EnsureCreatedAsync();
-    }
 }
 
 await IdentitySeeder.SeedAsync(app.Services, app.Configuration);

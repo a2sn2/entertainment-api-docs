@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>FoundationKit.Infrastructure</RootNamespace>
+    <AssemblyName>FoundationKit.Infrastructure</AssemblyName>
+    <Description>Reusable EF Core repositories and domain event dispatching.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FoundationKit.Domain\FoundationKit.Domain.csproj" />
+    <ProjectReference Include="..\FoundationKit.Application\FoundationKit.Application.csproj" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+  </ItemGroup>
+</Project>

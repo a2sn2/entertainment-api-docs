@@ -91,7 +91,7 @@
         try
         {
             var result = await Authentication.LoginAsync(new LoginRequest(_model.Email, _model.Password));
-            if (!result.Succeeded)
+            if (result.IsFailure)
             {
                 _error = result.Error;
                 return;

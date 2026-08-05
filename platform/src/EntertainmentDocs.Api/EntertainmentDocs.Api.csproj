@@ -6,6 +6,7 @@
     <ProjectReference Include="..\EntertainmentDocs.Application\EntertainmentDocs.Application.csproj" />
     <ProjectReference Include="..\EntertainmentDocs.Contracts\EntertainmentDocs.Contracts.csproj" />
     <ProjectReference Include="..\EntertainmentDocs.Infrastructure\EntertainmentDocs.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\core\FoundationKit.WebApi\FoundationKit.WebApi.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design"><PrivateAssets>all</PrivateAssets></PackageReference>
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />

@@ -1,8 +1,5 @@
 namespace EntertainmentDocs.Application.Abstractions;
 
-public interface ICurrentUser
+public interface ICurrentUser : FoundationKit.Application.Abstractions.ICurrentUser
 {
-    Guid? UserId { get; }
-    bool IsAuthenticated { get; }
-    bool IsInRole(string role);
 }

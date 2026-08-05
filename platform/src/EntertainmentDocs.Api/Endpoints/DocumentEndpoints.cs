@@ -1,5 +1,7 @@
 using EntertainmentDocs.Application.Documents;
 using EntertainmentDocs.Contracts.Documents;
+using FoundationKit.Application.Messaging;
+using FoundationKit.WebApi.Results;
 
 namespace EntertainmentDocs.Api.Endpoints;
 
@@ -11,10 +13,12 @@ public static class DocumentEndpoints
             .WithTags("Documents")
             .RequireRateLimiting("api");
 
-        group.MapGet("/", async (DocumentService service, CancellationToken ct) =>
+        group.MapGet("/", async (
+            IQueryHandler<ListPublishedDocumentsQuery, IReadOnlyList<DocumentSummaryDto>> handler,
+            CancellationToken cancellationToken) =>
         {
-            var documents = await service.ListPublishedAsync(ct);
-            var response = documents
+            var result = await handler.HandleAsync(new ListPublishedDocumentsQuery(), cancellationToken);
+            return result.ToHttpResult(documents => Results.Ok(documents
                 .Select(document => new DocumentSummaryResponse(
                     document.Id,
                     document.Reference,
@@ -22,21 +26,19 @@ public static class DocumentEndpoints
                     document.Title,
                     document.Status,
                     document.UpdatedAt))
-                .ToArray();
-
-            return Results.Ok(response);
+                .ToArray()));
         })
         .WithName("ListPublishedDocuments")
         .WithSummary("List all currently published documentation records.")
         .Produces<IReadOnlyList<DocumentSummaryResponse>>(StatusCodes.Status200OK);
 
-        group.MapGet("/{slug}", async (string slug, DocumentService service, CancellationToken ct) =>
+        group.MapGet("/{slug}", async (
+            string slug,
+            IQueryHandler<GetPublishedDocumentQuery, DocumentDetailsDto> handler,
+            CancellationToken cancellationToken) =>
         {
-            var document = await service.GetPublishedAsync(slug, ct);
-            if (document is null)
-                return Results.NotFound();
-
-            return Results.Ok(new DocumentDetailsResponse(
+            var result = await handler.HandleAsync(new GetPublishedDocumentQuery(slug), cancellationToken);
+            return result.ToHttpResult(document => Results.Ok(new DocumentDetailsResponse(
                 document.Id,
                 document.Reference,
                 document.Slug,
@@ -44,12 +46,12 @@ public static class DocumentEndpoints
                 document.Status,
                 document.Version,
                 document.Content,
-                document.UpdatedAt));
+                document.UpdatedAt)));
         })
         .WithName("GetPublishedDocument")
         .WithSummary("Get the latest published version of one document by slug.")
         .Produces<DocumentDetailsResponse>(StatusCodes.Status200OK)
-        .Produces(StatusCodes.Status404NotFound);
+        .ProducesProblem(StatusCodes.Status404NotFound);
 
         return app;
     }

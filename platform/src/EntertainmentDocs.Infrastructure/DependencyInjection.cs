@@ -3,6 +3,8 @@ using EntertainmentDocs.Infrastructure.Identity;
 using EntertainmentDocs.Infrastructure.Persistence;
 using EntertainmentDocs.Infrastructure.Persistence.Repositories;
 using EntertainmentDocs.Infrastructure.Services;
+using FoundationKit.Infrastructure;
+using FoundationKit.Infrastructure.Events;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -18,14 +20,18 @@ public static class DependencyInjection
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new InvalidOperationException("ConnectionStrings:SqlServer is required.");
 
-        services.AddDbContext<AppDbContext>(options =>
+        services.AddFoundationInfrastructure();
+        services.AddDbContext<AppDbContext>((serviceProvider, options) =>
+        {
             options.UseSqlServer(connectionString, sqlServer =>
             {
                 sqlServer.EnableRetryOnFailure(
                     maxRetryCount: 5,
                     maxRetryDelay: TimeSpan.FromSeconds(10),
                     errorNumbersToAdd: null);
-            }));
+            });
+            options.AddInterceptors(serviceProvider.GetRequiredService<DomainEventsSaveChangesInterceptor>());
+        });
 
         services.AddIdentityCore<ApplicationUser>(options =>
         {

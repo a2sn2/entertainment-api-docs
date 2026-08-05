@@ -1,6 +1,5 @@
 namespace EntertainmentDocs.Application.Abstractions;
 
-public interface IUnitOfWork
+public interface IUnitOfWork : FoundationKit.Application.Abstractions.IUnitOfWork
 {
-    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -1,33 +1,44 @@
 using EntertainmentDocs.Application.Abstractions;
 using EntertainmentDocs.Domain.Documents;
+using FoundationKit.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace EntertainmentDocs.Infrastructure.Persistence.Repositories;
 
-public sealed class DocumentRepository(AppDbContext dbContext) : IDocumentRepository
+public sealed class DocumentRepository
+    : EfRepository<DocumentationDocument, Guid, AppDbContext>, IDocumentRepository
 {
-    public Task<bool> ReferenceExistsAsync(string reference, CancellationToken ct) =>
-        dbContext.Documents.AnyAsync(x => x.Reference == reference, ct);
+    private readonly AppDbContext _dbContext;
 
-    public Task<bool> SlugExistsAsync(string slug, CancellationToken ct) =>
-        dbContext.Documents.AnyAsync(x => x.Slug == slug.ToLower(), ct);
+    public DocumentRepository(AppDbContext dbContext) : base(dbContext) =>
+        _dbContext = dbContext;
 
-    public Task<DocumentationDocument?> GetAsync(Guid id, CancellationToken ct) =>
-        dbContext.Documents.Include(x => x.Versions).SingleOrDefaultAsync(x => x.Id == id, ct);
+    public Task<bool> ReferenceExistsAsync(string reference, CancellationToken cancellationToken) =>
+        _dbContext.Documents.AnyAsync(document => document.Reference == reference, cancellationToken);
 
-    public Task<DocumentationDocument?> GetPublishedBySlugAsync(string slug, CancellationToken ct) =>
-        dbContext.Documents.AsNoTracking().Include(x => x.Versions)
-            .SingleOrDefaultAsync(x => x.Slug == slug.ToLower() && x.Status == DocumentStatus.Published, ct);
+    public Task<bool> SlugExistsAsync(string slug, CancellationToken cancellationToken) =>
+        _dbContext.Documents.AnyAsync(document => document.Slug == slug.ToLowerInvariant(), cancellationToken);
 
-    public async Task<IReadOnlyList<DocumentationDocument>> ListPublishedAsync(CancellationToken ct) =>
-        await dbContext.Documents.AsNoTracking()
-            .Where(x => x.Status == DocumentStatus.Published)
-            .OrderBy(x => x.Title)
-            .ToListAsync(ct);
+    public Task<DocumentationDocument?> GetWithVersionsAsync(Guid id, CancellationToken cancellationToken) =>
+        _dbContext.Documents
+            .Include(document => document.Versions)
+            .SingleOrDefaultAsync(document => document.Id == id, cancellationToken);
 
-    public Task AddAsync(DocumentationDocument document, CancellationToken ct) =>
-        dbContext.Documents.AddAsync(document, ct).AsTask();
+    public Task<DocumentationDocument?> GetPublishedBySlugAsync(string slug, CancellationToken cancellationToken) =>
+        _dbContext.Documents
+            .AsNoTracking()
+            .Include(document => document.Versions)
+            .SingleOrDefaultAsync(
+                document => document.Slug == slug.ToLowerInvariant() && document.Status == DocumentStatus.Published,
+                cancellationToken);
 
-    public Task AddVersionAsync(DocumentVersion version, CancellationToken ct) =>
-        dbContext.Set<DocumentVersion>().AddAsync(version, ct).AsTask();
+    public async Task<IReadOnlyList<DocumentationDocument>> ListPublishedAsync(CancellationToken cancellationToken) =>
+        await _dbContext.Documents
+            .AsNoTracking()
+            .Where(document => document.Status == DocumentStatus.Published)
+            .OrderBy(document => document.Title)
+            .ToListAsync(cancellationToken);
+
+    public Task AddVersionAsync(DocumentVersion version, CancellationToken cancellationToken) =>
+        _dbContext.DocumentVersions.AddAsync(version, cancellationToken).AsTask();
 }

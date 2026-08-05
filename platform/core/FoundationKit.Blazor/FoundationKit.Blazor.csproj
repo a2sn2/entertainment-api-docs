@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>FoundationKit.Blazor</RootNamespace>
+    <AssemblyName>FoundationKit.Blazor</AssemblyName>
+    <Description>Reusable typed HTTP client results and asynchronous feature state for Blazor.</Description>
+  </PropertyGroup>
+</Project>

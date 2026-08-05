@@ -1,8 +1,7 @@
 namespace EntertainmentDocs.Domain.Common;
 
-public abstract class Entity
+public abstract class Entity : FoundationKit.Domain.Primitives.Entity<Guid>
 {
-    protected Entity(Guid id) => Id = id;
+    protected Entity(Guid id) : base(id) { }
     protected Entity() { }
-    public Guid Id { get; protected set; }
 }

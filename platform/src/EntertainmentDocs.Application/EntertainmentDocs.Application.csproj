@@ -2,6 +2,7 @@
   <PropertyGroup><RootNamespace>EntertainmentDocs.Application</RootNamespace></PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\EntertainmentDocs.Domain\EntertainmentDocs.Domain.csproj" />
+    <ProjectReference Include="..\..\core\FoundationKit.Application\FoundationKit.Application.csproj" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 </Project>
