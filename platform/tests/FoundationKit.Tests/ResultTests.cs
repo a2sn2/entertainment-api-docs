@@ -22,6 +22,6 @@ public sealed class ResultTests
 
         Assert.True(result.IsFailure);
         Assert.Equal(error, result.Error);
-        Assert.Throws<InvalidOperationException>(() => result.Value);
+        Assert.Throws<InvalidOperationException>(() => { _ = result.Value; });
     }
 }
