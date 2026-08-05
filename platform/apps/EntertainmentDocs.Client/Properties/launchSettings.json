@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "EntertainmentDocs.Client": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:53321;http://localhost:53322"
+    }
+  }
+}
