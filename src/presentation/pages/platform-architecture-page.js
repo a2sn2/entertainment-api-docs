@@ -10,7 +10,7 @@ export function renderPlatformArchitecturePage() {
         ['Client Web','Published documentation and search for authenticated or public readers.'],
         ['Admin Web','Documents, versions, approvals, users, roles, and platform settings.'],
         ['ASP.NET Core API','The only application boundary allowed to enforce use cases and authorization.'],
-        ['PostgreSQL','Identity, documents, versions, workflow state, audit records, and future integrations.']
+        ['Microsoft SQL Server','Identity, documents, versions, workflow state, audit records, and future integrations.']
       ].map(([title,text])=>`<article class="card metric"><div class="metric-label">Layer</div><div class="metric-value">${title}</div><div class="metric-note">${text}</div></article>`).join('')}
     </div>
   </section>
@@ -27,6 +27,13 @@ export function renderPlatformArchitecturePage() {
         ['Audit & Operations','Audit trail, health, logging, support, observability.'],
         ['Integration Registry','Future environments, schemas, providers, and connection metadata.']
       ].map(([title,text])=>`<article class="panel"><h3>${title}</h3><p class="muted">${text}</p></article>`).join('')}
+    </div>
+  </section>
+  <section class="section"><h2 class="section-title">Database environments</h2>
+    <div class="grid-3">
+      <article class="panel"><h3>Development</h3><p class="muted">Local SQL Server with Windows Authentication and the <code>EntertainmentDocs_Dev</code> database.</p></article>
+      <article class="panel"><h3>Testing</h3><p class="muted">Isolated SQL Server container and <code>EntertainmentDocs_Test</code>, recreated by CI and validated with EF Core migrations.</p></article>
+      <article class="panel"><h3>Production</h3><p class="muted">Dedicated <code>EntertainmentDocs_Prod</code> database with managed secrets, encryption, backups, and reviewed deployment migrations.</p></article>
     </div>
   </section>
   <section class="section"><h2 class="section-title">Role model</h2>
@@ -51,5 +58,5 @@ export function renderPlatformArchitecturePage() {
 ├── deploy/
 └── docs/</pre></div>
   </section>
-  <section class="section"><div class="callout callout-danger"><div>!</div><div><h3>Deployment boundary</h3><p>GitHub Pages remains a static preview. Database, identity, admin, and API features require separate application hosting.</p></div></div></section>`;
+  <section class="section"><div class="callout callout-danger"><div>!</div><div><h3>Deployment boundary</h3><p>GitHub Pages remains a static preview. SQL Server, identity, admin, and API features require separate application hosting.</p></div></div></section>`;
 }
