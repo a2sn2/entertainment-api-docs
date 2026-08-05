@@ -7,7 +7,7 @@ public static class ResultHttpExtensions
 {
     public static IResult ToHttpResult(this Result result, Func<IResult>? onSuccess = null) =>
         result.IsSuccess
-            ? onSuccess?.Invoke() ?? Results.NoContent()
+            ? onSuccess?.Invoke() ?? global::Microsoft.AspNetCore.Http.Results.NoContent()
             : result.Error.ToProblem();
 
     public static IResult ToHttpResult<T>(this Result<T> result, Func<T, IResult> onSuccess) =>
@@ -26,7 +26,7 @@ public static class ResultHttpExtensions
             _ => StatusCodes.Status500InternalServerError
         };
 
-        return Results.Problem(
+        return global::Microsoft.AspNetCore.Http.Results.Problem(
             statusCode: statusCode,
             title: error.Code,
             detail: error.Description,
