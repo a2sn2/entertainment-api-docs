@@ -93,7 +93,7 @@
             var result = await Authentication.LoginAsync(new LoginRequest(_model.Email, _model.Password));
             if (result.IsFailure)
             {
-                _error = result.Error?.Message;
+                _error = result.Error;
                 return;
             }
 
