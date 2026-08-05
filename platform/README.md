@@ -12,15 +12,27 @@ Production-oriented foundation for evolving the static API documentation into a 
 
 - `Domain` — business invariants and aggregates.
 - `Application` — use cases and ports.
-- `Infrastructure` — PostgreSQL, Identity, JWT, repositories.
+- `Infrastructure` — Microsoft SQL Server, EF Core, Identity, JWT, and repositories.
 - `API` — HTTP contracts and policies.
 
-## Local infrastructure
+## Local Visual Studio development
 
-```bash
-cd platform/deploy
-cp .env.example .env
-docker compose up --build
+Use the local SQL Server instance with Windows Authentication:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\platform\scripts\setup-local-sqlserver.ps1
 ```
 
-Do not use example secrets in any shared environment.
+Then run the API, Client, and Admin projects using their `http` launch profiles.
+
+See `docs/LOCAL-SQLSERVER.md` for the complete setup and SSMS verification steps.
+
+## Integration stack
+
+Docker Compose remains available for repeatable SQL Server integration testing and CI:
+
+```bash
+docker compose -f platform/deploy/docker-compose.test.yml up --build -d
+```
+
+All values in the test compose file are isolated test-only credentials. Never reuse them in a shared or production environment.
