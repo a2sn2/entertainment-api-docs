@@ -12,7 +12,7 @@ public sealed class DocumentationApiClient(HttpClient httpClient) : ApiClientBas
         var result = await SendAsync<DocumentSummaryResponse[]>(request, cancellationToken);
         return result.IsSuccess
             ? ApiResult<IReadOnlyList<DocumentSummaryResponse>>.Success(result.Value ?? [], result.StatusCode)
-            : ApiResult<IReadOnlyList<DocumentSummaryResponse>>.Failure(result.Error!);
+            : ApiResult<IReadOnlyList<DocumentSummaryResponse>>.Failure(result.ErrorDetails!);
     }
 
     public async Task<ApiResult<DocumentDetailsResponse>> GetBySlugAsync(
