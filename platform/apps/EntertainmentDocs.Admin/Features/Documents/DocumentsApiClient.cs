@@ -1,5 +1,5 @@
 using System.Net.Http.Json;
-using EntertainmentDocs.Admin.Infrastructure.Authentication;
+using EntertainmentDocs.Admin.Infrastructure.Api;
 using EntertainmentDocs.Contracts.Documents;
 using FoundationKit.Blazor.Api;
 
