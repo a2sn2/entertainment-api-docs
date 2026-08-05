@@ -107,7 +107,9 @@
     }
 
     private static bool IsSafeLocalUrl(string? value) =>
-        !string.IsNullOrWhiteSpace(value) && value.StartsWith('/', StringComparison.Ordinal) && !value.StartsWith("//", StringComparison.Ordinal);
+        !string.IsNullOrWhiteSpace(value) &&
+        value.StartsWith("/", StringComparison.Ordinal) &&
+        !value.StartsWith("//", StringComparison.Ordinal);
 
     private sealed class LoginModel
     {
