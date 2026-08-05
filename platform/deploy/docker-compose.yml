@@ -1,17 +1,24 @@
 services:
-  postgres:
-    image: postgres:16-alpine
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-entertainment_docs}
-      POSTGRES_USER: ${POSTGRES_USER:-entdocs}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: ${MSSQL_PID:-Developer}
+      MSSQL_SA_PASSWORD: ${SQLSERVER_SA_PASSWORD}
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - sqlserver-data:/var/opt/mssql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-entdocs} -d ${POSTGRES_DB:-entertainment_docs}"]
+      test:
+        - CMD-SHELL
+        - >-
+          (/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "SELECT 1"
+          || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -Q "SELECT 1")
+          >/dev/null 2>&1
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 30
+      start_period: 20s
+    restart: unless-stopped
 
   api:
     build:
@@ -19,18 +26,20 @@ services:
       dockerfile: deploy/Dockerfile.api
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-entertainment_docs};Username=${POSTGRES_USER:-entdocs};Password=${POSTGRES_PASSWORD}
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__SqlServer: Server=sqlserver,1433;Database=${SQLSERVER_DATABASE:-EntertainmentDocs_Prod};User Id=sa;Password=${SQLSERVER_SA_PASSWORD};Encrypt=True;TrustServerCertificate=${SQLSERVER_TRUST_SERVER_CERTIFICATE:-True};MultipleActiveResultSets=True
       Jwt__Issuer: ${JWT_ISSUER}
       Jwt__Audience: ${JWT_AUDIENCE}
       Jwt__SigningKey: ${JWT_SIGNING_KEY}
       BootstrapAdmin__Email: ${BOOTSTRAP_ADMIN_EMAIL}
       BootstrapAdmin__Password: ${BOOTSTRAP_ADMIN_PASSWORD}
+      Database__ApplyMigrationsOnStartup: ${APPLY_MIGRATIONS_ON_STARTUP:-false}
     depends_on:
-      postgres:
+      sqlserver:
         condition: service_healthy
     ports:
       - "8080:8080"
     restart: unless-stopped
 
 volumes:
-  postgres-data:
+  sqlserver-data:
