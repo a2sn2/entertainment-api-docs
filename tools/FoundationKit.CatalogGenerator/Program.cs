@@ -181,7 +181,7 @@ internal static class Program
     }
 
     private static string Normalize(string value) =>
-        value.Replace("\r\n", "\n", StringComparison.Ordinal);
+        value.Replace("\r\n", "\n", StringComparison.Ordinal).TrimEnd() + "\n";
 }
 
 internal sealed record CatalogDocument(
