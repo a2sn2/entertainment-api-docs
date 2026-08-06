@@ -1,9 +1,0 @@
-FROM nginx:1.27-alpine
-WORKDIR /usr/share/nginx/html
-RUN rm -rf ./*
-COPY index.html 404.html manifest.webmanifest sw.js ./
-COPY assets ./assets
-COPY pages ./pages
-COPY src ./src
-COPY platform/deploy/nginx-spa.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
