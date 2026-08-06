@@ -1,0 +1,214 @@
+@page "/initiatives"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@implements IDisposable
+@inject InitiativesViewModel ViewModel
+@inject ISnackbar Snackbar
+
+<PageTitle>مبادراتي — منصة أثر</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-10">
+    <div class="page-heading">
+        <div>
+            <div class="eyebrow">مساحة المستخدم</div>
+            <MudText Typo="Typo.h2">مبادراتي</MudText>
+            <MudText Class="muted-copy mt-2">
+                قدّم الفكرة مرة واحدة، ثم تابع انتقالها من الإرسال إلى القرار.
+            </MudText>
+        </div>
+        <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary">
+            Idempotency + Audit
+        </MudChip>
+    </div>
+
+    <MudGrid Class="mt-6">
+        <MudItem xs="12" lg="5">
+            <MudPaper Class="athar-card pa-6" Elevation="0">
+                <MudText Typo="Typo.h4">مبادرة جديدة</MudText>
+                <MudText Class="muted-copy mt-2">
+                    الحقول التالية مرتبطة مباشرة بعقد CreateInitiativeRequest.
+                </MudText>
+
+                <MudForm @ref="_form" Class="mt-5">
+                    <MudTextField T="string"
+                                  Label="عنوان المبادرة"
+                                  @bind-Value="ViewModel.Draft.Title"
+                                  Required="true"
+                                  Variant="Variant.Outlined" />
+                    <MudTextField T="string"
+                                  Label="وصف المبادرة"
+                                  @bind-Value="ViewModel.Draft.Summary"
+                                  Required="true"
+                                  Lines="6"
+                                  Variant="Variant.Outlined"
+                                  Class="mt-4" />
+                    <MudSelect T="string"
+                               Label="التصنيف"
+                               @bind-Value="ViewModel.Draft.Category"
+                               Required="true"
+                               Variant="Variant.Outlined"
+                               Class="mt-4">
+                        <MudSelectItem Value="@("تعليم")">تعليم</MudSelectItem>
+                        <MudSelectItem Value="@("صحة")">صحة</MudSelectItem>
+                        <MudSelectItem Value="@("بيئة")">بيئة</MudSelectItem>
+                        <MudSelectItem Value="@("تقنية")">تقنية</MudSelectItem>
+                        <MudSelectItem Value="@("تمكين اقتصادي")">تمكين اقتصادي</MudSelectItem>
+                    </MudSelect>
+                    <MudTextField T="string"
+                                  Label="المدينة"
+                                  @bind-Value="ViewModel.Draft.City"
+                                  Required="true"
+                                  Variant="Variant.Outlined"
+                                  Class="mt-4" />
+                    <MudNumericField T="decimal"
+                                     Label="الميزانية المطلوبة"
+                                     @bind-Value="ViewModel.Draft.RequestedBudget"
+                                     Min="0"
+                                     Variant="Variant.Outlined"
+                                     Class="mt-4" />
+                    <MudNumericField T="int"
+                                     Label="عدد المستفيدين المتوقع"
+                                     @bind-Value="ViewModel.Draft.TargetBeneficiaries"
+                                     Min="1"
+                                     Variant="Variant.Outlined"
+                                     Class="mt-4" />
+                    <MudButton FullWidth="true"
+                               Color="Color.Primary"
+                               Variant="Variant.Filled"
+                               Size="Size.Large"
+                               Disabled="ViewModel.IsBusy"
+                               OnClick="CreateAsync"
+                               StartIcon="@Icons.Material.Filled.Send"
+                               Class="mt-5">
+                        @(ViewModel.IsBusy ? "جاري الحفظ..." : "إرسال المبادرة")
+                    </MudButton>
+                </MudForm>
+
+                @if (ViewModel.LastCreated is not null)
+                {
+                    <MudAlert Severity="Severity.Success"
+                              Variant="Variant.Outlined"
+                              Class="mt-5">
+                        تم حفظ المبادرة برقم:
+                        <strong>@ViewModel.LastCreated.Id</strong>
+                    </MudAlert>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" lg="7">
+            <MudPaper Class="athar-card pa-6" Elevation="0">
+                <div class="list-toolbar">
+                    <div>
+                        <MudText Typo="Typo.h4">سجل المبادرات</MudText>
+                        <MudText Class="muted-copy">
+                            الحالة محدثة مباشرة من قاعدة البيانات.
+                        </MudText>
+                    </div>
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                   OnClick="ViewModel.LoadAsync"
+                                   Disabled="ViewModel.IsBusy" />
+                </div>
+
+                @if (ViewModel.IsBusy && ViewModel.Items.Count == 0)
+                {
+                    <MudProgressLinear Indeterminate="true"
+                                       Color="Color.Primary"
+                                       Class="mt-5" />
+                }
+                else if (ViewModel.Items.Count == 0)
+                {
+                    <div class="empty-state">
+                        <MudIcon Icon="@Icons.Material.Filled.Inbox"
+                                 Size="Size.Large" />
+                        <MudText Typo="Typo.h6">لا توجد مبادرات بعد</MudText>
+                    </div>
+                }
+                else
+                {
+                    <div class="initiative-list mt-5">
+                        @foreach (var item in ViewModel.Items)
+                        {
+                            <article class="initiative-item">
+                                <div>
+                                    <MudText Typo="Typo.h6">@item.Title</MudText>
+                                    <MudText Typo="Typo.body2" Class="muted-copy">
+                                        @item.Category · @item.City ·
+                                        @item.TargetBeneficiaries.ToString("N0") مستفيد
+                                    </MudText>
+                                </div>
+                                <div class="initiative-meta">
+                                    <MudChip T="string"
+                                             Color="@StatusColor(item.Status)"
+                                             Variant="Variant.Outlined"
+                                             Size="Size.Small">
+                                        @StatusLabel(item.Status)
+                                    </MudChip>
+                                    <MudText Typo="Typo.caption">
+                                        @item.CreatedUtc.ToLocalTime().ToString("yyyy-MM-dd")
+                                    </MudText>
+                                </div>
+                            </article>
+                        }
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(ViewModel.ErrorMessage))
+                {
+                    <MudAlert Severity="Severity.Error"
+                              Variant="Variant.Outlined"
+                              Class="mt-5">
+                        @ViewModel.ErrorMessage
+                    </MudAlert>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private MudForm? _form;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ViewModel.StateChanged += OnStateChanged;
+        await ViewModel.LoadAsync();
+    }
+
+    private async Task CreateAsync()
+    {
+        if (_form is null)
+            return;
+
+        await _form.Validate();
+        if (!_form.IsValid)
+            return;
+
+        await ViewModel.CreateAsync();
+        if (ViewModel.LastCreated is not null)
+            Snackbar.Add("تم إرسال المبادرة للمراجعة.", Severity.Success);
+    }
+
+    private static Color StatusColor(string status) =>
+        status switch
+        {
+            InitiativeWorkflow.Approved => Color.Success,
+            InitiativeWorkflow.Rejected => Color.Error,
+            _ => Color.Warning
+        };
+
+    private static string StatusLabel(string status) =>
+        status switch
+        {
+            InitiativeWorkflow.Approved => "معتمدة",
+            InitiativeWorkflow.Rejected => "مرفوضة",
+            _ => "قيد المراجعة"
+        };
+
+    private void OnStateChanged() =>
+        _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        ViewModel.StateChanged -= OnStateChanged;
+    }
+}

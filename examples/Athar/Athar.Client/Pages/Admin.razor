@@ -1,0 +1,220 @@
+@page "/admin"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(Roles = AtharRoles.Administrator)]
+@implements IDisposable
+@inject AdminViewModel ViewModel
+@inject ISnackbar Snackbar
+
+<PageTitle>لوحة الإدارة — منصة أثر</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-10">
+    <div class="page-heading">
+        <div>
+            <div class="eyebrow">مساحة الإدارة</div>
+            <MudText Typo="Typo.h2">مركز قرار المبادرات</MudText>
+            <MudText Class="muted-copy mt-2">
+                مؤشرات لحظية وقائمة مراجعة مرتبطة بسجل تدقيق دائم.
+            </MudText>
+        </div>
+        <MudButton Variant="Variant.Outlined"
+                   StartIcon="@Icons.Material.Filled.Refresh"
+                   OnClick="ViewModel.LoadAsync"
+                   Disabled="ViewModel.IsBusy">
+            تحديث
+        </MudButton>
+    </div>
+
+    @if (ViewModel.Dashboard is not null)
+    {
+        <MudGrid Class="mt-6">
+            <MudItem xs="6" md="3">
+                <MudPaper Class="athar-card metric-card" Elevation="0">
+                    <MudText Typo="Typo.h3">@ViewModel.Dashboard.Submitted</MudText>
+                    <MudText>قيد المراجعة</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <MudPaper Class="athar-card metric-card" Elevation="0">
+                    <MudText Typo="Typo.h3">@ViewModel.Dashboard.Approved</MudText>
+                    <MudText>معتمدة</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <MudPaper Class="athar-card metric-card" Elevation="0">
+                    <MudText Typo="Typo.h3">@ViewModel.Dashboard.ApprovedBeneficiaries.ToString("N0")</MudText>
+                    <MudText>مستفيد مستهدف</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" md="3">
+                <MudPaper Class="athar-card metric-card" Elevation="0">
+                    <MudText Typo="Typo.h3">@ViewModel.Dashboard.ApprovedBudget.ToString("N0")</MudText>
+                    <MudText>ميزانية المبادرات المعتمدة</MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+
+    <MudPaper Class="athar-card pa-6 mt-6" Elevation="0">
+        <div class="list-toolbar">
+            <div>
+                <MudText Typo="Typo.h4">قائمة المراجعة</MudText>
+                <MudText Class="muted-copy">اختر الحالة ثم راجع التفاصيل.</MudText>
+            </div>
+            <MudSelect T="string"
+                       Value="@ViewModel.Status"
+                       ValueChanged="StatusChanged"
+                       Variant="Variant.Outlined"
+                       Margin="Margin.Dense"
+                       Style="min-width: 190px">
+                <MudSelectItem Value="@("submitted")">قيد المراجعة</MudSelectItem>
+                <MudSelectItem Value="@("approved")">المعتمدة</MudSelectItem>
+                <MudSelectItem Value="@("rejected")">المرفوضة</MudSelectItem>
+            </MudSelect>
+        </div>
+
+        @if (ViewModel.IsBusy && ViewModel.Items.Count == 0)
+        {
+            <MudProgressLinear Indeterminate="true"
+                               Color="Color.Primary"
+                               Class="mt-5" />
+        }
+        else if (ViewModel.Items.Count == 0)
+        {
+            <div class="empty-state">
+                <MudIcon Icon="@Icons.Material.Filled.TaskAlt"
+                         Size="Size.Large"
+                         Color="Color.Success" />
+                <MudText Typo="Typo.h6">لا توجد عناصر في هذه القائمة</MudText>
+            </div>
+        }
+        else
+        {
+            <div class="admin-grid mt-5">
+                @foreach (var item in ViewModel.Items)
+                {
+                    <article class="admin-item @(item.Id == _selectedId ? "selected" : string.Empty)">
+                        <button type="button"
+                                class="admin-item-header"
+                                @onclick="() => Select(item.Id)">
+                            <span>
+                                <strong>@item.Title</strong>
+                                <small>@item.Category · @item.City</small>
+                            </span>
+                            <MudChip T="string"
+                                     Variant="Variant.Outlined"
+                                     Size="Size.Small"
+                                     Color="@StatusColor(item.Status)">
+                                @StatusLabel(item.Status)
+                            </MudChip>
+                        </button>
+
+                        @if (_selectedId == item.Id)
+                        {
+                            <div class="review-panel">
+                                <MudText Typo="Typo.body2">
+                                    الميزانية: @item.RequestedBudget.ToString("N0")
+                                    · المستفيدون: @item.TargetBeneficiaries.ToString("N0")
+                                </MudText>
+
+                                @if (item.Status == InitiativeWorkflow.Submitted)
+                                {
+                                    <MudTextField T="string"
+                                                  Label="ملاحظات القرار"
+                                                  @bind-Value="_reviewNotes"
+                                                  Lines="3"
+                                                  Variant="Variant.Outlined"
+                                                  Class="mt-4" />
+                                    <MudStack Row="true" Spacing="2" Class="mt-4">
+                                        <MudButton Color="Color.Success"
+                                                   Variant="Variant.Filled"
+                                                   Disabled="ViewModel.IsBusy"
+                                                   OnClick="@(() => ReviewAsync(item.Id, InitiativeWorkflow.Approve))">
+                                            اعتماد
+                                        </MudButton>
+                                        <MudButton Color="Color.Error"
+                                                   Variant="Variant.Outlined"
+                                                   Disabled="ViewModel.IsBusy"
+                                                   OnClick="@(() => ReviewAsync(item.Id, InitiativeWorkflow.Reject))">
+                                            رفض
+                                        </MudButton>
+                                    </MudStack>
+                                }
+                            </div>
+                        }
+                    </article>
+                }
+            </div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(ViewModel.ErrorMessage))
+        {
+            <MudAlert Severity="Severity.Error"
+                      Variant="Variant.Outlined"
+                      Class="mt-5">
+                @ViewModel.ErrorMessage
+            </MudAlert>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private Guid? _selectedId;
+    private string? _reviewNotes;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ViewModel.StateChanged += OnStateChanged;
+        await ViewModel.LoadAsync();
+    }
+
+    private void Select(Guid id)
+    {
+        _selectedId = _selectedId == id ? null : id;
+        _reviewNotes = null;
+    }
+
+    private async Task StatusChanged(string status)
+    {
+        ViewModel.Status = status;
+        _selectedId = null;
+        await ViewModel.LoadAsync();
+    }
+
+    private async Task ReviewAsync(Guid id, string decision)
+    {
+        await ViewModel.ReviewAsync(id, decision, _reviewNotes);
+        if (string.IsNullOrWhiteSpace(ViewModel.ErrorMessage))
+        {
+            Snackbar.Add(
+                decision == InitiativeWorkflow.Approve
+                    ? "تم اعتماد المبادرة."
+                    : "تم رفض المبادرة.",
+                Severity.Success);
+            _selectedId = null;
+            _reviewNotes = null;
+        }
+    }
+
+    private static Color StatusColor(string status) =>
+        status switch
+        {
+            InitiativeWorkflow.Approved => Color.Success,
+            InitiativeWorkflow.Rejected => Color.Error,
+            _ => Color.Warning
+        };
+
+    private static string StatusLabel(string status) =>
+        status switch
+        {
+            InitiativeWorkflow.Approved => "معتمدة",
+            InitiativeWorkflow.Rejected => "مرفوضة",
+            _ => "قيد المراجعة"
+        };
+
+    private void OnStateChanged() =>
+        _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        ViewModel.StateChanged -= OnStateChanged;
+    }
+}
