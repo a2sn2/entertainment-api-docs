@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Typed HTTP result handling and asynchronous UI state helpers for Blazor applications.</Description>
+  </PropertyGroup>
+</Project>

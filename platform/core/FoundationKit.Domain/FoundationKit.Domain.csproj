@@ -1,7 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <RootNamespace>FoundationKit.Domain</RootNamespace>
-    <AssemblyName>FoundationKit.Domain</AssemblyName>
-    <Description>Reusable domain primitives with no framework dependencies.</Description>
-  </PropertyGroup>
-</Project>

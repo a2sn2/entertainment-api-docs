@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Use-case, result, validation, pagination, and persistence contracts for FoundationKit.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FoundationKit.Domain\FoundationKit.Domain.csproj" />
+  </ItemGroup>
+</Project>

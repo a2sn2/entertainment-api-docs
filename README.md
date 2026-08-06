@@ -1,163 +1,100 @@
 # FoundationKit for .NET
 
-[![Platform CI and Full-Stack Test](https://github.com/a2sn2/foundationkit-dotnet/actions/workflows/platform-ci.yml/badge.svg)](https://github.com/a2sn2/foundationkit-dotnet/actions/workflows/platform-ci.yml)
-[![FoundationKit Packages](https://github.com/a2sn2/foundationkit-dotnet/actions/workflows/foundationkit-ci.yml/badge.svg)](https://github.com/a2sn2/foundationkit-dotnet/actions/workflows/foundationkit-ci.yml)
+[![FoundationKit CI](https://github.com/a2sn2/foundationkit-dotnet/actions/workflows/ci.yml/badge.svg)](https://github.com/a2sn2/foundationkit-dotnet/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Target: .NET 8](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/)
 
-**FoundationKit** is a reusable .NET engineering foundation for building maintainable APIs, internal platforms, web applications, and business systems. It provides shared technical building blocks while leaving every product responsible for its own domain rules, contracts, database provider, routes, and user experience.
+FoundationKit is a focused set of reusable .NET building blocks for applications that use Clean Architecture and domain-driven design principles. This repository contains the reusable core only: no product domain, hosted application, database provider, migration, frontend product, or deployment topology is selected here.
 
-The repository is organized around four clearly separated roles:
-
-1. **FoundationKit Core** — reusable NuGet-ready packages.
-2. **Showcase** — the interactive GitHub Pages experience that asks: “What do you want to build today?”
-3. **EntertainmentDocs** — the first validated reference consumer of FoundationKit.
-4. **Future products** — independent repositories that consume versioned FoundationKit packages.
-
-> The core is consumed, not hosted. The Showcase is the runnable experience. EntertainmentDocs proves the core in a real product.
-
-## Live Showcase
-
-https://a2sn2.github.io/foundationkit-dotnet/
-
-The Showcase runs entirely in the browser. It does not send the visitor's idea anywhere until the visitor explicitly chooses a contact action.
-
-## Repository map
-
-```text
-.
-├── FoundationKit.sln              # Core package solution entry point
-├── index.html                     # FoundationKit Showcase entry point
-├── assets/css/showcase.css        # Showcase visual system
-├── src/showcase.js                # Showcase interaction and idea analysis
-│
-├── platform/
-│   ├── core/                      # FoundationKit package source
-│   ├── src/                       # EntertainmentDocs backend and contracts
-│   ├── apps/                      # EntertainmentDocs Admin, Client, and shared UI
-│   ├── tests/                     # Core, domain, and architecture tests
-│   ├── deploy/                    # Docker and Nginx integration stack
-│   ├── postman/                   # API collection and environment
-│   ├── scripts/                   # Setup, packaging, and smoke tests
-│   └── EntertainmentDocs.sln      # Complete reference-consumer solution
-│
-├── core/README.md                 # Core ownership and package boundaries
-├── samples/EntertainmentDocs/     # Reference-consumer navigation
-├── templates/                     # Rules for starting future products
-├── showcase/README.md             # Showcase behavior and contact configuration
-├── docs/                          # Current architecture and historical reference
-└── .github/                       # CI and project-idea intake
-```
-
-The current physical locations under `platform/` are intentionally retained to preserve the validated solution, Docker, migration, and CI paths. The architectural ownership is now explicit, while a future physical extraction can happen package-by-package without mixing it with behavior changes.
-
-## FoundationKit packages
+## Packages
 
 | Package | Responsibility |
 |---|---|
-| `FoundationKit.Domain` | Entities, aggregate roots, value objects, and domain events |
-| `FoundationKit.Application` | Results, errors, commands, queries, persistence ports, specifications, and pagination |
-| `FoundationKit.Infrastructure` | Provider-neutral EF Core repositories and domain-event adapters |
-| `FoundationKit.WebApi` | RFC 7807 mapping, correlation IDs, and baseline HTTP security conventions |
-| `FoundationKit.Blazor` | Typed HTTP execution, API errors, results, and asynchronous UI state |
+| `FoundationKit.Domain` | Entities, aggregate roots, value objects, domain exceptions, and domain-event contracts |
+| `FoundationKit.Application` | Commands, queries, results, validation, pagination, repository ports, and use-case abstractions |
+| `FoundationKit.Infrastructure` | Provider-neutral EF Core repositories, unit of work adapter, specifications, and in-process event dispatch |
+| `FoundationKit.WebApi` | ASP.NET Core result mapping, Problem Details, correlation IDs, and baseline response headers |
+| `FoundationKit.Blazor` | Typed HTTP results, response parsing, and reusable asynchronous UI state |
 
-FoundationKit does **not** own:
+Dependency direction:
 
-- product entities or workflows;
-- product API routes or transport contracts;
-- SQL Server or any other provider selection;
-- product migrations;
-- product authorization policies;
-- product-specific pages, branding, or business rules;
-- automatic CRUD exposure.
+```text
+FoundationKit.Domain
+        ↑
+FoundationKit.Application
+        ↑
+FoundationKit.Infrastructure
 
-## Reference consumer: EntertainmentDocs
+FoundationKit.Application
+        ↑
+FoundationKit.WebApi
 
-EntertainmentDocs is the first working product built on FoundationKit. It demonstrates:
+FoundationKit.Blazor
+    independent browser helper package
+```
 
-- ASP.NET Core Identity and JWT authentication;
-- role- and policy-based authorization;
-- SQL Server and EF Core migrations;
-- explicit commands, queries, and handlers;
-- Blazor WebAssembly Admin and Client applications;
-- MudBlazor shared UI;
-- Postman contracts;
-- Docker Compose and Nginx;
-- architecture tests and a complete publishing smoke test.
+`FoundationKit.Infrastructure` references EF Core abstractions but intentionally does not select SQL Server, PostgreSQL, SQLite, or another provider. Database providers and migrations belong to consuming applications.
 
-Its business behavior remains product-owned. It is a reference consumer, not part of the reusable core.
+## Build and test
 
-## Quick start
+Requirements:
 
-### Build the FoundationKit packages
+- .NET SDK 8
+- Bash or PowerShell only when using the packaging scripts
 
 ```bash
 dotnet restore FoundationKit.sln
 dotnet build FoundationKit.sln --configuration Release --no-restore
-dotnet test platform/tests/FoundationKit.Tests/FoundationKit.Tests.csproj --configuration Release
+dotnet test FoundationKit.sln --configuration Release --no-build
 ```
 
-### Build the complete EntertainmentDocs reference consumer
+Create all five NuGet packages and symbol packages:
 
 ```bash
-dotnet restore platform/EntertainmentDocs.sln
-dotnet build platform/EntertainmentDocs.sln --configuration Release --no-restore
-dotnet test platform/EntertainmentDocs.sln --configuration Release --no-build
+./scripts/pack.sh
 ```
 
-### Run the Showcase locally
-
-```bash
-python -m http.server 8000
-```
-
-Then open `http://localhost:8000/`.
-
-### Package FoundationKit
-
-Windows:
+Windows PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\platform\scripts\pack-foundation.ps1
+.\scripts\pack.ps1
 ```
 
-Linux/macOS:
+Artifacts are written to `artifacts/packages`.
+
+## Consume from a local package source
 
 ```bash
-bash platform/scripts/pack-foundation.sh
+dotnet nuget add source ./artifacts/packages --name FoundationKitLocal
+dotnet add package FoundationKit.Domain --version 0.1.0 --source FoundationKitLocal
 ```
 
-Packages are written to `platform/artifacts/foundation/`.
+Reference only the packages a project needs. A Domain project should not reference Infrastructure, WebApi, or Blazor merely for convenience.
 
-## Dependency direction
+## Domain-event delivery contract
 
-```text
-Product.Domain          → FoundationKit.Domain
-Product.Application     → FoundationKit.Application + Product.Domain
-Product.Infrastructure  → FoundationKit.Infrastructure + Product.Application
-Product.Api             → FoundationKit.WebApi + Product.Application/Infrastructure
-Product.Blazor          → FoundationKit.Blazor + Product.Contracts
-```
+The EF Core interceptor dispatches domain events in-process after a successful save. Events are cleared before handlers run so a handler failure does not cause an accidental duplicate dispatch during a later save.
 
-Dependencies point inward. FoundationKit never references a consuming product.
+This is a best-effort in-process mechanism, not durable messaging. A consuming product that requires retry, guaranteed delivery, cross-process delivery, or an audit trail must implement an outbox and its own delivery worker.
 
-## Starting another product
+## Repository rules
 
-A new product should live in its own repository and consume versioned FoundationKit packages. See:
+- Keep product-specific rules, contracts, migrations, UI, and hosting outside this repository.
+- Preserve inward dependency direction.
+- Do not add a database provider to the reusable Infrastructure package.
+- Add tests and documentation with every public behavior change.
+- Keep all five packages buildable and packable independently.
+- Treat the `main` branch as releasable.
 
-- [Core ownership](core/README.md)
-- [EntertainmentDocs reference consumer](samples/EntertainmentDocs/README.md)
-- [Future-product templates](templates/README.md)
-- [Repository boundaries](docs/architecture/REPOSITORY-BOUNDARIES.md)
-- [Safe reorganization decision](docs/REORGANIZATION.md)
+More detail:
 
-## Documentation truth rules
+- [Architecture](docs/ARCHITECTURE.md)
+- [Package contracts](docs/PACKAGES.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
 
-- EF Core migrations are the database schema source of truth.
-- Implemented behavior must be distinguished from design intent and future recommendations.
-- Runtime changes must update the relevant documentation, contracts, tests, and operational assets.
-- Historical repository-reference chapters remain available under `docs/repository-reference/`; current navigation starts at `docs/README.md`.
+## Status
 
-## Contact and project ideas
+Current package version: `0.1.0`
 
-The Showcase can turn a visitor's idea into a lightweight foundation map and then offer a public GitHub project-inquiry form. Visitors are warned not to post confidential details in a public issue.
-
-Repository owner and technical contact: **ALHassan ALShami** — [GitHub profile](https://github.com/a2sn2).
+The API surface is still pre-1.0 and may evolve. Breaking changes must be documented in `CHANGELOG.md`.

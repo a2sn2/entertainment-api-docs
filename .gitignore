@@ -4,25 +4,27 @@
 *.user
 *.suo
 
-# Local configuration and secrets
-.env
-.env.*
-!.env.example
-.local/
-**/appsettings.Local.json
-**/appsettings.*.local.json
-
-# IDE and OS
+# IDE and operating system
 .vs/
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
 
-# Test and coverage
+# Build, test, package, and coverage output
+artifacts/
 TestResults/
 coverage/
 *.trx
+*.nupkg
+*.snupkg
+
+# Local configuration and secrets
+.env
+.env.*
+.local/
+*.local
+*.secrets.json
 
 # Logs
 *.log

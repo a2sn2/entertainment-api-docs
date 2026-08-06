@@ -1,0 +1,68 @@
+name: FoundationKit CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foundationkit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test-pack:
+    name: Build, test, and pack
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            Directory.Packages.props
+
+      - name: Verify core-only repository
+        run: bash scripts/verify-core-only.sh
+
+      - name: Restore
+        run: dotnet restore FoundationKit.sln
+
+      - name: Build
+        run: dotnet build FoundationKit.sln --configuration Release --no-restore
+
+      - name: Test
+        run: >-
+          dotnet test FoundationKit.sln
+          --configuration Release
+          --no-build
+          --logger "trx;LogFileName=foundationkit.trx"
+
+      - name: Pack
+        run: bash scripts/pack.sh Release artifacts/packages
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: foundationkit-test-results
+          path: tests/**/TestResults/*.trx
+          if-no-files-found: ignore
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: foundationkit-packages
+          path: |
+            artifacts/packages/*.nupkg
+            artifacts/packages/*.snupkg
+          if-no-files-found: error
