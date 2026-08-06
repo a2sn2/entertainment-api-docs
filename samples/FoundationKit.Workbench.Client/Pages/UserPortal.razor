@@ -130,7 +130,7 @@
     private bool _loading = true;
     private bool _submitting;
 
-    private IEnumerable<CapabilityResponse> Capabilities =>
+    private IEnumerable<CapabilityContract> Capabilities =>
         (_catalog?.Packages ?? []).SelectMany(package => package.Capabilities);
 
     private Color RuntimeColor => _runtime?.Mode == "local" ? Color.Success : Color.Warning;
