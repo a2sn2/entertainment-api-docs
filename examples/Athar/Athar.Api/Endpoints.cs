@@ -7,6 +7,7 @@ using FoundationKit.Application.Pagination;
 using FoundationKit.WebApi.Results;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Athar.Api;
 

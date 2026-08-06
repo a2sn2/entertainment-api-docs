@@ -23,10 +23,10 @@
 
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
             <MudButton Href="/" Variant="Variant.Text">الرئيسية</MudButton>
-            <AuthorizeView>
+            <AuthorizeView Context="userContext">
                 <Authorized>
                     <MudButton Href="/initiatives" Variant="Variant.Text">مبادراتي</MudButton>
-                    <AuthorizeView Roles="@AtharRoles.Administrator">
+                    <AuthorizeView Roles="@AtharRoles.Administrator" Context="adminContext">
                         <MudButton Href="/admin" Variant="Variant.Text">لوحة الإدارة</MudButton>
                     </AuthorizeView>
                     <MudButton Variant="Variant.Outlined" OnClick="LogoutAsync">

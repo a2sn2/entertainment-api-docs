@@ -1,4 +1,5 @@
 using Athar.Domain;
+using Xunit;
 
 namespace Athar.Tests;
 
