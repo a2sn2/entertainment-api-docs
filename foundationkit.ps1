@@ -130,7 +130,7 @@ function Invoke-ChildPowerShell {
 
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $ScriptPath @Arguments
     if ($LASTEXITCODE -ne 0) {
-        throw "Child script failed with exit code $LASTEXITCODE: $ScriptPath"
+        throw "Child script failed with exit code ${LASTEXITCODE}: $ScriptPath"
     }
 }
 
