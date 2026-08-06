@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="FoundationKit Workbench — discover reusable .NET capabilities and shape your next system.">
+  <meta name="theme-color" content="#08111f">
+  <title>FoundationKit Workbench</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+  <header class="topbar shell">
+    <a class="brand" href="#top" aria-label="FoundationKit"><span class="brand-mark">FK</span><span><strong>FoundationKit</strong><small>Workbench</small></span></a>
+    <nav class="nav" aria-label="التنقل الرئيسي"><a href="#capabilities">القدرات</a><a href="#ideas">الأفكار</a><a href="#adoption">طريقة الاستخدام</a><a class="nav-cta" href="#builder">ابدأ مشروعك</a></nav>
+  </header>
+  <main id="top">
+    <section class="hero shell">
+      <div class="hero-copy">
+        <div id="runtime-badge" class="runtime-badge loading"><span class="pulse"></span><span>جارٍ التحقق من بيئة التشغيل...</span></div>
+        <p class="eyebrow">Reusable .NET Building Blocks</p>
+        <h1>ماذا تريد أن <span>تبني؟</span></h1>
+        <p class="hero-text">استكشف ما يقدمه الكور فعليًا، اختر الفكرة الأقرب لمشروعك، ثم حوّلها إلى ملخص واضح يمكنك حفظه محليًا في SQL Server والتواصل بشأنه مع الحسن الشامي.</p>
+        <div class="hero-actions"><a class="button primary" href="#builder">صمّم الفكرة الآن</a><a class="button ghost" href="#capabilities">استكشف الكور</a></div>
+        <div class="hero-stats" aria-label="إحصاءات الكور"><article><strong id="package-count">—</strong><span>حزم مستقلة</span></article><article><strong id="capability-count">—</strong><span>قدرات منفذة</span></article><article><strong id="idea-count">—</strong><span>أفكار بداية</span></article></div>
+      </div>
+      <div class="hero-visual" aria-hidden="true"><div class="orbit orbit-one"><span>Domain</span></div><div class="orbit orbit-two"><span>Application</span></div><div class="orbit orbit-three"><span>Infrastructure</span></div><div class="core-node"><span>Foundation</span><strong>Core</strong><small>.NET 8</small></div><div class="mini-node node-api">Web API</div><div class="mini-node node-ui">Blazor</div></div>
+    </section>
+    <section class="truth-strip"><div class="shell truth-grid"><div><span>✓</span><p><strong>منفّذ فعلًا</strong><small>الكتالوج يعرض السلوك الموجود في الكود فقط.</small></p></div><div><span>↳</span><p><strong>حدود واضحة</strong><small>SQL Server والتطبيق والمهاجرات خارج حزم الكور.</small></p></div><div><span>∞</span><p><strong>مصدر معلومات واحد</strong><small>الواجهة والوثائق تُحدّث من كتالوج مركزي.</small></p></div></div></section>
+    <section id="capabilities" class="section shell"><div class="section-heading"><div><p class="eyebrow">Core Capability Map</p><h2>ما الذي تستفيد منه داخل كل حزمة؟</h2></div><p>كل بطاقة أدناه مرتبطة بواجهة عامة موجودة حاليًا، وليست وعدًا بميزة مستقبلية.</p></div><div id="package-tabs" class="package-tabs" role="tablist" aria-label="حزم FoundationKit"></div><div id="package-panel" class="package-panel" aria-live="polite"></div></section>
+    <section id="ideas" class="section ideas-section"><div class="shell"><div class="section-heading light"><div><p class="eyebrow">Starting Points</p><h2>أفكار يمكنك البدء بها</h2></div><p>الكور يعطيك الأساس التقني؛ أما قواعد المنتج والهوية والصلاحيات والتكاملات فتبقى قرارًا للمشروع.</p></div><div id="ideas-grid" class="ideas-grid"></div></div></section>
+    <section id="adoption" class="section shell"><div class="section-heading"><div><p class="eyebrow">Adoption Path</p><h2>كيف تستخدم الكور دون كسر المعمارية؟</h2></div><a class="text-link" href="https://github.com/a2sn2/foundationkit-dotnet" target="_blank" rel="noreferrer">فتح المستودع ↗</a></div><div id="adoption-steps" class="adoption-steps"></div></section>
+    <section id="builder" class="section builder-section"><div class="shell builder-layout">
+      <aside class="builder-aside"><p class="eyebrow">Project Brief Builder</p><h2>حوّل فكرتك إلى طلب واضح</h2><p>أجب عن الأسئلة، اختر القدرات المناسبة، ثم ستحصل على ملخص قابل للنسخ ورابط مباشر للتواصل.</p><ol class="progress-list" aria-label="خطوات بناء الملخص"><li class="active" data-progress="1"><span>1</span>الفكرة</li><li data-progress="2"><span>2</span>المستخدمون والهدف</li><li data-progress="3"><span>3</span>قدرات الكور</li><li data-progress="4"><span>4</span>الأولوية والتواصل</li></ol><div id="persistence-note" class="persistence-note"></div></aside>
+      <div class="builder-card"><form id="brief-form" novalidate>
+        <section class="form-step active" data-step="1"><span class="step-kicker">الخطوة 1 من 4</span><h3>ما الذي تريد بناءه؟</h3><p>اختر فكرة جاهزة أو اكتب نوع مشروعك بنفسك.</p><div id="idea-options" class="idea-options"></div><label class="field"><span>اسم المشروع</span><input id="project-name" name="projectName" maxlength="160" required placeholder="مثال: منصة إدارة عمليات الفروع"></label><label class="field"><span>نوع المشروع</span><input id="project-type" name="projectType" maxlength="80" required placeholder="مثال: نظام داخلي، API، بوابة عملاء"></label></section>
+        <section class="form-step" data-step="2"><span class="step-kicker">الخطوة 2 من 4</span><h3>لمن نبني؟ وما النتيجة المطلوبة؟</h3><label class="field"><span>المستخدمون الأساسيون</span><textarea id="audience" name="audience" maxlength="300" required placeholder="من سيستخدم النظام؟ وما طبيعة عمله؟"></textarea></label><label class="field"><span>الهدف الرئيسي</span><textarea id="goal" name="goal" maxlength="1000" required placeholder="ما المشكلة التي سيحلها المشروع؟ وما النتيجة التي تريد الوصول إليها؟"></textarea></label></section>
+        <section class="form-step" data-step="3"><span class="step-kicker">الخطوة 3 من 4</span><h3>ما القدرات التي تبدو مفيدة؟</h3><p>يمكنك تعديل الاختيارات المقترحة بناءً على الفكرة.</p><div id="capability-options" class="capability-options"></div></section>
+        <section class="form-step" data-step="4"><span class="step-kicker">الخطوة 4 من 4</span><h3>ما الأولوية؟ وهل توجد ملاحظات؟</h3><label class="field"><span>الأولويات</span><textarea id="priorities" name="priorities" maxlength="800" placeholder="مثال: سرعة الإطلاق، الأمان، قابلية التوسع، سهولة التشغيل"></textarea></label><label class="field"><span>ملاحظات عامة غير سرية</span><textarea id="notes" name="notes" maxlength="2000" placeholder="لا تضع كلمات مرور أو بيانات عملاء أو معلومات سرية."></textarea></label><div class="public-warning"><strong>تنبيه الخصوصية</strong><p>رابط التواصل يفتح GitHub Issue عامة. انسخ الملخص فقط إن كان مناسبًا للنشر العام.</p></div></section>
+        <div id="form-error" class="form-error" role="alert"></div><div class="form-actions"><button id="previous-step" class="button ghost hidden" type="button">السابق</button><button id="next-step" class="button primary" type="button">التالي</button><button id="submit-brief" class="button primary hidden" type="submit">إنشاء الملخص</button></div>
+      </form>
+      <section id="brief-result" class="brief-result hidden" aria-live="polite"><div class="result-icon">✓</div><p class="eyebrow">Ready to discuss</p><h3>ملخص مشروعك جاهز</h3><p id="result-status"></p><pre id="result-summary"></pre><div class="result-actions"><button id="copy-summary" class="button ghost" type="button">نسخ الملخص</button><a id="contact-link" class="button primary" href="#" target="_blank" rel="noreferrer">تواصل مع الحسن الشامي</a></div><button id="start-over" class="text-button" type="button">إنشاء ملخص جديد</button></section>
+      </div>
+    </div></section>
+  </main>
+  <footer class="footer"><div class="shell footer-grid"><div><strong>FoundationKit for .NET</strong><p>كور تقني قابل لإعادة الاستخدام، مع Workbench محلي وواجهة GitHub Pages Demo ثابتة بلا Backend أو قاعدة بيانات.</p></div><div class="footer-links"><a href="https://github.com/a2sn2/foundationkit-dotnet" target="_blank" rel="noreferrer">GitHub</a><a href="https://github.com/a2sn2" target="_blank" rel="noreferrer">ALHassan ALShami</a></div></div></footer>
+  <script src="app.js" defer></script>
+</body>
+</html>

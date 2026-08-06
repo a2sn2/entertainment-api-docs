@@ -4,12 +4,12 @@
 
 Public building blocks:
 
-- `Entity<TId>`
-- `AggregateRoot<TId>`
-- `ValueObject`
-- `DomainException`
-- `IDomainEvent`
-- `IHasDomainEvents`
+- `Entity<TId>`;
+- `AggregateRoot<TId>`;
+- `ValueObject`;
+- `DomainException`;
+- `IDomainEvent`;
+- `IHasDomainEvents`.
 
 No framework packages are referenced.
 
@@ -38,22 +38,24 @@ Public building blocks:
 - `DomainEventsSaveChangesInterceptor`;
 - `AddFoundationInfrastructure`.
 
-The package references EF Core itself but no provider.
+The package references EF Core abstractions but no relational provider.
 
-A consuming application registers the interceptor with its DbContext:
+A consuming application selects its provider and registers the interceptor:
 
 ```csharp
 services.AddFoundationInfrastructure();
 
 services.AddDbContext<ProductDbContext>((serviceProvider, options) =>
 {
-    options.UseYourSelectedProvider(connectionString);
+    options.UseSqlServer(connectionString); // consumer-owned provider decision
     options.AddInterceptors(
         serviceProvider.GetRequiredService<DomainEventsSaveChangesInterceptor>());
 });
 ```
 
-Provider selection and migrations remain in the consuming application.
+Provider selection, DbContext, configurations, migrations, transactions, concurrency policy, specialized repositories, and read models remain in the consuming application.
+
+The local Workbench under `samples/` is the reference implementation for SQL Server ownership. Its migrations are not package assets.
 
 ## FoundationKit.WebApi
 
@@ -65,7 +67,7 @@ Public building blocks:
 - correlation-ID middleware;
 - baseline security-header middleware.
 
-A consuming API chooses all host-specific security and operational settings.
+A consuming API still chooses authentication, authorization, CORS, rate limiting, OpenAPI, forwarded headers, and operational policy.
 
 ## FoundationKit.Blazor
 
@@ -77,4 +79,10 @@ Public building blocks:
 - `ApiResponseReader`;
 - `AsyncState<T>`.
 
-Successful responses with invalid JSON are returned as `Response.InvalidJson` failures rather than escaping as deserialization exceptions.
+Successful responses with invalid JSON become `Response.InvalidJson` failures rather than escaping as deserialization exceptions.
+
+## Capability catalog contract
+
+The human-facing implemented feature list is maintained in `catalog/foundationkit.catalog.json`. Every catalog capability must correspond to existing tested behavior and public surface. The catalog generator rejects unknown idea references and any status other than `implemented`.
+
+The catalog is documentation metadata; it does not change runtime package behavior or add package dependencies.

@@ -1,0 +1,30 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+      MSSQL_SA_PASSWORD: "${FOUNDATIONKIT_SQL_PASSWORD:?FOUNDATIONKIT_SQL_PASSWORD is required}"
+    ports:
+      - "14333:1433"
+    volumes:
+      - foundationkit-sql-data:/var/opt/mssql
+    restart: unless-stopped
+
+  workbench:
+    build:
+      context: ..
+      dockerfile: samples/FoundationKit.Workbench/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ConnectionStrings__Workbench: "Server=sqlserver,1433;Database=FoundationKitWorkbench;User Id=sa;Password=${FOUNDATIONKIT_SQL_PASSWORD};TrustServerCertificate=True;Encrypt=False"
+      Database__MigrationAttempts: "60"
+      Database__MigrationDelaySeconds: "2"
+    depends_on:
+      - sqlserver
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  foundationkit-sql-data:
