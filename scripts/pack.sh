@@ -19,7 +19,10 @@ if [[ ${#projects[@]} -ne 5 ]]; then
 fi
 
 for project in "${projects[@]}"; do
-  dotnet pack "$project" --configuration "$configuration" --no-build --output "$output"
+  dotnet pack "$project" \
+    --configuration "$configuration" \
+    --no-build \
+    --output "$output"
 done
 
 package_count="$(find "$output" -maxdepth 1 -name '*.nupkg' ! -name '*.symbols.nupkg' | wc -l | tr -d ' ')"
@@ -30,4 +33,5 @@ if [[ "$package_count" -ne 5 || "$symbol_count" -ne 5 ]]; then
   exit 1
 fi
 
-printf 'Created %s packages and %s symbol packages in %s\n' "$package_count" "$symbol_count" "$output"
+printf 'Created %s packages and %s symbol packages in %s\n' \
+  "$package_count" "$symbol_count" "$output"
