@@ -1,0 +1,185 @@
+{
+  "info": {
+    "_postman_id": "7ef5aef2-7d14-4be9-8dca-athar000001",
+    "name": "منصة أثر — FoundationKit Production Reference",
+    "description": "تسلسل عربي كامل: CSRF، تسجيل مستخدم، إنشاء مبادرة، دخول الإدارة، المراجعة، ثم قراءة الحالة.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5068" },
+    { "key": "csrfToken", "value": "" },
+    { "key": "userEmail", "value": "user@athar.local" },
+    { "key": "userPassword", "value": "AtharUser!2026Aa" },
+    { "key": "adminEmail", "value": "admin@athar.local" },
+    { "key": "adminPassword", "value": "AtharAdmin!2026Aa" },
+    { "key": "initiativeId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1 — الأمان",
+      "item": [
+        {
+          "name": "الحصول على رمز CSRF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('تم إنشاء رمز الحماية', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set('csrfToken', pm.response.json().requestToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/security/antiforgery"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 — المستخدم",
+      "item": [
+        {
+          "name": "إنشاء حساب",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-CSRF-TOKEN", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"displayName\": \"مستخدم منصة أثر\",\n  \"password\": \"{{userPassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/register"
+          }
+        },
+        {
+          "name": "إنشاء مبادرة",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('تم إنشاء المبادرة', function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('initiativeId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-CSRF-TOKEN", "value": "{{csrfToken}}" },
+              { "key": "X-Correlation-ID", "value": "postman-athar-user-001" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientRequestId\": \"11111111-2222-3333-4444-555555555555\",\n  \"title\": \"مختبر تعلّم متنقل\",\n  \"summary\": \"مبادرة توصل جلسات تعليم رقمية عملية إلى المدارس الواقعة خارج مراكز المدن.\",\n  \"category\": \"تعليم\",\n  \"city\": \"صنعاء\",\n  \"requestedBudget\": 25000,\n  \"targetBeneficiaries\": 320\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/initiatives"
+          }
+        },
+        {
+          "name": "قائمة مبادراتي",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/initiatives/mine?page=1&pageSize=20"
+          }
+        },
+        {
+          "name": "تسجيل الخروج",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-CSRF-TOKEN", "value": "{{csrfToken}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": "{{baseUrl}}/api/v1/auth/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 — الإدارة",
+      "item": [
+        {
+          "name": "دخول المسؤول",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-CSRF-TOKEN", "value": "{{csrfToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\",\n  \"rememberMe\": false\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          }
+        },
+        {
+          "name": "لوحة المؤشرات",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/dashboard"
+          }
+        },
+        {
+          "name": "قائمة قيد المراجعة",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/admin/initiatives?page=1&pageSize=20&status=submitted"
+          }
+        },
+        {
+          "name": "اعتماد المبادرة",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-CSRF-TOKEN", "value": "{{csrfToken}}" },
+              { "key": "X-Correlation-ID", "value": "postman-athar-admin-001" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"approve\",\n  \"notes\": \"المبادرة واضحة وقابلة للقياس وتم اعتمادها من Postman.\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/admin/initiatives/{{initiativeId}}/review"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 — التحقق النهائي",
+      "item": [
+        {
+          "name": "تفاصيل المبادرة بعد القرار",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/initiatives/{{initiativeId}}"
+          }
+        },
+        {
+          "name": "Readiness",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health/ready"
+          }
+        }
+      ]
+    }
+  ]
+}
