@@ -12,7 +12,7 @@
             <div class="eyebrow">مساحة المستخدم</div>
             <MudText Typo="Typo.h2">مبادراتي</MudText>
             <MudText Class="muted-copy mt-2">
-                قدّم الفكرة مرة واحدة، ثم تابع انتقالها من الإرسال إلى القرار.
+                قدّم الفكرة مرة واحدة، ثم تابع انتقالها من الإرسال إلى القرار وتفاصيل المراجعة.
             </MudText>
         </div>
         <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary">
@@ -101,7 +101,7 @@
                     <div>
                         <MudText Typo="Typo.h4">سجل المبادرات</MudText>
                         <MudText Class="muted-copy">
-                            الحالة محدثة مباشرة من قاعدة البيانات.
+                            الحالة محدثة مباشرة من قاعدة البيانات. افتح أي مبادرة لرؤية القرار.
                         </MudText>
                     </div>
                     <MudIconButton Icon="@Icons.Material.Filled.Refresh"
@@ -128,7 +128,7 @@
                     <div class="initiative-list mt-5">
                         @foreach (var item in ViewModel.Items)
                         {
-                            <article class="initiative-item">
+                            <article class="initiative-item @(ViewModel.Selected?.Id == item.Id ? "selected" : string.Empty)">
                                 <div>
                                     <MudText Typo="Typo.h6">@item.Title</MudText>
                                     <MudText Typo="Typo.body2" Class="muted-copy">
@@ -143,13 +143,76 @@
                                              Size="Size.Small">
                                         @StatusLabel(item.Status)
                                     </MudChip>
-                                    <MudText Typo="Typo.caption">
-                                        @item.CreatedUtc.ToLocalTime().ToString("yyyy-MM-dd")
-                                    </MudText>
+                                    <MudButton Variant="Variant.Text"
+                                               Size="Size.Small"
+                                               Disabled="ViewModel.IsBusy"
+                                               OnClick="@(() => ViewModel.SelectAsync(item.Id))">
+                                        التفاصيل
+                                    </MudButton>
                                 </div>
                             </article>
                         }
                     </div>
+                }
+
+                @if (ViewModel.Selected is not null)
+                {
+                    var selected = ViewModel.Selected;
+                    <section class="details-panel mt-5">
+                        <div class="details-heading">
+                            <div>
+                                <MudText Typo="Typo.h5">@selected.Title</MudText>
+                                <MudText Typo="Typo.caption" Class="muted-copy">
+                                    أُنشئت @selected.CreatedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                                    · آخر تحديث @selected.UpdatedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                                </MudText>
+                            </div>
+                            <MudChip T="string"
+                                     Color="@StatusColor(selected.Status)"
+                                     Variant="Variant.Filled">
+                                @StatusLabel(selected.Status)
+                            </MudChip>
+                        </div>
+
+                        <MudText Class="details-summary mt-4">@selected.Summary</MudText>
+
+                        <div class="details-grid mt-4">
+                            <div><span>التصنيف</span><strong>@selected.Category</strong></div>
+                            <div><span>المدينة</span><strong>@selected.City</strong></div>
+                            <div><span>الميزانية</span><strong>@selected.RequestedBudget.ToString("N0")</strong></div>
+                            <div><span>المستفيدون</span><strong>@selected.TargetBeneficiaries.ToString("N0")</strong></div>
+                        </div>
+
+                        <MudDivider Class="my-5" />
+                        <MudText Typo="Typo.h6">سجل المراجعة</MudText>
+
+                        @if (selected.Reviews.Count == 0)
+                        {
+                            <MudAlert Severity="Severity.Info"
+                                      Variant="Variant.Outlined"
+                                      Class="mt-3">
+                                المبادرة ما تزال بانتظار مراجعة الإدارة.
+                            </MudAlert>
+                        }
+                        else
+                        {
+                            <div class="review-history mt-3">
+                                @foreach (var review in selected.Reviews)
+                                {
+                                    <article class="review-entry">
+                                        <div class="review-entry-heading">
+                                            <strong>@DecisionLabel(review.Decision)</strong>
+                                            <span>@review.ReviewedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</span>
+                                        </div>
+                                        <MudText Typo="Typo.body2">المراجع: @review.ReviewerDisplayName</MudText>
+                                        <MudText Class="muted-copy mt-2">
+                                            @(string.IsNullOrWhiteSpace(review.Notes) ? "لا توجد ملاحظات إضافية." : review.Notes)
+                                        </MudText>
+                                    </article>
+                                }
+                            </div>
+                        }
+                    </section>
                 }
 
                 @if (!string.IsNullOrWhiteSpace(ViewModel.ErrorMessage))
@@ -203,6 +266,11 @@
             InitiativeWorkflow.Rejected => "مرفوضة",
             _ => "قيد المراجعة"
         };
+
+    private static string DecisionLabel(string decision) =>
+        decision == InitiativeWorkflow.Approve
+            ? "قرار اعتماد"
+            : "قرار رفض";
 
     private void OnStateChanged() =>
         _ = InvokeAsync(StateHasChanged);
