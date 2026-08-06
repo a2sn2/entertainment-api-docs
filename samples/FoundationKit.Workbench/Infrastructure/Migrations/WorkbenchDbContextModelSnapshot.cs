@@ -1,7 +1,7 @@
+using FoundationKit.Workbench.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
@@ -62,9 +62,60 @@ public partial class WorkbenchDbContextModelSnapshot : ModelSnapshot
                 .IsRequired()
                 .HasColumnType("nvarchar(max)");
 
+            entity.Property<BuildBriefStatus>("Status")
+                .HasConversion<string>()
+                .HasMaxLength(32)
+                .HasColumnType("nvarchar(32)");
+
+            entity.Property<DateTimeOffset>("UpdatedUtc")
+                .HasColumnType("datetimeoffset");
+
             entity.HasKey("Id");
             entity.HasIndex("CreatedUtc");
+            entity.HasIndex("Status");
             entity.ToTable("BuildBriefs");
+        });
+
+        modelBuilder.Entity("FoundationKit.Workbench.Domain.AdminReview", entity =>
+        {
+            entity.Property<Guid>("Id")
+                .ValueGeneratedNever()
+                .HasColumnType("uniqueidentifier");
+
+            entity.Property<Guid>("BuildBriefId")
+                .HasColumnType("uniqueidentifier");
+
+            entity.Property<AdminReviewDecision>("Decision")
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .HasColumnType("nvarchar(20)");
+
+            entity.Property<string>("Notes")
+                .IsRequired()
+                .HasMaxLength(1200)
+                .HasColumnType("nvarchar(1200)");
+
+            entity.Property<string>("ReviewedBy")
+                .IsRequired()
+                .HasMaxLength(120)
+                .HasColumnType("nvarchar(120)");
+
+            entity.Property<DateTimeOffset>("ReviewedUtc")
+                .HasColumnType("datetimeoffset");
+
+            entity.HasKey("Id");
+            entity.HasIndex("BuildBriefId");
+            entity.HasIndex("ReviewedUtc");
+            entity.ToTable("AdminReviews");
+        });
+
+        modelBuilder.Entity("FoundationKit.Workbench.Domain.AdminReview", entity =>
+        {
+            entity.HasOne("FoundationKit.Workbench.Domain.BuildBrief", null)
+                .WithMany()
+                .HasForeignKey("BuildBriefId")
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired();
         });
 #pragma warning restore 612, 618
     }
