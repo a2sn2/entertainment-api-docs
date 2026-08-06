@@ -1,19 +1,39 @@
 # FoundationKit for .NET
 
 [![FoundationKit CI](https://github.com/a2sn2/foundationkit-dotnet/actions/workflows/ci.yml/badge.svg)](https://github.com/a2sn2/foundationkit-dotnet/actions/workflows/ci.yml)
-[![Blazor Pages Demo](https://github.com/a2sn2/foundationkit-dotnet/actions/workflows/pages.yml/badge.svg)](https://a2sn2.github.io/foundationkit-dotnet/)
+[![FoundationKit Atlas](https://github.com/a2sn2/foundationkit-dotnet/actions/workflows/pages.yml/badge.svg)](https://a2sn2.github.io/foundationkit-dotnet/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Target: .NET 8](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/)
 
 FoundationKit is a reusable .NET production baseline for domain-driven, Clean Architecture applications.
 
-The repository now has three deliberately different layers of proof:
+The repository has deliberately different layers of proof:
 
 ```text
 src/FoundationKit.*          reusable core packages
 samples/Workbench            architecture discovery and dual-stack workflow
 examples/Athar               complete Arabic production-reference product
+site/                        static Arabic GitHub Pages repository atlas
+apps/                        reserved for future real products
 ```
+
+## FoundationKit Atlas — GitHub Pages
+
+Open the public Arabic repository portal:
+
+**https://a2sn2.github.io/foundationkit-dotnet/**
+
+The portal lists every actual Blazor `@page` route in Workbench and Athar, plus the reusable packages, API surfaces, documentation, CI, Postman, Docker, tests, and production gates. Every item explains:
+
+- what it is;
+- why it exists;
+- where its source lives;
+- whether it is static, local, or requires SQL Server;
+- how data flows through the related layers.
+
+GitHub Pages is intentionally a **static documentation and preview portal**. It does not impersonate the ASP.NET Core API, Identity, or SQL Server. Real writes, authentication, migrations, reviews, and audit records run through the local or hosted applications.
+
+The portal manifest is validated against the Razor source files by `scripts/verify-pages.py`; adding a new `@page` without documenting it fails CI.
 
 ## الصورة الكاملة
 
@@ -160,6 +180,7 @@ Read first:
 - [منصة أثر](examples/Athar/README.md)
 - [جاهزية الإنتاج](docs/PRODUCTION-READINESS-AR.md)
 - [إضافة مشروع جديد](docs/ADDING-A-PROJECT-AR.md)
+- [التشغيل الكامل على Visual Studio 2026](docs/VISUAL-STUDIO-2026-AR.md)
 
 ## Repository layout
 
@@ -168,11 +189,12 @@ src/          reusable FoundationKit packages
 samples/      architecture samples
 examples/     complete reference products
 apps/         reserved for real products using the same boundaries
+site/         static GitHub Pages repository atlas
 tests/        core, Workbench, and product tests
 postman/      executable API collections
 deploy/       Docker topologies
-scripts/      verification and smoke tests
-docs/         architecture, operations, and production gates
+scripts/      verification, Pages validation, and smoke tests
+docs/         architecture, operations, local run, and production gates
 catalog/      canonical core capability catalog
 tools/        repository tooling
 ```
@@ -188,11 +210,15 @@ FoundationKit.sln
 Available startup projects:
 
 ```text
-FoundationKit.Workbench.Api   architecture reference
-Athar.Api                     complete Arabic product example
+FoundationKit.Workbench.Api   http://localhost:5057
+Athar.Api                     http://localhost:5068
 ```
 
-Local execution will be performed after the repository implementation and CI verification are complete.
+Each API hosts its own Blazor WebAssembly client. Do not run the Client project separately when testing the complete API + UI + SQL Server path.
+
+Follow the detailed Arabic setup, User Secrets, SQL Server, migrations, user flow, administrator flow, and troubleshooting guide:
+
+**[تشغيل FoundationKit وWorkbench ومنصة أثَر على Visual Studio 2026](docs/VISUAL-STUDIO-2026-AR.md)**
 
 ## Build and verify
 
@@ -201,6 +227,7 @@ dotnet restore FoundationKit.sln
 dotnet build FoundationKit.sln --configuration Release --no-restore
 dotnet test FoundationKit.sln --configuration Release --no-build
 bash scripts/verify-repository.sh
+python3 scripts/verify-pages.py
 ```
 
 Docker smoke paths:
