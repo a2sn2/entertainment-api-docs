@@ -26,7 +26,8 @@ builder.Services.AddScoped<IRepository<Initiative, Guid>,
     EfRepository<Initiative, Guid, AtharDbContext>>();
 builder.Services.AddScoped<IRepository<InitiativeReview, Guid>,
     EfRepository<InitiativeReview, Guid, AtharDbContext>>();
-builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork<AtharDbContext>>();
+builder.Services.AddScoped<FoundationKit.Application.Abstractions.IUnitOfWork,
+    EfUnitOfWork<AtharDbContext>>();
 builder.Services.AddSingleton<FoundationKit.Application.Abstractions.IClock, SystemClock>();
 
 var connectionString = builder.Configuration.GetConnectionString("Athar")
