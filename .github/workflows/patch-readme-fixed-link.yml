@@ -1,0 +1,86 @@
+name: Patch README Fixed Athar Link
+
+on:
+  push:
+    branches:
+      - feature/free-fixed-athar-link
+    paths:
+      - .github/workflows/patch-readme-fixed-link.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/free-fixed-athar-link
+          fetch-depth: 0
+
+      - name: Document the fixed free live address
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("README.md")
+          text = path.read_text(encoding="utf-8")
+          old = '''سيظهر رابط مؤقت مثل:
+
+```text
+https://random-name.trycloudflare.com
+```
+
+شروط استمرار الرابط:
+
+- الجهاز شغال.
+- أثَر شغال.
+- الإنترنت متصل.
+- نافذة النفق مفتوحة.
+
+إغلاق النافذة أو `Ctrl+C` يوقف الرابط، والرابط يتغير في التشغيل التالي.
+
+> Quick Tunnel مناسب للعرض التجريبي فقط ولا يملك ضمان استمرارية أو SLA.
+'''
+          new = '''تنشئ Cloudflare رابطًا داخليًا مؤقتًا مثل:
+
+```text
+https://random-name.trycloudflare.com
+```
+
+لكن سكربت `expose` يلتقطه ويحدّث رابط المشاركة المجاني والثابت تلقائيًا:
+
+```text
+https://a2sn2.github.io/foundationkit-dotnet/athar-live/
+```
+
+شارك رابط `athar-live` دائمًا؛ لا يحتاج شراء نطاق ولا يتغير بين مرات التشغيل. صفحة GitHub Pages الثابتة تحوّل الزائر إلى نفق Cloudflare الحالي، أو تعرض أن النظام متوقف عندما لا يكون النفق شغّالًا.
+
+شروط استمرار الوصول إلى التطبيق الحقيقي:
+
+- الجهاز شغال.
+- أثَر شغال.
+- الإنترنت متصل.
+- نافذة النفق مفتوحة.
+- Git المحلي قادر على الدفع إلى فرع `athar-live-link` لتحديث الوجهة تلقائيًا.
+
+إغلاق النافذة أو `Ctrl+C` يوقف الوصول إلى التطبيق. رابط Cloudflare الداخلي يتغير في التشغيل التالي، لكن رابط `athar-live` الذي ترسله للناس يبقى ثابتًا.
+
+الدليل التفصيلي: [رابط أثَر المجاني والثابت](docs/ATHAR-FIXED-LINK-AR.md).
+
+> Quick Tunnel مناسب للعرض التجريبي فقط ولا يملك ضمان استمرارية أو SLA.
+'''
+          if old not in text:
+              raise SystemExit("Expected README tunnel section was not found")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8", newline="\n")
+
+      - name: Commit the documentation patch
+        shell: bash
+        run: |
+          git config user.name "foundationkit-actions"
+          git config user.email "foundationkit-actions@users.noreply.github.com"
+          git add README.md
+          git commit -m "Document the fixed free Athar live address"
+          git push origin HEAD:feature/free-fixed-athar-link
