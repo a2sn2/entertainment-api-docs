@@ -5,6 +5,9 @@ param(
     [ValidateSet("Start", "Stop", "Status", "Open", "Lan", "Backup", "Reset")]
     [string]$Action = "Start",
 
+    [ValidateSet("Auto", "Docker", "Native")]
+    [string]$Mode = "Auto",
+
     [switch]$Force
 )
 
@@ -13,31 +16,61 @@ Set-StrictMode -Version Latest
 
 $RepositoryRoot = Split-Path -Parent $PSScriptRoot
 $ComposeFile = Join-Path $RepositoryRoot "deploy/athar-compose.yml"
+$NativeProject = Join-Path $RepositoryRoot "examples/Athar/Athar.Api/Athar.Api.csproj"
 $LocalDirectory = Join-Path $RepositoryRoot ".local"
 $EnvironmentFile = Join-Path $LocalDirectory "athar-product.env"
 $BackupDirectory = Join-Path $LocalDirectory "backups"
+$LogDirectory = Join-Path $LocalDirectory "logs"
+$NativeAppDirectory = Join-Path $LocalDirectory "athar-native/app"
+$NativePidFile = Join-Path $LocalDirectory "athar-native.pid"
+$ModeFile = Join-Path $LocalDirectory "athar-product.mode"
+$NativeOutputLog = Join-Path $LogDirectory "athar-native.out.log"
+$NativeErrorLog = Join-Path $LogDirectory "athar-native.err.log"
 $ProjectName = "athar-product"
 $BaseUrl = "http://localhost:8090"
+$ListenUrl = "http://0.0.0.0:8090"
+$DefaultNativeConnectionString = "Server=.;Database=Athar;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
+
+function Test-Command {
+    param([Parameter(Mandatory)][string]$Name)
+
+    return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue)
+}
 
 function Assert-Command {
     param([Parameter(Mandatory)][string]$Name)
 
-    if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
+    if (-not (Test-Command $Name)) {
         throw "Required command '$Name' is not installed or is not available in PATH."
     }
 }
 
-function Assert-Docker {
-    Assert-Command "docker"
-
-    docker info *> $null
-    if ($LASTEXITCODE -ne 0) {
-        throw "Docker Desktop is not ready. Start Docker Desktop, wait until it is running, and try again."
+function Test-DockerReady {
+    if (-not (Test-Command "docker")) {
+        return $false
     }
 
-    docker compose version *> $null
+    & docker info *> $null
     if ($LASTEXITCODE -ne 0) {
-        throw "Docker Compose is not available through Docker Desktop."
+        return $false
+    }
+
+    & docker compose version *> $null
+    return $LASTEXITCODE -eq 0
+}
+
+function Assert-Docker {
+    if (-not (Test-DockerReady)) {
+        throw "Docker Desktop is not ready. Start Docker Desktop or run with -Mode Native."
+    }
+}
+
+function Assert-NativeRequirements {
+    Assert-Command "dotnet"
+
+    & dotnet --version *> $null
+    if ($LASTEXITCODE -ne 0) {
+        throw ".NET SDK is not available. Install .NET 8 SDK and try again."
     }
 }
 
@@ -60,6 +93,7 @@ function Initialize-EnvironmentFile {
         "ATHAR_SQL_PASSWORD=$sqlPassword"
         "ATHAR_ADMIN_EMAIL=admin@athar.local"
         "ATHAR_ADMIN_PASSWORD=$adminPassword"
+        "ATHAR_NATIVE_CONNECTION_STRING=$DefaultNativeConnectionString"
     )
 
     [System.IO.File]::WriteAllLines(
@@ -89,6 +123,64 @@ function Get-EnvironmentValues {
     return $values
 }
 
+function Save-ExecutionMode {
+    param([Parameter(Mandatory)][ValidateSet("Docker", "Native")][string]$ExecutionMode)
+
+    New-Item -ItemType Directory -Force -Path $LocalDirectory | Out-Null
+    [System.IO.File]::WriteAllText(
+        $ModeFile,
+        $ExecutionMode,
+        [System.Text.Encoding]::ASCII)
+}
+
+function Get-StoredExecutionMode {
+    if (-not (Test-Path $ModeFile)) {
+        return $null
+    }
+
+    $stored = (Get-Content $ModeFile -Raw).Trim()
+    if ($stored -in @("Docker", "Native")) {
+        return $stored
+    }
+
+    return $null
+}
+
+function Resolve-ExecutionMode {
+    param(
+        [Parameter(Mandatory)][string]$RequestedMode,
+        [switch]$PreferStored
+    )
+
+    if ($RequestedMode -eq "Docker") {
+        Assert-Docker
+        return "Docker"
+    }
+
+    if ($RequestedMode -eq "Native") {
+        Assert-NativeRequirements
+        return "Native"
+    }
+
+    if ($PreferStored) {
+        $stored = Get-StoredExecutionMode
+        if ($stored -eq "Docker" -and (Test-DockerReady)) {
+            return "Docker"
+        }
+        if ($stored -eq "Native") {
+            Assert-NativeRequirements
+            return "Native"
+        }
+    }
+
+    if (Test-DockerReady) {
+        return "Docker"
+    }
+
+    Assert-NativeRequirements
+    return "Native"
+}
+
 function Invoke-Compose {
     param(
         [Parameter(Mandatory)]
@@ -103,6 +195,56 @@ function Invoke-Compose {
 
     if ($LASTEXITCODE -ne 0) {
         throw "Docker Compose failed. Review the messages above."
+    }
+}
+
+function Get-NativeProcess {
+    if (-not (Test-Path $NativePidFile)) {
+        return $null
+    }
+
+    $pidText = (Get-Content $NativePidFile -Raw).Trim()
+    $processId = 0
+    if (-not [int]::TryParse($pidText, [ref]$processId)) {
+        Remove-Item $NativePidFile -Force -ErrorAction SilentlyContinue
+        return $null
+    }
+
+    try {
+        return Get-Process -Id $processId -ErrorAction Stop
+    }
+    catch {
+        Remove-Item $NativePidFile -Force -ErrorAction SilentlyContinue
+        return $null
+    }
+}
+
+function Publish-NativeProduct {
+    Assert-NativeRequirements
+
+    New-Item -ItemType Directory -Force -Path $NativeAppDirectory | Out-Null
+    Write-Host "Publishing Athar for local Windows execution..." -ForegroundColor Cyan
+
+    & dotnet publish `
+        $NativeProject `
+        --configuration Release `
+        --output $NativeAppDirectory `
+        --nologo
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "dotnet publish failed. Review the messages above."
+    }
+}
+
+function Show-NativeLogs {
+    if (Test-Path $NativeOutputLog) {
+        Write-Host "--- Native output log ---" -ForegroundColor Yellow
+        Get-Content $NativeOutputLog -Tail 120
+    }
+
+    if (Test-Path $NativeErrorLog) {
+        Write-Host "--- Native error log ---" -ForegroundColor Yellow
+        Get-Content $NativeErrorLog -Tail 120
     }
 }
 
@@ -124,8 +266,116 @@ function Wait-UntilReady {
         }
     }
 
-    Invoke-Compose -ComposeArguments @("logs", "--tail", "150", "athar-api")
     throw "Athar did not become ready before the timeout."
+}
+
+function Start-NativeProduct {
+    Assert-NativeRequirements
+    Initialize-EnvironmentFile
+
+    $existing = Get-NativeProcess
+    if ($null -ne $existing) {
+        Write-Host "Athar is already running in Native mode with PID $($existing.Id)." -ForegroundColor Yellow
+        Save-ExecutionMode "Native"
+        Wait-UntilReady -Attempts 10
+        return
+    }
+
+    Publish-NativeProduct
+
+    $values = Get-EnvironmentValues
+    $connectionString = $DefaultNativeConnectionString
+    if ($values.ContainsKey("ATHAR_NATIVE_CONNECTION_STRING") -and
+        -not [string]::IsNullOrWhiteSpace($values["ATHAR_NATIVE_CONNECTION_STRING"])) {
+        $connectionString = $values["ATHAR_NATIVE_CONNECTION_STRING"]
+    }
+
+    New-Item -ItemType Directory -Force -Path $LogDirectory | Out-Null
+    Remove-Item $NativeOutputLog -Force -ErrorAction SilentlyContinue
+    Remove-Item $NativeErrorLog -Force -ErrorAction SilentlyContinue
+
+    $env:ASPNETCORE_ENVIRONMENT = "Development"
+    $env:DOTNET_ENVIRONMENT = "Development"
+    $env:ASPNETCORE_URLS = $ListenUrl
+    $env:ConnectionStrings__Athar = $connectionString
+    $env:AdminSeed__Enabled = "true"
+    $env:AdminSeed__Email = $values["ATHAR_ADMIN_EMAIL"]
+    $env:AdminSeed__Password = $values["ATHAR_ADMIN_PASSWORD"]
+    $env:DatabaseStartup__MigrationAttempts = "30"
+    $env:DatabaseStartup__DelaySeconds = "2"
+
+    $executable = Join-Path $NativeAppDirectory "Athar.Api.exe"
+    $applicationDll = Join-Path $NativeAppDirectory "Athar.Api.dll"
+
+    if (Test-Path $executable) {
+        $process = Start-Process `
+            -FilePath $executable `
+            -WorkingDirectory $NativeAppDirectory `
+            -RedirectStandardOutput $NativeOutputLog `
+            -RedirectStandardError $NativeErrorLog `
+            -PassThru
+    }
+    elseif (Test-Path $applicationDll) {
+        $process = Start-Process `
+            -FilePath "dotnet" `
+            -ArgumentList @($applicationDll) `
+            -WorkingDirectory $NativeAppDirectory `
+            -RedirectStandardOutput $NativeOutputLog `
+            -RedirectStandardError $NativeErrorLog `
+            -PassThru
+    }
+    else {
+        throw "Published Athar executable was not found."
+    }
+
+    [System.IO.File]::WriteAllText(
+        $NativePidFile,
+        $process.Id.ToString(),
+        [System.Text.Encoding]::ASCII)
+    Save-ExecutionMode "Native"
+
+    try {
+        Wait-UntilReady
+    }
+    catch {
+        Show-NativeLogs
+        throw
+    }
+}
+
+function Stop-NativeProduct {
+    $process = Get-NativeProcess
+    if ($null -eq $process) {
+        Write-Host "Athar Native process is not running." -ForegroundColor Yellow
+        return
+    }
+
+    Stop-Process -Id $process.Id -Force
+    try {
+        Wait-Process -Id $process.Id -Timeout 15 -ErrorAction SilentlyContinue
+    }
+    catch {
+    }
+
+    Remove-Item $NativePidFile -Force -ErrorAction SilentlyContinue
+    Write-Host "Athar Native process stopped." -ForegroundColor Green
+}
+
+function Show-NativeStatus {
+    $process = Get-NativeProcess
+    if ($null -eq $process) {
+        Write-Host "Athar Native process is not running." -ForegroundColor Yellow
+        return
+    }
+
+    Write-Host "Athar Native process is running with PID $($process.Id)." -ForegroundColor Green
+    try {
+        Invoke-RestMethod -Uri "$BaseUrl/health/ready" -TimeoutSec 3 | ConvertTo-Json -Depth 5
+    }
+    catch {
+        Write-Host "The process exists, but the readiness endpoint is not available." -ForegroundColor Yellow
+        Show-NativeLogs
+    }
 }
 
 function Show-AccessInformation {
@@ -169,7 +419,7 @@ function Show-LanUrls {
     Write-Host "If another device cannot connect, allow TCP port 8090 through Windows Firewall." -ForegroundColor Yellow
 }
 
-function Backup-Database {
+function Backup-DockerDatabase {
     Assert-Docker
     Initialize-EnvironmentFile
     New-Item -ItemType Directory -Force -Path $BackupDirectory | Out-Null
@@ -196,30 +446,102 @@ fi
     Write-Host "  $(Join-Path $BackupDirectory $fileName)"
 }
 
+function Backup-NativeDatabase {
+    Assert-Command "sqlcmd"
+    Initialize-EnvironmentFile
+    New-Item -ItemType Directory -Force -Path $BackupDirectory | Out-Null
+
+    $values = Get-EnvironmentValues
+    $connectionString = $DefaultNativeConnectionString
+    if ($values.ContainsKey("ATHAR_NATIVE_CONNECTION_STRING") -and
+        -not [string]::IsNullOrWhiteSpace($values["ATHAR_NATIVE_CONNECTION_STRING"])) {
+        $connectionString = $values["ATHAR_NATIVE_CONNECTION_STRING"]
+    }
+
+    $server = "."
+    $database = "Athar"
+    if ($connectionString -match "(?i)(?:Server|Data Source)\s*=\s*([^;]+)") {
+        $server = $Matches[1].Trim()
+    }
+    if ($connectionString -match "(?i)(?:Database|Initial Catalog)\s*=\s*([^;]+)") {
+        $database = $Matches[1].Trim()
+    }
+
+    $defaultBackupPath = (& sqlcmd -S $server -E -C -b -h -1 -W -Q "SET NOCOUNT ON; SELECT CONVERT(nvarchar(4000), SERVERPROPERTY('InstanceDefaultBackupPath'));" | Select-Object -First 1).Trim()
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($defaultBackupPath)) {
+        throw "Could not read the SQL Server default backup path."
+    }
+
+    $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    $fileName = "$database-$stamp.bak"
+    $serverBackupFile = Join-Path $defaultBackupPath $fileName
+    $safeDatabase = $database.Replace("]", "]]" )
+    $safePath = $serverBackupFile.Replace("'", "''")
+    $query = "BACKUP DATABASE [$safeDatabase] TO DISK = N'$safePath' WITH INIT, CHECKSUM"
+
+    & sqlcmd -S $server -E -C -b -Q $query
+    if ($LASTEXITCODE -ne 0) {
+        throw "Native SQL Server backup failed."
+    }
+
+    $localBackupFile = Join-Path $BackupDirectory $fileName
+    try {
+        Copy-Item $serverBackupFile $localBackupFile -Force
+        Write-Host "Database backup created:" -ForegroundColor Green
+        Write-Host "  $localBackupFile"
+    }
+    catch {
+        Write-Host "SQL Server created the backup, but it could not be copied into the repository folder." -ForegroundColor Yellow
+        Write-Host "  $serverBackupFile"
+    }
+}
+
 switch ($Action) {
     "Start" {
-        Assert-Docker
         Initialize-EnvironmentFile
-        Invoke-Compose -ComposeArguments @("up", "--build", "-d")
-        Wait-UntilReady
+        $executionMode = Resolve-ExecutionMode -RequestedMode $Mode
+
+        if ($executionMode -eq "Docker") {
+            Write-Host "Starting Athar in Docker mode..." -ForegroundColor Cyan
+            Invoke-Compose -ComposeArguments @("up", "--build", "-d")
+            Save-ExecutionMode "Docker"
+            Wait-UntilReady
+        }
+        else {
+            Write-Host "Docker is unavailable. Starting Athar with local .NET and SQL Server..." -ForegroundColor Cyan
+            Start-NativeProduct
+        }
+
         Show-AccessInformation
         Start-Process $BaseUrl
     }
     "Stop" {
-        Assert-Docker
-        Initialize-EnvironmentFile
-        Invoke-Compose -ComposeArguments @("down", "--remove-orphans")
-        Write-Host "Athar stopped. SQL Server data was preserved." -ForegroundColor Green
+        $executionMode = Resolve-ExecutionMode -RequestedMode $Mode -PreferStored
+
+        if ($executionMode -eq "Docker") {
+            Initialize-EnvironmentFile
+            Invoke-Compose -ComposeArguments @("down", "--remove-orphans")
+            Write-Host "Athar stopped. Docker SQL Server data was preserved." -ForegroundColor Green
+        }
+        else {
+            Stop-NativeProduct
+        }
     }
     "Status" {
-        Assert-Docker
-        Initialize-EnvironmentFile
-        Invoke-Compose -ComposeArguments @("ps")
-        try {
-            Invoke-RestMethod -Uri "$BaseUrl/health/ready" -TimeoutSec 3 | ConvertTo-Json -Depth 5
+        $executionMode = Resolve-ExecutionMode -RequestedMode $Mode -PreferStored
+
+        if ($executionMode -eq "Docker") {
+            Initialize-EnvironmentFile
+            Invoke-Compose -ComposeArguments @("ps")
+            try {
+                Invoke-RestMethod -Uri "$BaseUrl/health/ready" -TimeoutSec 3 | ConvertTo-Json -Depth 5
+            }
+            catch {
+                Write-Host "The readiness endpoint is not available." -ForegroundColor Yellow
+            }
         }
-        catch {
-            Write-Host "The readiness endpoint is not available." -ForegroundColor Yellow
+        else {
+            Show-NativeStatus
         }
     }
     "Open" {
@@ -230,17 +552,35 @@ switch ($Action) {
         Show-LanUrls
     }
     "Backup" {
-        Backup-Database
+        $executionMode = Resolve-ExecutionMode -RequestedMode $Mode -PreferStored
+        if ($executionMode -eq "Docker") {
+            Backup-DockerDatabase
+        }
+        else {
+            Backup-NativeDatabase
+        }
     }
     "Reset" {
         if (-not $Force) {
-            throw "Reset deletes the local database. Run the command again with -Force to confirm."
+            throw "Reset removes local product files. Run the command again with -Force to confirm."
         }
 
-        Assert-Docker
-        Initialize-EnvironmentFile
-        Invoke-Compose -ComposeArguments @("down", "--volumes", "--remove-orphans")
+        $executionMode = Resolve-ExecutionMode -RequestedMode $Mode -PreferStored
+        if ($executionMode -eq "Docker") {
+            Initialize-EnvironmentFile
+            Invoke-Compose -ComposeArguments @("down", "--volumes", "--remove-orphans")
+            Write-Host "Removed Docker containers and Docker SQL Server data." -ForegroundColor Green
+        }
+        else {
+            Stop-NativeProduct
+            Remove-Item (Join-Path $LocalDirectory "athar-native") -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item $NativeOutputLog -Force -ErrorAction SilentlyContinue
+            Remove-Item $NativeErrorLog -Force -ErrorAction SilentlyContinue
+            Write-Host "Removed Native launcher files. The local SQL Server database was preserved for safety." -ForegroundColor Green
+        }
+
         Remove-Item $EnvironmentFile -Force -ErrorAction SilentlyContinue
-        Write-Host "Removed containers, local data, and experimental settings." -ForegroundColor Green
+        Remove-Item $ModeFile -Force -ErrorAction SilentlyContinue
+        Remove-Item $NativePidFile -Force -ErrorAction SilentlyContinue
     }
 }

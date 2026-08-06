@@ -1,0 +1,64 @@
+name: Athar Windows Launcher Check
+
+on:
+  pull_request:
+    paths:
+      - "scripts/athar-product.ps1"
+      - "START-ATHAR.cmd"
+      - "STOP-ATHAR.cmd"
+      - ".github/workflows/windows-launcher-check.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/athar-product.ps1"
+      - "START-ATHAR.cmd"
+      - "STOP-ATHAR.cmd"
+      - ".github/workflows/windows-launcher-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-powershell-51:
+    name: Parse and smoke test on Windows PowerShell 5.1
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Verify launcher is ASCII-only
+        shell: powershell
+        run: |
+          $path = "scripts/athar-product.ps1"
+          $bytes = [System.IO.File]::ReadAllBytes($path)
+          $nonAscii = @($bytes | Where-Object { $_ -gt 127 })
+          if ($nonAscii.Count -gt 0) {
+            throw "The Windows PowerShell 5.1 launcher must remain ASCII-only."
+          }
+
+      - name: Parse launcher with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path "scripts/athar-product.ps1"),
+            [ref]$tokens,
+            [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | Format-List | Out-String | Write-Error
+            exit 1
+          }
+          Write-Host "Windows PowerShell 5.1 parser check passed."
+
+      - name: Smoke test Native status command
+        shell: powershell
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File ".\scripts\athar-product.ps1" -Action Status -Mode Native
