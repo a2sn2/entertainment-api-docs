@@ -2,16 +2,98 @@
 
 ## Purpose
 
-The Workbench is a real local consumer of FoundationKit. It provides a creative discovery page, explains implemented capabilities, recommends starting ideas, asks what the visitor wants to build, saves completed briefs in SQL Server, and creates a public-safe contact link for ALHassan ALShami.
+The Workbench is the official consumer and demonstration application for the FoundationKit core.
 
-It is not part of the reusable package surface and must not be copied into `src/`.
+It is split into three projects:
 
-## Fastest start with Docker
+```text
+FoundationKit.Workbench.Api        ASP.NET Core API, application logic, EF Core, SQL Server, migrations
+FoundationKit.Workbench.Client     Blazor WebAssembly, Razor Components, MudBlazor, typed HTTP client
+FoundationKit.Workbench.Contracts  request, response, runtime, health, catalog, and route contracts
+```
 
-Requirements:
+The reusable packages remain under `src/`. Workbench product logic, database provider, migrations, DTOs, UI, and deployment configuration must not move into the core.
 
-- Docker Desktop on Windows or macOS, or Docker Engine with Compose on Linux;
-- free local ports `8080` for the Workbench and `14333` for optional host access to SQL Server.
+## Visual Studio 2026
+
+Open:
+
+```text
+FoundationKit.sln
+```
+
+Set the startup project to:
+
+```text
+FoundationKit.Workbench.Api
+```
+
+The API project references the Blazor client as a hosted WebAssembly application, so one startup project is sufficient. Pressing `F5` starts the API and serves the compiled Blazor client from the same origin.
+
+The launch profile opens:
+
+```text
+http://localhost:5057
+```
+
+Swagger is available at:
+
+```text
+http://localhost:5057/swagger
+```
+
+## Configure your SQL Server
+
+Use Visual Studio **Manage User Secrets** on `FoundationKit.Workbench.Api`.
+
+Default SQL Server instance:
+
+```json
+{
+  "ConnectionStrings": {
+    "Workbench": "Server=.;Database=FoundationKitWorkbench;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
+  }
+}
+```
+
+SQL Express:
+
+```json
+{
+  "ConnectionStrings": {
+    "Workbench": "Server=.\\SQLEXPRESS;Database=FoundationKitWorkbench;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
+  }
+}
+```
+
+SQL authentication:
+
+```json
+{
+  "ConnectionStrings": {
+    "Workbench": "Server=localhost,1433;Database=FoundationKitWorkbench;User Id=foundationkit;Password=<local-password>;TrustServerCertificate=True;Encrypt=False"
+  }
+}
+```
+
+Do not commit real credentials.
+
+## Local command line
+
+```powershell
+$env:ConnectionStrings__Workbench="Server=.;Database=FoundationKitWorkbench;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
+dotnet run --project .\samples\FoundationKit.Workbench\FoundationKit.Workbench.Api.csproj
+```
+
+The API host serves:
+
+- the Blazor WebAssembly application;
+- MudBlazor static assets;
+- Swagger/OpenAPI;
+- the Workbench API;
+- the canonical catalog.
+
+## Docker start
 
 PowerShell:
 
@@ -25,143 +107,158 @@ Bash:
 ./scripts/run-workbench.sh
 ```
 
-The helper generates a strong ephemeral development password, starts both containers, waits for `/api/health`, and opens:
+Open:
 
 ```text
 http://localhost:8080
 ```
 
-The SQL Server database is persisted in the Docker volume `foundationkit-sql-data`. Stop services without deleting data:
+Stop:
 
 ```powershell
 .\scripts\stop-workbench.ps1
 ```
 
-```bash
-./scripts/stop-workbench.sh
-```
-
-Delete services and local database data intentionally:
+Delete containers and local Docker database data intentionally:
 
 ```bash
 docker compose -f deploy/docker-compose.yml down --volumes
 ```
 
-## Use an existing local SQL Server
+## Shared contracts
 
-The default application connection string uses Windows authentication:
+The canonical create contract is:
 
 ```text
-Server=localhost;
-Database=FoundationKitWorkbench;
-Trusted_Connection=True;
-TrustServerCertificate=True;
-MultipleActiveResultSets=True
+samples/FoundationKit.Workbench.Contracts/BuildBriefContracts.cs
 ```
 
-Run:
+`BuildBriefRequest` is used by:
 
-```powershell
-dotnet run --project samples/FoundationKit.Workbench
+1. the Blazor form;
+2. the typed `WorkbenchApiClient`;
+3. the ASP.NET Core endpoint;
+4. Swagger/OpenAPI;
+5. the Postman collection.
+
+This prevents the frontend, API documentation, and manual API testing from drifting into different payload shapes.
+
+## API routes
+
+| Route | Contract | Behavior |
+|---|---|---|
+| `GET /api/runtime` | `RuntimeResponse` | reports local runtime and persistence mode |
+| `GET /api/catalog` | `CatalogResponse` | returns the canonical implemented capability catalog |
+| `GET /api/health` | `HealthResponse` | verifies SQL Server connectivity |
+| `POST /api/build-briefs` | `BuildBriefRequest` → `BuildBriefResponse` | validates and saves a BuildBrief aggregate |
+| `GET /api/build-briefs/{id}` | `BuildBriefResponse` | reads a saved brief |
+
+## Postman
+
+Import:
+
+```text
+postman/FoundationKit.Workbench.postman_collection.json
 ```
 
-The `http` launch profile opens `http://localhost:5057` automatically.
+The collection variable `baseUrl` defaults to:
 
-For a named SQL Server Express instance:
-
-```powershell
-$env:ConnectionStrings__Workbench="Server=.\SQLEXPRESS;Database=FoundationKitWorkbench;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
-dotnet run --project samples/FoundationKit.Workbench
+```text
+http://localhost:5057
 ```
 
-For SQL authentication:
+The create request stores its returned identifier in `buildBriefId`. The next GET request uses that identifier automatically.
 
-```powershell
-$env:ConnectionStrings__Workbench="Server=localhost,1433;Database=FoundationKitWorkbench;User Id=foundationkit;Password=<local-password>;TrustServerCertificate=True;Encrypt=False"
-dotnet run --project samples/FoundationKit.Workbench
+Swagger and Postman are API consumers. Neither bypasses application logic, domain validation, repositories, unit of work, or SQL persistence.
+
+## Request flow
+
+```text
+MudBlazor form
+      ↓
+BuildBriefRequest from Contracts
+      ↓
+WorkbenchApiClient : FoundationKit.Blazor.ApiClientBase
+      ↓
+POST /api/build-briefs
+      ↓
+unknown capability validation
+      ↓
+BuildBrief.Create → Result<BuildBrief>
+      ↓
+IRepository + IUnitOfWork
+      ↓
+EF Core + SQL Server
+      ↓
+BuildBriefCreated domain event after successful save
+      ↓
+BuildBriefResponse
 ```
 
-Do not commit real credentials to `appsettings.json`, Docker files, scripts, or documentation.
+## Migrations
 
-## Migrations and schema
-
-The Workbench owns its migrations under:
+Migrations remain under:
 
 ```text
 samples/FoundationKit.Workbench/Infrastructure/Migrations/
 ```
 
-The application calls `Database.MigrateAsync` at startup with bounded retries. The migration creates the `BuildBriefs` table and index. EF Core migrations are the Workbench schema source of truth.
+The API applies migrations at startup with bounded retries.
 
-Create a new migration after changing Workbench persistence:
+Create a migration:
 
 ```bash
 dotnet ef migrations add <MigrationName> \
-  --project samples/FoundationKit.Workbench \
-  --startup-project samples/FoundationKit.Workbench \
+  --project samples/FoundationKit.Workbench/FoundationKit.Workbench.Api.csproj \
+  --startup-project samples/FoundationKit.Workbench/FoundationKit.Workbench.Api.csproj \
   --output-dir Infrastructure/Migrations
 ```
 
-Review generated SQL and migration code before committing. Never move Workbench migrations into a reusable FoundationKit package.
+Review migration code and generated SQL before committing.
 
-## API routes
+## GitHub Pages
 
-| Route | Behavior |
-|---|---|
-| `GET /api/runtime` | reports local runtime and SQL Server persistence mode |
-| `GET /api/catalog` | returns the canonical implemented capability catalog |
-| `GET /api/health` | verifies SQL Server connectivity |
-| `POST /api/build-briefs` | validates and saves a BuildBrief aggregate |
-| `GET /api/build-briefs/{id}` | reads a saved local brief |
+GitHub Pages publishes the Blazor WebAssembly client itself. It does not host ASP.NET Core or SQL Server.
 
-A saved response includes a prefilled GitHub contact URL. The GitHub issue is public; confidential details must use a separately agreed private channel.
-
-## Local execution flow
-
-```text
-Browser loads shared site assets
-        ↓
-GET /api/runtime identifies local mode
-        ↓
-GET /api/catalog renders packages, capabilities, ideas, and adoption steps
-        ↓
-Visitor completes the four-step builder
-        ↓
-POST /api/build-briefs
-        ↓
-FoundationKit Result validation + repository + unit of work
-        ↓
-SQL Server migration-backed table
-        ↓
-Contact summary and link
-```
-
-## GitHub Pages difference
-
-GitHub Pages deploys the same `site/` assets and catalog but no ASP.NET Core host. The page detects the missing API and switches to demo mode. In demo mode answers remain in browser memory, are not persisted, and are not sent automatically.
+When `/api/runtime` is unavailable, the client switches to demo mode, reads the static catalog, and disables database submission. The local API path remains the authoritative implementation.
 
 ## Troubleshooting
 
-Check containers:
+Health:
+
+```powershell
+Invoke-RestMethod http://localhost:5057/api/health
+```
+
+Swagger JSON:
+
+```powershell
+Invoke-RestMethod http://localhost:5057/swagger/v1/swagger.json
+```
+
+Docker status:
 
 ```bash
 docker compose -f deploy/docker-compose.yml ps
 ```
 
-Read logs:
+Docker logs:
 
 ```bash
 docker compose -f deploy/docker-compose.yml logs --tail=300
 ```
 
-Verify health:
+SQL verification:
 
-```bash
-curl http://localhost:8080/api/health
+```sql
+USE FoundationKitWorkbench;
+GO
+
+SELECT *
+FROM dbo.BuildBriefs
+ORDER BY CreatedUtc DESC;
 ```
-
-A local port conflict can be fixed by stopping the conflicting service or adjusting the host-side port in `deploy/docker-compose.yml`. The Workbench container must continue listening on internal port `8080`, and the SQL Server container must continue listening on internal port `1433` unless both the compose connection string and service configuration are changed together.
 
 ## Production warning
 
-The Workbench is not a production starter application. It intentionally omits identity, authorization, rate limiting, production secret management, telemetry export, backups, high availability, external ingress, and a controlled deployment migration strategy.
+The Workbench demonstrates architecture and integration. It does not yet include identity, authorization, rate limiting, production secret management, telemetry export, backups, high availability, ingress hardening, or a controlled production migration strategy.
