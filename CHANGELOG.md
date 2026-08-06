@@ -21,12 +21,16 @@ All notable repository and package changes are documented here.
 - Blazor-oriented `ViewModelBase` and `ListViewModel<T>` for MVVM-style state ownership.
 - Arabic production-readiness gate and new-project guide.
 - Reserved `apps/` boundary for future real products.
+- `FoundationKit Atlas`, a creative Arabic GitHub Pages portal that documents every Workbench and Athar Blazor route, core package, API surface, document, and operational proof.
+- Pages manifest validation that compares documented UI routes with the actual Razor `@page` declarations.
+- Detailed Arabic Visual Studio 2026 guide for SQL Server, User Secrets, startup projects, user/admin workflows, and troubleshooting.
 
 ### Changed
 
-- The repository now distinguishes reusable core, architecture Workbench, complete reference products, and future real applications.
+- The repository now distinguishes reusable core, architecture Workbench, complete reference products, future real applications, and a dedicated static documentation portal.
 - `FoundationKit.sln`, repository verification, CI, documentation, and package versions now include Athar.
 - CI publishes and tests both the Workbench and Athar against real SQL Server containers.
+- GitHub Pages now deploys the standalone Arabic repository atlas instead of presenting one product client as the entire repository.
 
 ## [0.1.0] - 2026-08-06
 
