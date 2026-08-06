@@ -27,4 +27,8 @@ public static class BuildBriefErrors
     public static readonly Error InvalidNotes = Error.Validation(
         "BuildBrief.InvalidNotes",
         "Notes cannot exceed 2000 characters.");
+
+    public static readonly Error AlreadyReviewed = Error.Conflict(
+        "BuildBrief.AlreadyReviewed",
+        "The request has already been reviewed and cannot transition again.");
 }
