@@ -1,16 +1,15 @@
-using System.Threading.RateLimiting;
 using Athar.Api;
 using Athar.Application;
 using Athar.Contracts;
 using Athar.Domain;
 using Athar.Infrastructure;
-using FoundationKit.Application.Abstractions;
 using FoundationKit.Application.Persistence;
 using FoundationKit.Infrastructure;
 using FoundationKit.Infrastructure.Events;
 using FoundationKit.Infrastructure.Persistence;
 using FoundationKit.WebApi;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
@@ -19,7 +18,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddFoundationInfrastructure();
 builder.Services.AddFoundationWebApi();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<ICurrentUser, CurrentUserAccessor>();
+builder.Services.AddScoped<Athar.Application.ICurrentUser, CurrentUserAccessor>();
 builder.Services.AddScoped<IInitiativeManager, InitiativeManager>();
 builder.Services.AddScoped<IInitiativeQueryService, InitiativeQueryService>();
 builder.Services.AddScoped<IAuditWriter, AuditWriter>();
@@ -28,7 +27,7 @@ builder.Services.AddScoped<IRepository<Initiative, Guid>,
 builder.Services.AddScoped<IRepository<InitiativeReview, Guid>,
     EfRepository<InitiativeReview, Guid, AtharDbContext>>();
 builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork<AtharDbContext>>();
-builder.Services.AddSingleton<IClock, SystemClock>();
+builder.Services.AddSingleton<FoundationKit.Application.Abstractions.IClock, SystemClock>();
 
 var connectionString = builder.Configuration.GetConnectionString("Athar")
     ?? throw new InvalidOperationException(
