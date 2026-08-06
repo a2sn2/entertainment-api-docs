@@ -11,7 +11,7 @@ const copySummary = document.querySelector('#copy-summary');
 const contactLink = document.querySelector('#contact-link');
 const currentYear = document.querySelector('#current-year');
 
-const repository = 'a2sn2/entertainment-api-docs';
+const repository = 'a2sn2/foundationkit-dotnet';
 let latestSummary = '';
 
 const categories = [
