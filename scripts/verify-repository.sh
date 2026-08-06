@@ -45,6 +45,7 @@ unexpected_top_level="$(
     ! -name 'deploy' \
     ! -name 'docs' \
     ! -name 'global.json' \
+    ! -name 'postman' \
     ! -name 'samples' \
     ! -name 'scripts' \
     ! -name 'site' \
@@ -78,10 +79,14 @@ required_files=(
   "catalog/foundationkit.catalog.json"
   "docs/FEATURES.md"
   "docs/WORKBENCH.md"
+  "samples/FoundationKit.Workbench/FoundationKit.Workbench.Api.csproj"
   "samples/FoundationKit.Workbench/Program.cs"
   "samples/FoundationKit.Workbench/Infrastructure/Migrations/20260806113000_InitialWorkbench.cs"
-  "site/index.html"
-  "site/app.js"
+  "samples/FoundationKit.Workbench.Client/FoundationKit.Workbench.Client.csproj"
+  "samples/FoundationKit.Workbench.Client/Pages/Home.razor"
+  "samples/FoundationKit.Workbench.Contracts/FoundationKit.Workbench.Contracts.csproj"
+  "samples/FoundationKit.Workbench.Contracts/BuildBriefContracts.cs"
+  "postman/FoundationKit.Workbench.postman_collection.json"
   "deploy/docker-compose.yml"
 )
 
@@ -92,13 +97,36 @@ for required_file in "${required_files[@]}"; do
   fi
 done
 
-if ! grep -q 'GitHub Pages Demo' site/index.html; then
-  echo "Static site must state that GitHub Pages is a demo without backend persistence." >&2
+api_project="samples/FoundationKit.Workbench/FoundationKit.Workbench.Api.csproj"
+client_project="samples/FoundationKit.Workbench.Client/FoundationKit.Workbench.Client.csproj"
+
+if ! grep -q 'Microsoft.EntityFrameworkCore.SqlServer' "$api_project"; then
+  echo "Workbench API must explicitly own the SQL Server provider dependency." >&2
   exit 1
 fi
 
-if ! grep -q 'Microsoft.EntityFrameworkCore.SqlServer' samples/FoundationKit.Workbench/FoundationKit.Workbench.csproj; then
-  echo "Workbench must explicitly own the SQL Server provider dependency." >&2
+if ! grep -q 'FoundationKit.Workbench.Contracts' "$api_project"; then
+  echo "Workbench API must reference the shared Contracts project." >&2
+  exit 1
+fi
+
+if ! grep -q 'FoundationKit.Workbench.Client' "$api_project"; then
+  echo "Workbench API must host the Blazor WebAssembly client." >&2
+  exit 1
+fi
+
+if ! grep -q 'MudBlazor' "$client_project"; then
+  echo "Workbench client must use MudBlazor." >&2
+  exit 1
+fi
+
+if ! grep -q 'FoundationKit.Blazor' "$client_project"; then
+  echo "Workbench client must consume the reusable FoundationKit.Blazor package." >&2
+  exit 1
+fi
+
+if ! grep -q 'BuildBriefRequest' postman/FoundationKit.Workbench.postman_collection.json; then
+  echo "Postman collection must document the shared request contract." >&2
   exit 1
 fi
 
