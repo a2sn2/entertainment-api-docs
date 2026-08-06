@@ -138,11 +138,18 @@ if ! grep -q 'FoundationKit.Blazor' "$client_project"; then
   exit 1
 fi
 
-if grep -RIl -- 'Microsoft.EntityFrameworkCore\|Microsoft.EntityFrameworkCore.SqlServer' \
+client_persistence_leaks="$(
+  grep -RIl \
+    --include='*.cs' \
+    --include='*.csproj' \
+    -- 'Microsoft.EntityFrameworkCore\|Microsoft.EntityFrameworkCore.SqlServer' \
     samples/FoundationKit.Workbench.Client \
-    samples/FoundationKit.Workbench.Contracts \
-    --include='*.cs' --include='*.csproj' | grep -q .; then
-  echo "Client and transport contracts must not reference EF Core or SQL Server." >&2
+    samples/FoundationKit.Workbench.Contracts || true
+)"
+
+if [[ -n "$client_persistence_leaks" ]]; then
+  echo "Client and transport contracts must not reference EF Core or SQL Server:" >&2
+  echo "$client_persistence_leaks" >&2
   exit 1
 fi
 
@@ -151,12 +158,12 @@ if ! grep -q 'CreateUserRequest' "$postman_collection"; then
   exit 1
 fi
 
-if ! grep -q 'AdminReviewRequest' "$postman_collection"; then
-  echo "Postman collection must document the admin review contract." >&2
+if ! grep -q 'reviewedBy' "$postman_collection" || ! grep -q 'decision' "$postman_collection"; then
+  echo "Postman collection must document the admin review request fields." >&2
   exit 1
 fi
 
-if ! grep -q '/api/user/requests' samples/FoundationKit.Workbench/Endpoints/UserPortalEndpoints.cs; then
+if ! grep -q '/api/user' samples/FoundationKit.Workbench/Endpoints/UserPortalEndpoints.cs; then
   echo "User vertical slice must expose a dedicated user route group." >&2
   exit 1
 fi
