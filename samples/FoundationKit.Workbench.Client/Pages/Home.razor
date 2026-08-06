@@ -1,0 +1,329 @@
+@page "/"
+@using System.Text.Json
+@inject WorkbenchApiClient Api
+@inject ISnackbar Snackbar
+
+<PageTitle>FoundationKit Workbench</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-8">
+    <section class="hero-grid">
+        <div>
+            <div class="eyebrow">الكور الرسمي لتطبيقات .NET</div>
+            <MudText Typo="Typo.h2" Class="hero-title">ابنِ الواجهة بـBlazor، واستهلك نفس الـAPI من الواجهة وPostman.</MudText>
+            <MudText Typo="Typo.h6" Class="hero-copy">
+                تجربة محلية حقيقية تجمع FoundationKit Core مع Blazor WebAssembly وMudBlazor وASP.NET Core API وSQL Server، دون خلط عقود النقل مع منطق النطاق.
+            </MudText>
+            <MudStack Row="true" Spacing="2" Class="mt-6 flex-wrap">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="#brief-builder" StartIcon="@Icons.Material.Filled.RocketLaunch">
+                    جهّز طلب المشروع
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Href="swagger" Target="_blank" StartIcon="@Icons.Material.Filled.Api">
+                    افتح Swagger
+                </MudButton>
+            </MudStack>
+        </div>
+
+        <div class="core-orbit" aria-hidden="true">
+            <div class="orbit orbit-one"></div>
+            <div class="orbit orbit-two"></div>
+            <div class="core-node">FK</div>
+            <span class="satellite satellite-api">API</span>
+            <span class="satellite satellite-ui">UI</span>
+            <span class="satellite satellite-db">SQL</span>
+        </div>
+    </section>
+
+    @if (_loading)
+    {
+        <div class="loading-panel">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
+            <MudText Typo="Typo.h6">جاري قراءة الكور والاتصال بالـAPI...</MudText>
+        </div>
+    }
+    else
+    {
+        <MudGrid Class="mt-8">
+            <MudItem xs="12" md="4">
+                <MudPaper Class="metric-card" Elevation="0">
+                    <MudIcon Icon="@Icons.Material.Filled.Layers" Size="Size.Large" />
+                    <MudText Typo="Typo.h3">@(_catalog?.Packages.Count ?? 0)</MudText>
+                    <MudText>حزم رسمية قابلة لإعادة الاستخدام</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudPaper Class="metric-card" Elevation="0">
+                    <MudIcon Icon="@Icons.Material.Filled.Hub" Size="Size.Large" />
+                    <MudText Typo="Typo.h3">@CapabilityCount</MudText>
+                    <MudText>قدرة منفذة ومثبتة في الكور</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudPaper Class="metric-card" Elevation="0">
+                    <MudIcon Icon="@Icons.Material.Filled.Storage" Size="Size.Large" />
+                    <MudText Typo="Typo.h3">@RuntimeLabel</MudText>
+                    <MudText>@PersistenceLabel</MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <section class="section-block">
+            <div class="section-heading">
+                <div>
+                    <div class="eyebrow">المعمارية</div>
+                    <MudText Typo="Typo.h3">حدود واضحة من الواجهة إلى قاعدة البيانات</MudText>
+                </div>
+            </div>
+
+            <MudGrid>
+                <MudItem xs="12" md="4">
+                    <MudPaper Class="architecture-card" Elevation="0">
+                        <MudIcon Icon="@Icons.Material.Filled.Web" Color="Color.Primary" Size="Size.Large" />
+                        <MudText Typo="Typo.h5">Blazor WebAssembly</MudText>
+                        <MudText>واجهة Razor Components تستخدم MudBlazor وعميل HTTP المصنف الموجود في FoundationKit.Blazor.</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudPaper Class="architecture-card" Elevation="0">
+                        <MudIcon Icon="@Icons.Material.Filled.Api" Color="Color.Secondary" Size="Size.Large" />
+                        <MudText Typo="Typo.h5">ASP.NET Core API</MudText>
+                        <MudText>Endpoints موثقة في Swagger، تستخدم نفس Contracts التي يعتمد عليها الفرونت إند وPostman.</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudPaper Class="architecture-card" Elevation="0">
+                        <MudIcon Icon="@Icons.Material.Filled.Dns" Color="Color.Tertiary" Size="Size.Large" />
+                        <MudText Typo="Typo.h5">SQL Server + EF Core</MudText>
+                        <MudText>قاعدة البيانات والمهاجرات يملكها التطبيق المستهلك، بينما تبقى حزم الكور مستقلة عن المزود.</MudText>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </section>
+
+        <section class="section-block">
+            <div class="section-heading">
+                <div>
+                    <div class="eyebrow">الحزم والقدرات</div>
+                    <MudText Typo="Typo.h3">اختر ما يحتاجه مشروعك</MudText>
+                </div>
+                <MudText Class="muted-text">يمكنك تحديد القدرات مباشرة أو اختيار فكرة مشروع لتعبئتها تلقائيًا.</MudText>
+            </div>
+
+            <MudExpansionPanels MultiExpansion="true" Elevation="0">
+                @foreach (var package in _catalog?.Packages ?? [])
+                {
+                    <MudExpansionPanel Text="@($"{package.TitleAr} — {package.PackageId}")" Class="package-panel">
+                        <MudText Class="mb-4">@package.SummaryAr</MudText>
+                        <div class="capability-grid">
+                            @foreach (var capability in package.Capabilities)
+                            {
+                                <button type="button"
+                                        class="capability-toggle @(IsSelected(capability.Id) ? "selected" : string.Empty)"
+                                        @onclick="() => ToggleCapability(capability.Id)">
+                                    <span class="capability-check">@(IsSelected(capability.Id) ? "✓" : "+")</span>
+                                    <strong>@capability.TitleAr</strong>
+                                    <small>@capability.DescriptionAr</small>
+                                </button>
+                            }
+                        </div>
+                    </MudExpansionPanel>
+                }
+            </MudExpansionPanels>
+        </section>
+
+        <section class="section-block">
+            <div class="section-heading">
+                <div>
+                    <div class="eyebrow">أفكار جاهزة</div>
+                    <MudText Typo="Typo.h3">ابدأ من سيناريو حقيقي</MudText>
+                </div>
+            </div>
+
+            <div class="idea-grid">
+                @foreach (var idea in _catalog?.Ideas ?? [])
+                {
+                    <button type="button" class="idea-card" @onclick="() => SelectIdea(idea)">
+                        <span class="idea-icon">@idea.Icon</span>
+                        <strong>@idea.TitleAr</strong>
+                        <small>@idea.DescriptionAr</small>
+                        <span class="idea-action">استخدام هذه الفكرة ←</span>
+                    </button>
+                }
+            </div>
+        </section>
+
+        <section id="brief-builder" class="section-block builder-shell">
+            <div class="section-heading">
+                <div>
+                    <div class="eyebrow">Request Contract</div>
+                    <MudText Typo="Typo.h3">أنشئ الطلب مرة واحدة</MudText>
+                </div>
+                <MudChip Color="@RuntimeColor" Variant="Variant.Outlined">@RuntimeDescription</MudChip>
+            </div>
+
+            <MudGrid>
+                <MudItem xs="12" lg="7">
+                    <MudPaper Class="form-panel" Elevation="0">
+                        <MudForm @ref="_form">
+                            <MudTextField T="string" Label="اسم المشروع" @bind-Value="_request.ProjectName" Required="true" RequiredError="اسم المشروع مطلوب" Variant="Variant.Outlined" />
+
+                            <MudSelect T="string" Label="نوع المشروع" @bind-Value="_request.ProjectType" Required="true" RequiredError="نوع المشروع مطلوب" Variant="Variant.Outlined" Class="mt-4">
+                                <MudSelectItem Value="@("منصة عمليات داخلية")">منصة عمليات داخلية</MudSelectItem>
+                                <MudSelectItem Value="@("نظام خدمة عملاء")">نظام خدمة عملاء</MudSelectItem>
+                                <MudSelectItem Value="@("نظام مالي")">نظام مالي</MudSelectItem>
+                                <MudSelectItem Value="@("بوابة أو لوحة تحكم")">بوابة أو لوحة تحكم</MudSelectItem>
+                                <MudSelectItem Value="@("أخرى")">أخرى</MudSelectItem>
+                            </MudSelect>
+
+                            <MudTextField T="string" Label="المستخدمون المستهدفون" @bind-Value="_request.Audience" Required="true" RequiredError="حدد المستخدمين المستهدفين" Variant="Variant.Outlined" Class="mt-4" />
+                            <MudTextField T="string" Label="الهدف والنتيجة المطلوبة" @bind-Value="_request.Goal" Required="true" RequiredError="الهدف مطلوب" Lines="4" Variant="Variant.Outlined" Class="mt-4" />
+                            <MudTextField T="string" Label="الأولويات" @bind-Value="_request.Priorities" Lines="3" Variant="Variant.Outlined" Class="mt-4" />
+                            <MudTextField T="string" Label="ملاحظات إضافية" @bind-Value="_request.Notes" Lines="4" Variant="Variant.Outlined" Class="mt-4" />
+                        </MudForm>
+
+                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-5">
+                            تم اختيار @_selectedCapabilities.Count قدرة. نفس البيانات أدناه يمكن إرسالها من Blazor أو Swagger أو Postman.
+                        </MudAlert>
+
+                        <MudButton FullWidth="true"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   Size="Size.Large"
+                                   Class="mt-5"
+                                   Disabled="@SubmitDisabled"
+                                   OnClick="SubmitAsync"
+                                   StartIcon="@Icons.Material.Filled.Send">
+                            @(_submitting ? "جاري الحفظ..." : "إرسال الطلب إلى الـAPI وحفظه في SQL Server")
+                        </MudButton>
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" lg="5">
+                    <MudPaper Class="request-preview" Elevation="0">
+                        <MudStack Row="true" AlignItems="AlignItems.Center">
+                            <div>
+                                <MudText Typo="Typo.h6">POST /api/build-briefs</MudText>
+                                <MudText Typo="Typo.caption" Class="muted-text">Content-Type: application/json</MudText>
+                            </div>
+                            <MudSpacer />
+                            <MudIcon Icon="@Icons.Material.Filled.DataObject" />
+                        </MudStack>
+                        <pre>@RequestPreview</pre>
+                    </MudPaper>
+
+                    @if (_result is not null)
+                    {
+                        <MudPaper Class="result-panel mt-4" Elevation="0">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
+                            <MudText Typo="Typo.h5" Class="mt-2">تم الحفظ بنجاح</MudText>
+                            <MudText Typo="Typo.body2">المعرّف: @_result.Id</MudText>
+                            <MudText Typo="Typo.body2">وقت الإنشاء: @_result.CreatedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudText>
+                            <MudButton Href="@_result.ContactUrl" Target="_blank" Variant="Variant.Outlined" Color="Color.Success" FullWidth="true" Class="mt-4">
+                                فتح ملخص التواصل
+                            </MudButton>
+                        </MudPaper>
+                    }
+                </MudItem>
+            </MudGrid>
+        </section>
+    }
+</MudContainer>
+
+@code {
+    private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        WriteIndented = true
+    };
+
+    private readonly HashSet<string> _selectedCapabilities = new(StringComparer.OrdinalIgnoreCase);
+    private MudForm? _form;
+    private BuildBriefRequest _request = new();
+    private CatalogResponse? _catalog;
+    private RuntimeResponse? _runtime;
+    private BuildBriefResponse? _result;
+    private bool _loading = true;
+    private bool _submitting;
+
+    private int CapabilityCount => _catalog?.Packages.Sum(package => package.Capabilities.Count) ?? 0;
+    private string RuntimeLabel => _runtime?.Mode == "local" ? "LOCAL" : "DEMO";
+    private string PersistenceLabel => _runtime?.Mode == "local" ? "SQL Server متصل" : "بدون حفظ في قاعدة البيانات";
+    private string RuntimeDescription => _runtime?.Mode == "local" ? "Local API + SQL Server" : "Static demo";
+    private Color RuntimeColor => _runtime?.Mode == "local" ? Color.Success : Color.Warning;
+    private bool SubmitDisabled => _submitting || _runtime?.Mode != "local";
+
+    private string RequestPreview
+    {
+        get
+        {
+            _request.SelectedCapabilityIds = _selectedCapabilities.OrderBy(id => id).ToArray();
+            return JsonSerializer.Serialize(_request, _jsonOptions);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var runtimeResult = await Api.GetRuntimeAsync();
+        _runtime = runtimeResult.IsSuccess && runtimeResult.Value is not null
+            ? runtimeResult.Value
+            : new RuntimeResponse("demo", "none", "none", "ALHassan ALShami");
+
+        var catalogResult = await Api.GetCatalogAsync();
+        if (catalogResult.IsSuccess && catalogResult.Value is not null)
+        {
+            _catalog = catalogResult.Value;
+        }
+        else
+        {
+            Snackbar.Add(catalogResult.Error ?? "تعذر تحميل كتالوج FoundationKit.", Severity.Error);
+        }
+
+        _loading = false;
+    }
+
+    private bool IsSelected(string capabilityId) => _selectedCapabilities.Contains(capabilityId);
+
+    private void ToggleCapability(string capabilityId)
+    {
+        if (!_selectedCapabilities.Add(capabilityId))
+            _selectedCapabilities.Remove(capabilityId);
+    }
+
+    private void SelectIdea(IdeaContract idea)
+    {
+        _request.ProjectType = idea.TitleAr;
+        _request.Goal = idea.DescriptionAr;
+        _selectedCapabilities.Clear();
+        foreach (var capabilityId in idea.RecommendedCapabilityIds)
+            _selectedCapabilities.Add(capabilityId);
+
+        Snackbar.Add($"تم تحميل فكرة: {idea.TitleAr}", Severity.Success);
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (_form is null || _runtime?.Mode != "local")
+            return;
+
+        await _form.Validate();
+        if (!_form.IsValid)
+        {
+            Snackbar.Add("راجع الحقول المطلوبة قبل الإرسال.", Severity.Warning);
+            return;
+        }
+
+        _submitting = true;
+        _result = null;
+        _request.SelectedCapabilityIds = _selectedCapabilities.OrderBy(id => id).ToArray();
+
+        var result = await Api.CreateBuildBriefAsync(_request);
+        _submitting = false;
+
+        if (result.IsSuccess && result.Value is not null)
+        {
+            _result = result.Value;
+            Snackbar.Add("تم إنشاء الطلب وحفظه في SQL Server.", Severity.Success);
+            return;
+        }
+
+        Snackbar.Add(result.Error ?? "فشل إرسال الطلب إلى الـAPI.", Severity.Error);
+    }
+}
