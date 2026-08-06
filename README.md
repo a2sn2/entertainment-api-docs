@@ -1,7 +1,7 @@
 # FoundationKit for .NET
 
-[![Platform CI and Full-Stack Test](https://github.com/a2sn2/entertainment-api-docs/actions/workflows/platform-ci.yml/badge.svg)](https://github.com/a2sn2/entertainment-api-docs/actions/workflows/platform-ci.yml)
-[![FoundationKit Packages](https://github.com/a2sn2/entertainment-api-docs/actions/workflows/foundationkit-ci.yml/badge.svg)](https://github.com/a2sn2/entertainment-api-docs/actions/workflows/foundationkit-ci.yml)
+[![Platform CI and Full-Stack Test](https://github.com/a2sn2/foundationkit-dotnet/actions/workflows/platform-ci.yml/badge.svg)](https://github.com/a2sn2/foundationkit-dotnet/actions/workflows/platform-ci.yml)
+[![FoundationKit Packages](https://github.com/a2sn2/foundationkit-dotnet/actions/workflows/foundationkit-ci.yml/badge.svg)](https://github.com/a2sn2/foundationkit-dotnet/actions/workflows/foundationkit-ci.yml)
 
 **FoundationKit** is a reusable .NET engineering foundation for building maintainable APIs, internal platforms, web applications, and business systems. It provides shared technical building blocks while leaving every product responsible for its own domain rules, contracts, database provider, routes, and user experience.
 
@@ -16,7 +16,7 @@ The repository is organized around four clearly separated roles:
 
 ## Live Showcase
 
-https://a2sn2.github.io/entertainment-api-docs/
+https://a2sn2.github.io/foundationkit-dotnet/
 
 The Showcase runs entirely in the browser. It does not send the visitor's idea anywhere until the visitor explicitly chooses a contact action.
 
