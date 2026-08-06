@@ -1,20 +1,24 @@
+using System.Reflection;
 using System.Text.Json;
 
 namespace FoundationKit.Workbench.Infrastructure;
 
 public sealed class CatalogService
 {
-    private readonly string _catalogPath = Path.Combine(
-        AppContext.BaseDirectory,
-        "catalog",
-        "foundationkit.catalog.json");
+    private const string CatalogResourceName =
+        "FoundationKit.Workbench.Catalog.foundationkit.catalog.json";
 
     public async Task<JsonElement> ReadAsync(CancellationToken cancellationToken = default)
     {
-        await using var stream = File.OpenRead(_catalogPath);
+        await using var stream = typeof(CatalogService).Assembly
+            .GetManifestResourceStream(CatalogResourceName)
+            ?? throw new InvalidOperationException(
+                $"Embedded catalog resource '{CatalogResourceName}' was not found.");
+
         using var document = await JsonDocument.ParseAsync(
             stream,
             cancellationToken: cancellationToken);
+
         return document.RootElement.Clone();
     }
 
