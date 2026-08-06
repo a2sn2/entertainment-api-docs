@@ -13,7 +13,7 @@ $RepositoryRoot = Split-Path -Parent $PSScriptRoot
 $BranchName = "athar-live-link"
 $RemoteName = "origin"
 $TargetRelativePath = "site/athar-live/target.json"
-$WorktreePath = Join-Path $RepositoryRoot ".local/athar-live-link-worktree"
+$WorktreePath = Join-Path ([System.IO.Path]::GetTempPath()) "foundationkit-athar-live-$PID"
 $StableUrl = "https://a2sn2.github.io/foundationkit-dotnet/athar-live/"
 $AllowedTunnelPattern = '^https://[a-z0-9-]+\.trycloudflare\.com/?$'
 
@@ -52,12 +52,9 @@ if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
     throw "Git is required to publish the fixed free alias."
 }
 
-New-Item -ItemType Directory -Force -Path (Split-Path -Parent $WorktreePath) | Out-Null
-
 try {
     Invoke-Git -Arguments @("fetch", $RemoteName, $BranchName) | Out-Null
 
-    Invoke-Git -Arguments @("worktree", "remove", "--force", $WorktreePath) -IgnoreExitCode | Out-Null
     if (Test-Path $WorktreePath) {
         Remove-Item $WorktreePath -Recurse -Force
     }
@@ -108,7 +105,7 @@ try {
     Write-Host "Stable link: $StableUrl" -ForegroundColor Green
 }
 finally {
-    Invoke-Git -Arguments @("worktree", "remove", "--force", $WorktreePath) -IgnoreExitCode | Out-Null
+    & git -C $RepositoryRoot worktree remove --force $WorktreePath *> $null
     if (Test-Path $WorktreePath) {
         Remove-Item $WorktreePath -Recurse -Force -ErrorAction SilentlyContinue
     }
