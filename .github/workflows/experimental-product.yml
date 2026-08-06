@@ -54,7 +54,7 @@ jobs:
           dotnet test
           tests/Athar.Tests/Athar.Tests.csproj
           --configuration Release
-          --no-build
+          --no-restore
           --logger "trx;LogFileName=athar-experimental.trx"
 
       - name: Publish Windows x64 package
@@ -62,7 +62,6 @@ jobs:
           dotnet publish
           examples/Athar/Athar.Api/Athar.Api.csproj
           --configuration Release
-          --no-build
           --runtime win-x64
           --self-contained false
           --output artifacts/athar-windows-x64/app
