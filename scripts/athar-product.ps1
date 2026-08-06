@@ -87,13 +87,16 @@ function Get-EnvironmentValues {
 }
 
 function Invoke-Compose {
-    param([Parameter(ValueFromRemainingArguments)][string[]]$Arguments)
+    param(
+        [Parameter(Mandatory)]
+        [string[]]$ComposeArguments
+    )
 
     & docker compose `
         --project-name $ProjectName `
         --env-file $EnvironmentFile `
         -f $ComposeFile `
-        @Arguments
+        @ComposeArguments
 
     if ($LASTEXITCODE -ne 0) {
         throw "فشل أمر Docker Compose. راجع الرسائل السابقة."
@@ -118,7 +121,7 @@ function Wait-UntilReady {
         }
     }
 
-    Invoke-Compose logs --tail 150 athar-api
+    Invoke-Compose -ComposeArguments @("logs", "--tail", "150", "athar-api")
     throw "لم يصل أثَر إلى حالة الجاهزية خلال المهلة المحددة."
 }
 
@@ -183,8 +186,8 @@ fi
 "$SQLCMD" -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -Q "BACKUP DATABASE [AtharDb] TO DISK = N'__BACKUP_PATH__' WITH INIT, CHECKSUM"
 '@.Replace("__BACKUP_PATH__", $containerPath)
 
-    Invoke-Compose exec -T athar-sqlserver bash -lc $backupCommand
-    Invoke-Compose cp "athar-sqlserver:$containerPath" (Join-Path $BackupDirectory $fileName)
+    Invoke-Compose -ComposeArguments @("exec", "-T", "athar-sqlserver", "bash", "-lc", $backupCommand)
+    Invoke-Compose -ComposeArguments @("cp", "athar-sqlserver:$containerPath", (Join-Path $BackupDirectory $fileName))
 
     Write-Host "تم إنشاء النسخة الاحتياطية:" -ForegroundColor Green
     Write-Host "  $(Join-Path $BackupDirectory $fileName)"
@@ -194,7 +197,7 @@ switch ($Action) {
     "Start" {
         Assert-Docker
         Initialize-EnvironmentFile
-        Invoke-Compose up --build -d
+        Invoke-Compose -ComposeArguments @("up", "--build", "-d")
         Wait-UntilReady
         Show-AccessInformation
         Start-Process $BaseUrl
@@ -202,13 +205,13 @@ switch ($Action) {
     "Stop" {
         Assert-Docker
         Initialize-EnvironmentFile
-        Invoke-Compose down --remove-orphans
+        Invoke-Compose -ComposeArguments @("down", "--remove-orphans")
         Write-Host "تم إيقاف أثَر مع الاحتفاظ ببيانات SQL Server." -ForegroundColor Green
     }
     "Status" {
         Assert-Docker
         Initialize-EnvironmentFile
-        Invoke-Compose ps
+        Invoke-Compose -ComposeArguments @("ps")
         try {
             Invoke-RestMethod -Uri "$BaseUrl/health/ready" -TimeoutSec 3 | ConvertTo-Json -Depth 5
         }
@@ -233,7 +236,7 @@ switch ($Action) {
 
         Assert-Docker
         Initialize-EnvironmentFile
-        Invoke-Compose down --volumes --remove-orphans
+        Invoke-Compose -ComposeArguments @("down", "--volumes", "--remove-orphans")
         Remove-Item $EnvironmentFile -Force -ErrorAction SilentlyContinue
         Write-Host "تم حذف الحاويات والبيانات المحلية وإعدادات التجربة." -ForegroundColor Green
     }
