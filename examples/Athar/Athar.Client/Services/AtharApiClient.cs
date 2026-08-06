@@ -18,31 +18,46 @@ public sealed class AtharApiClient(HttpClient httpClient)
             new HttpRequestMessage(HttpMethod.Get, AtharRoutes.Me),
             cancellationToken);
 
-    public Task<ApiResult<CurrentUserResponse>> RegisterAsync(
+    public async Task<ApiResult<CurrentUserResponse>> RegisterAsync(
         RegisterRequest request,
-        CancellationToken cancellationToken = default) =>
-        SendProtectedAsync<CurrentUserResponse>(
+        CancellationToken cancellationToken = default)
+    {
+        var result = await SendProtectedAsync<CurrentUserResponse>(
             HttpMethod.Post,
             AtharRoutes.Register,
             request,
             cancellationToken);
 
-    public Task<ApiResult<CurrentUserResponse>> LoginAsync(
+        ResetAntiforgeryAfterIdentityChange(result.IsSuccess);
+        return result;
+    }
+
+    public async Task<ApiResult<CurrentUserResponse>> LoginAsync(
         LoginRequest request,
-        CancellationToken cancellationToken = default) =>
-        SendProtectedAsync<CurrentUserResponse>(
+        CancellationToken cancellationToken = default)
+    {
+        var result = await SendProtectedAsync<CurrentUserResponse>(
             HttpMethod.Post,
             AtharRoutes.Login,
             request,
             cancellationToken);
 
-    public Task<ApiResult<ApiMessageResponse>> LogoutAsync(
-        CancellationToken cancellationToken = default) =>
-        SendProtectedAsync<ApiMessageResponse>(
+        ResetAntiforgeryAfterIdentityChange(result.IsSuccess);
+        return result;
+    }
+
+    public async Task<ApiResult<ApiMessageResponse>> LogoutAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var result = await SendProtectedAsync<ApiMessageResponse>(
             HttpMethod.Post,
             AtharRoutes.Logout,
             new { },
             cancellationToken);
+
+        ResetAntiforgeryAfterIdentityChange(result.IsSuccess);
+        return result;
+    }
 
     public Task<ApiResult<InitiativeDetailsDto>> CreateInitiativeAsync(
         CreateInitiativeRequest request,
@@ -141,11 +156,8 @@ public sealed class AtharApiClient(HttpClient httpClient)
 
         var response = await SendAsync<TResponse>(request, cancellationToken);
 
-        if (response.StatusCode == System.Net.HttpStatusCode.BadRequest
-            && response.ErrorDetails?.Code == "InvalidAntiforgeryToken")
-        {
+        if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
             _antiforgeryToken = null;
-        }
 
         return response;
     }
@@ -174,6 +186,12 @@ public sealed class AtharApiClient(HttpClient httpClient)
 
         _antiforgeryToken = result.Value.RequestToken;
         return ApiResult<string>.Success(_antiforgeryToken);
+    }
+
+    private void ResetAntiforgeryAfterIdentityChange(bool identityChanged)
+    {
+        if (identityChanged)
+            _antiforgeryToken = null;
     }
 
     private static string BuildQuery(
