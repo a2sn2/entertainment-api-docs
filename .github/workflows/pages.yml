@@ -1,11 +1,14 @@
-name: FoundationKit Pages Demo
+name: FoundationKit Blazor Pages Demo
 
 on:
   push:
     branches: [main]
     paths:
-      - "site/**"
+      - "samples/FoundationKit.Workbench.Client/**"
+      - "samples/FoundationKit.Workbench.Contracts/**"
+      - "src/FoundationKit.Blazor/**"
       - "catalog/foundationkit.catalog.json"
+      - "Directory.Packages.props"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -25,16 +28,23 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Validate static demo
-        run: |
-          python3 -m json.tool catalog/foundationkit.catalog.json >/dev/null
-          node --check site/app.js
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
 
-      - name: Assemble Pages artifact
+      - name: Publish Blazor WebAssembly client
+        run: >-
+          dotnet publish
+          samples/FoundationKit.Workbench.Client/FoundationKit.Workbench.Client.csproj
+          --configuration Release
+          --output release
+
+      - name: Prepare GitHub Pages base path
         run: |
-          mkdir -p _site/catalog
-          cp -R site/. _site/
-          cp catalog/foundationkit.catalog.json _site/catalog/
+          sed -i 's|<base href="/" />|<base href="/foundationkit-dotnet/" />|' release/wwwroot/index.html
+          cp release/wwwroot/index.html release/wwwroot/404.html
+          touch release/wwwroot/.nojekyll
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -42,7 +52,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
+          path: release/wwwroot
 
   deploy:
     environment:
