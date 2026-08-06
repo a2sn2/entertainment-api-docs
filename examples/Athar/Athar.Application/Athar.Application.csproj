@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Athar.Application</RootNamespace>
+    <AssemblyName>Athar.Application</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Athar.Domain\Athar.Domain.csproj" />
+    <ProjectReference Include="..\Athar.Contracts\Athar.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\src\FoundationKit.Application\FoundationKit.Application.csproj" />
+  </ItemGroup>
+</Project>
