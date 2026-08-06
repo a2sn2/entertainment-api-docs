@@ -6,7 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\samples\FoundationKit.Workbench\FoundationKit.Workbench.csproj" />
+    <ProjectReference Include="..\..\samples\FoundationKit.Workbench\FoundationKit.Workbench.Api.csproj" />
+    <ProjectReference Include="..\..\samples\FoundationKit.Workbench.Contracts\FoundationKit.Workbench.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>
