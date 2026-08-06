@@ -1,11 +1,13 @@
 {
-  "name": "Entertainment Services API Documentation",
-  "short_name": "Entertainment APIs",
-  "description": "Interactive documentation for the Entertainment Services API.",
+  "name": "FoundationKit for .NET",
+  "short_name": "FoundationKit",
+  "description": "Interactive FoundationKit showcase and .NET engineering foundation.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#06111f",
-  "theme_color": "#071b33",
+  "background_color": "#080b16",
+  "theme_color": "#080b16",
+  "lang": "ar",
+  "dir": "rtl",
   "icons": []
 }
