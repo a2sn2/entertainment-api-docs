@@ -41,6 +41,28 @@ jobs:
           python3 -m json.tool postman/Athar.Api.postman_collection.json >/dev/null
           python3 scripts/verify-pages.py
           node --check site/app.js
+          node --check site/athar-demo/app.js
+          test -f site/athar-demo/index.html
+          test -f site/athar-demo/styles.css
+          grep -q "DEMO · بدون خادم" site/athar-demo/index.html
+
+      - name: Validate experimental product PowerShell
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            "scripts/athar-product.ps1",
+            [ref]$tokens,
+            [ref]$errors) | Out-Null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            "scripts/expose-athar-tunnel.ps1",
+            [ref]$tokens,
+            [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | Format-List | Out-String | Write-Error
+            exit 1
+          }
 
       - name: Restore
         run: dotnet restore FoundationKit.sln
