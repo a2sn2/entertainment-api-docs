@@ -1,22 +1,22 @@
-# Architecture
+# Technical Architecture
 
 ## Repository purpose
 
-FoundationKit supplies reusable technical building blocks and an official Workbench consumer that proves the integration path.
+FoundationKit provides reusable technical building blocks and a reference application that proves two complete vertical slices:
 
 ```text
-Reusable core packages under src/
+Reusable FoundationKit packages
         ↓ consumed by
-ASP.NET Core Workbench API
-        ↓ shares contracts with
-Blazor WebAssembly + MudBlazor client
-        ↓ sends the same JSON used by
-Swagger and Postman
-        ↓ persists through
+User Full Stack + Admin Full Stack
+        ↓ connected through
+Shared request lifecycle and unit of work
+        ↓ persisted by
 EF Core + SQL Server + Workbench-owned migrations
 ```
 
-The Workbench projects are consumers, not additional reusable core packages.
+The reference application is not a sixth core package. It demonstrates how a product consumes the core without leaking product behavior into `src/`.
+
+For the functional walkthrough, read [Dual Full-Stack Architecture](DUAL-FULL-STACK.md).
 
 ## Reusable dependency rules
 
@@ -29,178 +29,244 @@ Domain <- Application <- Infrastructure
 Blazor is independent from server-side packages.
 ```
 
-### Domain
+### FoundationKit.Domain
 
-May depend only on the .NET base class library.
+May depend only on the .NET base class library. It provides entities, aggregate roots, value objects, and domain events.
 
-### Application
+### FoundationKit.Application
 
-May depend on Domain. It owns use-case contracts and ports but does not depend on EF Core, ASP.NET Core, SQL Server, MudBlazor, or product DTOs.
+May depend on Domain. It provides results, commands, queries, repository ports, pagination, validation abstractions, and application contracts.
 
-### Infrastructure
+### FoundationKit.Infrastructure
 
-May depend on Application, Domain, and provider-neutral EF Core abstractions. It must not reference a relational provider or hosted application.
+May depend on Application, Domain, and provider-neutral EF Core abstractions. It must not select SQL Server or own migrations.
 
-### WebApi
+### FoundationKit.WebApi
 
-May depend on Application and the ASP.NET Core shared framework. It adapts classified results to HTTP and supplies reusable middleware.
+May depend on Application and the ASP.NET Core shared framework. It maps classified results to HTTP, Problem Details, correlation IDs, and baseline response headers.
 
-### Blazor
+### FoundationKit.Blazor
 
-Owns browser-side transport and state helpers. It must not reference Domain, Application, Infrastructure, EF Core, SQL Server, or server hosting.
+Owns browser-side typed API results, response parsing, network classification, and asynchronous UI state. It must not reference EF Core, SQL Server, or server hosting.
 
-Architecture tests enforce assembly references. `scripts/verify-repository.sh` additionally rejects provider packages and migrations under `src/`.
+Architecture tests and `scripts/verify-repository.sh` enforce these boundaries.
 
-## Official Workbench projects
+## Reference application composition
 
 ```text
 samples/FoundationKit.Workbench/
-    ASP.NET Core API
-    product domain and application logic
+    ASP.NET Core host
+    product domain aggregates
+    user and admin application use cases
+    endpoint route groups
     WorkbenchDbContext
     SQL Server provider
     EF Core migrations
     Swagger/OpenAPI
 
-samples/FoundationKit.Workbench.Client/
-    Blazor WebAssembly
-    Razor Components
-    MudBlazor
-    WorkbenchApiClient
-    FoundationKit.Blazor consumption
-
 samples/FoundationKit.Workbench.Contracts/
-    ApiRoutes
-    BuildBriefRequest
-    BuildBriefResponse
-    RuntimeResponse
-    HealthResponse
-    CatalogResponse and nested catalog DTOs
+    Shared platform contracts
+    User contracts
+    Admin contracts
+    Workflow vocabulary
+    API route constants
+
+samples/FoundationKit.Workbench.Client/
+    Blazor WebAssembly shell
+    MudBlazor
+    architecture landing page
+    user portal UI/UX
+    admin portal UI/UX
+    typed WorkbenchApiClient
 ```
 
-The API references the client as a hosted Blazor WebAssembly project. Running the API project serves both the backend and the frontend from one origin.
+One ASP.NET Core host serves the Blazor application and all API groups from one origin. This keeps local startup simple without merging the user and admin use cases.
 
-## Contract boundary
-
-Transport contracts belong to `FoundationKit.Workbench.Contracts`, not to Domain or Application.
+## Vertical slice 1 — User
 
 ```text
-MudBlazor form
-      ↓
-BuildBriefRequest
-      ↓
-WorkbenchApiClient
-      ↓
-ASP.NET Core endpoint
-      ↓
+Pages/UserPortal.razor
+        ↓
+WorkbenchApiClient.CreateUserRequestAsync
+        ↓
+CreateUserRequest contract
+        ↓
+POST /api/user/requests
+        ↓
+CreateUserRequestUseCase
+        ↓
 BuildBrief.Create
+        ↓
+IRepository<BuildBrief, Guid>
+        ↓
+IUnitOfWork
+        ↓
+BuildBriefs
 ```
 
-The same request shape is visible in:
-
-- Blazor serialization;
-- Swagger/OpenAPI;
-- the Postman collection;
-- API endpoint binding.
-
-This separation keeps HTTP transport reusable without exposing EF Core entities or aggregate internals to the browser.
-
-## API execution flow
+The user reads the latest workflow state through:
 
 ```text
-POST /api/build-briefs
+GET /api/user/requests/{id}
+```
+
+Transport contracts are not EF entities. The API maps the aggregate to `UserRequestResponse`.
+
+## Vertical slice 2 — Admin
+
+```text
+Pages/AdminPortal.razor
         ↓
-BuildBriefRequest binding
+WorkbenchApiClient.GetAdminQueueAsync
         ↓
-capability ID validation against canonical catalog
+GET /api/admin/requests?status=submitted
         ↓
-BuildBrief.Create returns Result<BuildBrief>
+IAdminQueueReader
         ↓
-IRepository.AddAsync
+EfAdminQueueReader
+        ↓
+BuildBriefs
+```
+
+A review follows:
+
+```text
+AdminReviewRequest
+        ↓
+POST /api/admin/requests/{id}/review
+        ↓
+ReviewUserRequestUseCase
+        ↓
+AdminReview.Create
+        +
+BuildBrief.ApplyReview
+        ↓
+AdminReviews insert + BuildBriefs status update
         ↓
 IUnitOfWork.SaveChangesAsync
-        ↓
-SQL Server commit
-        ↓
-DomainEventsSaveChangesInterceptor
-        ↓
-BuildBriefCreatedHandler
-        ↓
-BuildBriefResponse
 ```
 
-`FoundationKit.WebApi` maps classified failures to RFC 7807 Problem Details. `FoundationKit.Blazor` classifies success, API failures, network failures, timeouts, empty payloads, and invalid JSON.
+The admin write path does not call the user UI. It changes shared domain state and persistence, which the user API then exposes.
+
+## Integration boundary
+
+The current connection is a synchronous workflow transition:
+
+```text
+submitted → approved | rejected
+```
+
+`ReviewUserRequestUseCase` creates the audit record and changes the user request status before one unit-of-work save. The domain emits `BuildBriefReviewed` after the transition.
+
+For a distributed product, this boundary may evolve into:
+
+```text
+Admin transaction
+        ↓
+Outbox message
+        ↓
+Integration event
+        ↓
+User read model update
+```
+
+The UI and transport contracts do not need to become coupled when that evolution happens.
 
 ## Database ownership
 
-For the Workbench only, migrations under:
-
-```text
-samples/FoundationKit.Workbench/Infrastructure/Migrations/
-```
-
-are the schema source of truth.
-
-The API project owns:
+The reference application owns:
 
 - `Microsoft.EntityFrameworkCore.SqlServer`;
 - `WorkbenchDbContext`;
-- entity configuration;
+- `BuildBriefConfiguration`;
+- `AdminReviewConfiguration`;
 - connection strings;
-- migrations;
-- startup migration policy.
+- startup migration behavior;
+- migrations under `samples/FoundationKit.Workbench/Infrastructure/Migrations/`.
 
-No core package owns a provider or database schema.
+Current tables:
+
+| Table | Owner | Responsibility |
+|---|---|---|
+| `BuildBriefs` | User workflow | Request data, current status, created and updated timestamps |
+| `AdminReviews` | Admin workflow | Decision, reviewer, notes, timestamp, foreign key to request |
+
+No reusable package owns a relational provider or schema.
+
+## Contracts and HTTP
+
+Contracts are divided by audience:
+
+```text
+Contracts/User/CreateUserRequest
+Contracts/User/UserRequestResponse
+Contracts/Admin/AdminReviewRequest
+Contracts/Admin/AdminQueueItemResponse
+Contracts/Admin/AdminReviewResponse
+Contracts/Workflow/WorkflowStatuses
+Contracts/Workflow/ReviewDecisions
+```
+
+The same types and JSON shapes are used by:
+
+- Blazor serialization;
+- minimal API binding;
+- Swagger/OpenAPI;
+- Postman;
+- smoke tests.
+
+Swagger groups endpoints as:
+
+- Shared platform;
+- User full stack;
+- Admin full stack.
+
+`FoundationKit.WebApi` maps classified failures to RFC 7807 Problem Details. `FoundationKit.Blazor` classifies successful responses, API failures, network errors, timeouts, empty payloads, and invalid JSON.
 
 ## Canonical capability catalog
 
-`catalog/foundationkit.catalog.json` is the hand-maintained source for implemented capabilities, package metadata, project ideas, adoption steps, and contact metadata.
+`catalog/foundationkit.catalog.json` remains the hand-maintained source for implemented reusable capabilities, packages, ideas, adoption steps, and contact metadata.
 
 It feeds:
 
 - `GET /api/catalog`;
-- the Blazor client;
-- the GitHub Pages Blazor demo;
+- the user portal capability selector;
+- the architecture landing page;
+- the GitHub Pages demo;
 - generated `docs/FEATURES.md`.
 
-`FoundationKit.CatalogGenerator` validates IDs, implemented status, and idea references. CI rejects generated documentation drift.
-
-## Swagger and Postman
-
-The API enables Swagger/OpenAPI at `/swagger`.
-
-Swagger documents the same Contracts assembly used by the client. The Postman collection under `postman/` sends matching request JSON and stores the created identifier for follow-up retrieval.
-
-Swagger and Postman are external API clients. They do not bypass domain creation, repositories, unit of work, migrations, or SQL Server.
+The API embeds the catalog as an assembly resource for reliable local and container execution. The client receives a static copy for GitHub Pages fallback.
 
 ## GitHub Pages boundary
 
-The Pages workflow publishes the Blazor WebAssembly client, not a second JavaScript implementation.
+GitHub Pages publishes the same Blazor WebAssembly client. It cannot execute ASP.NET Core or SQL Server.
 
-GitHub Pages cannot execute ASP.NET Core or SQL Server. When `/api/runtime` is unavailable, the client:
+In demo mode:
 
-- switches to demo mode;
-- reads the static canonical catalog;
-- disables database submission;
-- does not pretend that persistence occurred.
+- the architecture landing page remains active;
+- the user form and JSON preview remain visible;
+- database submission is disabled;
+- the admin page shows explicit demo queue data;
+- approve and reject actions are disabled;
+- no persistence is claimed.
 
-The local API-hosted path remains authoritative.
+The local API-hosted path is authoritative.
 
 ## Domain events
 
-`DomainEventsSaveChangesInterceptor` supports synchronous and asynchronous EF Core saves.
+`DomainEventsSaveChangesInterceptor` dispatches in-process events only after a successful database save.
 
 ```text
-Capture pending events
+Capture events
         ↓
 Database save succeeds
         ↓
-Clear aggregate event queues
+Clear aggregate queues
         ↓
-Dispatch handlers in process
+Dispatch registered handlers
 ```
 
-A database failure dispatches nothing and leaves event queues unchanged. A handler failure occurs after commit and is surfaced to the caller. Use an outbox when durable delivery is required.
+A database failure dispatches nothing. In-process events are not durable; use an outbox for production delivery guarantees.
 
 ## CI verification
 
@@ -212,25 +278,29 @@ CI performs:
 4. generated capability documentation drift detection;
 5. core and Workbench tests;
 6. Blazor-hosted API publish;
-7. NuGet and symbol packaging;
-8. Dockerized API + Blazor + SQL Server smoke testing;
-9. real create and read persistence verification.
+7. package creation;
+8. Dockerized Blazor + API + SQL Server startup;
+9. user request creation;
+10. admin queue retrieval;
+11. admin approval;
+12. user status retrieval;
+13. approved queue verification.
 
-## Known production gaps
+## Security and production boundary
 
-The Workbench is an architecture and integration reference. It does not yet provide:
+The reference application intentionally does not implement production identity or authorization. A consuming product must decide:
 
-- authentication and authorization;
-- production secret management;
+- user authentication and ownership;
+- admin authentication and roles;
+- authorization policies for each route group;
+- audit identity guarantees;
 - rate limiting;
-- telemetry export;
-- backups and high availability;
+- private-data handling;
+- secret management;
+- outbox and queue strategy;
+- telemetry and alerting;
+- backup and recovery;
 - controlled deployment migrations;
-- durable domain-event delivery;
-- production ingress and TLS policy.
+- ingress and TLS.
 
-These are explicit product decisions, not hidden FoundationKit features.
-
-## Versioning
-
-The core is pre-1.0. Public API changes require tests, package documentation, catalog updates when capabilities change, generated documentation, and `CHANGELOG.md`.
+The two vertical slices make those decisions easy to place: user-facing concerns stay in the user slice, admin-facing concerns stay in the admin slice, and cross-slice behavior stays at the integration boundary.

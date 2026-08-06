@@ -1,6 +1,8 @@
 using System.Net.Http.Json;
 using FoundationKit.Blazor.Api;
 using FoundationKit.Workbench.Contracts;
+using FoundationKit.Workbench.Contracts.Admin;
+using FoundationKit.Workbench.Contracts.User;
 
 namespace FoundationKit.Workbench.Client.Services;
 
@@ -33,24 +35,48 @@ public sealed class WorkbenchApiClient(HttpClient httpClient) : ApiClientBase(ht
             new HttpRequestMessage(HttpMethod.Get, ApiRoutes.Health),
             cancellationToken);
 
-    public Task<ApiResult<BuildBriefResponse>> CreateBuildBriefAsync(
-        BuildBriefRequest request,
+    public Task<ApiResult<UserRequestResponse>> CreateUserRequestAsync(
+        CreateUserRequest request,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        return SendAsync<BuildBriefResponse>(
-            new HttpRequestMessage(HttpMethod.Post, ApiRoutes.BuildBriefs)
+        return SendAsync<UserRequestResponse>(
+            new HttpRequestMessage(HttpMethod.Post, ApiRoutes.User.Requests)
             {
                 Content = JsonContent.Create(request)
             },
             cancellationToken);
     }
 
-    public Task<ApiResult<BuildBriefResponse>> GetBuildBriefAsync(
+    public Task<ApiResult<UserRequestResponse>> GetUserRequestAsync(
         Guid id,
         CancellationToken cancellationToken = default) =>
-        SendAsync<BuildBriefResponse>(
-            new HttpRequestMessage(HttpMethod.Get, ApiRoutes.BuildBrief(id)),
+        SendAsync<UserRequestResponse>(
+            new HttpRequestMessage(HttpMethod.Get, ApiRoutes.User.Request(id)),
             cancellationToken);
+
+    public Task<ApiResult<IReadOnlyList<AdminQueueItemResponse>>> GetAdminQueueAsync(
+        string status = "submitted",
+        CancellationToken cancellationToken = default) =>
+        SendAsync<IReadOnlyList<AdminQueueItemResponse>>(
+            new HttpRequestMessage(
+                HttpMethod.Get,
+                $"{ApiRoutes.Admin.Requests}?status={Uri.EscapeDataString(status)}"),
+            cancellationToken);
+
+    public Task<ApiResult<AdminReviewResponse>> ReviewUserRequestAsync(
+        Guid id,
+        AdminReviewRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        return SendAsync<AdminReviewResponse>(
+            new HttpRequestMessage(HttpMethod.Post, ApiRoutes.Admin.Review(id))
+            {
+                Content = JsonContent.Create(request)
+            },
+            cancellationToken);
+    }
 }

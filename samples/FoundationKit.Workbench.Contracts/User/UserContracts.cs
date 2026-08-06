@@ -1,11 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace FoundationKit.Workbench.Contracts;
+namespace FoundationKit.Workbench.Contracts.User;
 
-public sealed class BuildBriefRequest
+public sealed class CreateUserRequest
 {
     [Required]
-    [StringLength(120)]
+    [StringLength(160)]
     public string? ProjectName { get; set; }
 
     [Required]
@@ -13,11 +13,11 @@ public sealed class BuildBriefRequest
     public string? ProjectType { get; set; }
 
     [Required]
-    [StringLength(160)]
+    [StringLength(300)]
     public string? Audience { get; set; }
 
     [Required]
-    [StringLength(1200)]
+    [StringLength(1000)]
     public string? Goal { get; set; }
 
     public IReadOnlyCollection<string> SelectedCapabilityIds { get; set; } = [];
@@ -29,7 +29,7 @@ public sealed class BuildBriefRequest
     public string? Notes { get; set; }
 }
 
-public sealed record BuildBriefResponse(
+public sealed record UserRequestResponse(
     Guid Id,
     string ProjectName,
     string ProjectType,
@@ -38,5 +38,7 @@ public sealed record BuildBriefResponse(
     IReadOnlyList<string> SelectedCapabilityIds,
     string Priorities,
     string Notes,
+    string Status,
     DateTimeOffset CreatedUtc,
+    DateTimeOffset UpdatedUtc,
     string ContactUrl);

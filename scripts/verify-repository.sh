@@ -48,7 +48,6 @@ unexpected_top_level="$(
     ! -name 'postman' \
     ! -name 'samples' \
     ! -name 'scripts' \
-    ! -name 'site' \
     ! -name 'src' \
     ! -name 'tests' \
     ! -name 'tools' \
@@ -76,16 +75,29 @@ if [[ -n "$migration_leaks" ]]; then
 fi
 
 required_files=(
+  "README.md"
   "catalog/foundationkit.catalog.json"
   "docs/FEATURES.md"
   "docs/WORKBENCH.md"
+  "docs/DUAL-FULL-STACK.md"
   "samples/FoundationKit.Workbench/FoundationKit.Workbench.Api.csproj"
   "samples/FoundationKit.Workbench/Program.cs"
+  "samples/FoundationKit.Workbench/Endpoints/SystemEndpoints.cs"
+  "samples/FoundationKit.Workbench/Endpoints/UserPortalEndpoints.cs"
+  "samples/FoundationKit.Workbench/Endpoints/AdminPortalEndpoints.cs"
+  "samples/FoundationKit.Workbench/Application/User/CreateUserRequestUseCase.cs"
+  "samples/FoundationKit.Workbench/Application/Admin/ReviewUserRequestUseCase.cs"
   "samples/FoundationKit.Workbench/Infrastructure/Migrations/20260806113000_InitialWorkbench.cs"
+  "samples/FoundationKit.Workbench/Infrastructure/Migrations/20260806164000_DualPortalWorkflow.cs"
   "samples/FoundationKit.Workbench.Client/FoundationKit.Workbench.Client.csproj"
   "samples/FoundationKit.Workbench.Client/Pages/Home.razor"
+  "samples/FoundationKit.Workbench.Client/Pages/UserPortal.razor"
+  "samples/FoundationKit.Workbench.Client/Pages/AdminPortal.razor"
+  "samples/FoundationKit.Workbench.Client/Services/WorkbenchApiClient.cs"
   "samples/FoundationKit.Workbench.Contracts/FoundationKit.Workbench.Contracts.csproj"
-  "samples/FoundationKit.Workbench.Contracts/BuildBriefContracts.cs"
+  "samples/FoundationKit.Workbench.Contracts/User/UserContracts.cs"
+  "samples/FoundationKit.Workbench.Contracts/Admin/AdminContracts.cs"
+  "samples/FoundationKit.Workbench.Contracts/Workflow/WorkflowContracts.cs"
   "postman/FoundationKit.Workbench.postman_collection.json"
   "deploy/docker-compose.yml"
 )
@@ -99,6 +111,7 @@ done
 
 api_project="samples/FoundationKit.Workbench/FoundationKit.Workbench.Api.csproj"
 client_project="samples/FoundationKit.Workbench.Client/FoundationKit.Workbench.Client.csproj"
+postman_collection="postman/FoundationKit.Workbench.postman_collection.json"
 
 if ! grep -q 'Microsoft.EntityFrameworkCore.SqlServer' "$api_project"; then
   echo "Workbench API must explicitly own the SQL Server provider dependency." >&2
@@ -125,9 +138,54 @@ if ! grep -q 'FoundationKit.Blazor' "$client_project"; then
   exit 1
 fi
 
-if ! grep -q 'BuildBriefRequest' postman/FoundationKit.Workbench.postman_collection.json; then
-  echo "Postman collection must document the shared request contract." >&2
+client_persistence_leaks="$(
+  grep -RIl \
+    --include='*.cs' \
+    --include='*.csproj' \
+    -- 'Microsoft.EntityFrameworkCore\|Microsoft.EntityFrameworkCore.SqlServer' \
+    samples/FoundationKit.Workbench.Client \
+    samples/FoundationKit.Workbench.Contracts || true
+)"
+
+if [[ -n "$client_persistence_leaks" ]]; then
+  echo "Client and transport contracts must not reference EF Core or SQL Server:" >&2
+  echo "$client_persistence_leaks" >&2
   exit 1
 fi
 
-echo "Repository boundary verification passed."
+if ! grep -q 'CreateUserRequest' "$postman_collection"; then
+  echo "Postman collection must document the user request contract." >&2
+  exit 1
+fi
+
+if ! grep -q 'reviewedBy' "$postman_collection" || ! grep -q 'decision' "$postman_collection"; then
+  echo "Postman collection must document the admin review request fields." >&2
+  exit 1
+fi
+
+if ! grep -q '/api/user' samples/FoundationKit.Workbench/Endpoints/UserPortalEndpoints.cs; then
+  echo "User vertical slice must expose a dedicated user route group." >&2
+  exit 1
+fi
+
+if ! grep -q '/api/admin' samples/FoundationKit.Workbench/Endpoints/AdminPortalEndpoints.cs; then
+  echo "Admin vertical slice must expose a dedicated admin route group." >&2
+  exit 1
+fi
+
+if ! grep -q 'AdminReviews' samples/FoundationKit.Workbench/Infrastructure/Migrations/20260806164000_DualPortalWorkflow.cs; then
+  echo "Dual-stack migration must persist the admin review side of the workflow." >&2
+  exit 1
+fi
+
+if ! grep -q 'USER FULL STACK' samples/FoundationKit.Workbench.Client/Pages/UserPortal.razor; then
+  echo "User portal must identify its full-stack responsibility clearly." >&2
+  exit 1
+fi
+
+if ! grep -q 'ADMIN FULL STACK' samples/FoundationKit.Workbench.Client/Pages/AdminPortal.razor; then
+  echo "Admin portal must identify its full-stack responsibility clearly." >&2
+  exit 1
+fi
+
+echo "Dual full-stack repository boundary verification passed."

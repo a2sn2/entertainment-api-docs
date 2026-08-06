@@ -29,7 +29,9 @@ public sealed class BuildBrief : AggregateRoot<Guid>
         SelectedCapabilityIdsJson = selectedCapabilityIdsJson;
         Priorities = priorities;
         Notes = notes;
+        Status = BuildBriefStatus.Submitted;
         CreatedUtc = createdUtc;
+        UpdatedUtc = createdUtc;
     }
 
     public string ProjectName { get; private set; } = string.Empty;
@@ -39,7 +41,9 @@ public sealed class BuildBrief : AggregateRoot<Guid>
     public string SelectedCapabilityIdsJson { get; private set; } = "[]";
     public string Priorities { get; private set; } = string.Empty;
     public string Notes { get; private set; } = string.Empty;
+    public BuildBriefStatus Status { get; private set; } = BuildBriefStatus.Submitted;
     public DateTimeOffset CreatedUtc { get; private set; }
+    public DateTimeOffset UpdatedUtc { get; private set; }
 
     public IReadOnlyList<string> SelectedCapabilityIds =>
         JsonSerializer.Deserialize<string[]>(SelectedCapabilityIdsJson) ?? [];
@@ -100,6 +104,22 @@ public sealed class BuildBrief : AggregateRoot<Guid>
 
         brief.RaiseDomainEvent(new BuildBriefCreated(brief.Id, brief.ProjectName, brief.CreatedUtc));
         return Result<BuildBrief>.Success(brief);
+    }
+
+    public Result<BuildBrief> ApplyReview(
+        AdminReviewDecision decision,
+        DateTimeOffset reviewedUtc)
+    {
+        if (Status is not BuildBriefStatus.Submitted)
+            return Result<BuildBrief>.Failure(BuildBriefErrors.AlreadyReviewed);
+
+        Status = decision is AdminReviewDecision.Approve
+            ? BuildBriefStatus.Approved
+            : BuildBriefStatus.Rejected;
+        UpdatedUtc = reviewedUtc;
+
+        RaiseDomainEvent(new BuildBriefReviewed(Id, Status, reviewedUtc));
+        return Result<BuildBrief>.Success(this);
     }
 
     private static string Normalize(string? value) => value?.Trim() ?? string.Empty;

@@ -1,9 +1,9 @@
-using System.Reflection;
 using System.Text.Json;
+using FoundationKit.Workbench.Application.Shared;
 
 namespace FoundationKit.Workbench.Infrastructure;
 
-public sealed class CatalogService
+public sealed class CatalogService : ICapabilityCatalog
 {
     private const string CatalogResourceName =
         "FoundationKit.Workbench.Catalog.foundationkit.catalog.json";

@@ -5,46 +5,130 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Target: .NET 8](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/)
 
-FoundationKit is the official reusable core for Clean Architecture and domain-driven .NET applications in this repository.
+FoundationKit is the official reusable .NET core in this repository. Its reference application is deliberately split into two complete end-to-end sections:
 
-The repository separates four responsibilities:
+1. **User Full Stack** — database, domain, application logic, request/response contracts, API, typed frontend client, Blazor UI, and user UX.
+2. **Admin Full Stack** — database queries and review records, domain transition, application logic, admin contracts, API, typed frontend client, Blazor UI, and admin UX.
 
-1. **Reusable core packages** under `src/`.
-2. **ASP.NET Core API** under `samples/FoundationKit.Workbench/`.
-3. **Blazor WebAssembly + MudBlazor client** under `samples/FoundationKit.Workbench.Client/`.
-4. **Shared request/response contracts** under `samples/FoundationKit.Workbench.Contracts/`.
-
-The API, Blazor client, Swagger, Postman collection, SQL Server provider, EF Core migrations, and product-specific Workbench logic are consumers of the core. They do not leak into the reusable packages.
-
-## Official Workbench flow
+The two sections connect through one explicit request lifecycle:
 
 ```text
-Blazor WebAssembly + MudBlazor
-              │
-              │ typed HTTP using FoundationKit.Blazor
-              ▼
-FoundationKit.Workbench.Contracts
-              │
-              ▼
-ASP.NET Core API + Swagger
-              │
-              ▼
-Domain / Application / Infrastructure / WebApi core
-              │
-              ▼
-EF Core + SQL Server + Workbench-owned migrations
+User creates request
+        ↓
+submitted
+        ↓
+Admin reviews request
+        ↓
+approved or rejected
+        ↓
+User reads the updated status
 ```
 
-`BuildBriefRequest` is the canonical transport contract. The Blazor client serializes it, Swagger documents it, and the Postman collection sends the same JSON shape.
+## Architecture at a glance
+
+```text
+                              REUSABLE CORE
+        FoundationKit.Domain / Application / Infrastructure / WebApi / Blazor
+                                     │
+                  ┌──────────────────┴──────────────────┐
+                  │                                     │
+           USER FULL STACK                       ADMIN FULL STACK
+                  │                                     │
+          Pages/UserPortal.razor                Pages/AdminPortal.razor
+                  │                                     │
+           typed API client                      typed API client
+                  │                                     │
+       Contracts/User + User API            Contracts/Admin + Admin API
+                  │                                     │
+       CreateUserRequestUseCase             ReviewUserRequestUseCase
+                  │                                     │
+        BuildBrief aggregate            AdminReview + BuildBrief transition
+                  │                                     │
+          BuildBriefs table                  AdminReviews table
+                  └──────────────────┬──────────────────┘
+                                     │
+                       SHARED WORKFLOW + UNIT OF WORK
+```
+
+Read the full architecture first:
+
+- [Dual Full-Stack Architecture](docs/DUAL-FULL-STACK.md)
+- [Technical Architecture](docs/ARCHITECTURE.md)
+- [Workbench Operations](docs/WORKBENCH.md)
+- [Implemented Core Capabilities](docs/FEATURES.md)
+
+## What belongs to the reusable core
+
+```text
+src/FoundationKit.Domain
+src/FoundationKit.Application
+src/FoundationKit.Infrastructure
+src/FoundationKit.WebApi
+src/FoundationKit.Blazor
+```
+
+These packages remain product-independent. They do not own SQL Server, migrations, Workbench rules, admin behavior, user behavior, or UI design.
+
+## What belongs to the reference application
+
+```text
+samples/FoundationKit.Workbench/                API host, domain, use cases, EF Core, SQL Server
+samples/FoundationKit.Workbench.Contracts/      User, Admin, Workflow, and shared transport contracts
+samples/FoundationKit.Workbench.Client/         Blazor WebAssembly + MudBlazor UI/UX
+postman/                                         executable API walkthrough
+deploy/                                          local Docker topology
+```
+
+## User Full Stack
+
+```text
+SQL Server → EF Core → BuildBrief → CreateUserRequestUseCase
+→ CreateUserRequest → POST /api/user/requests
+→ WorkbenchApiClient → /user Blazor UI
+```
+
+User endpoints:
+
+| Method | Route | Purpose |
+|---|---|---|
+| `POST` | `/api/user/requests` | Create a request in `submitted` state |
+| `GET` | `/api/user/requests/{id}` | Read the latest status |
+
+## Admin Full Stack
+
+```text
+SQL Server → EfAdminQueueReader / AdminReview
+→ ReviewUserRequestUseCase → AdminReviewRequest
+→ /api/admin/requests → WorkbenchApiClient → /admin Blazor UI
+```
+
+Admin endpoints:
+
+| Method | Route | Purpose |
+|---|---|---|
+| `GET` | `/api/admin/requests?status=submitted` | Read the admin queue |
+| `POST` | `/api/admin/requests/{id}/review` | Approve or reject a user request |
+
+The review operation inserts `AdminReviews` and changes `BuildBriefs.Status` through the same unit of work.
+
+## Shared platform endpoints
+
+| Method | Route | Purpose |
+|---|---|---|
+| `GET` | `/api/runtime` | Local or static-demo runtime |
+| `GET` | `/api/health` | API and SQL Server health |
+| `GET` | `/api/catalog` | Canonical FoundationKit capability catalog |
+
+Swagger documents all three groups: Shared Platform, User Full Stack, and Admin Full Stack.
 
 ## Run in Visual Studio 2026
 
 Requirements:
 
-- Visual Studio 2026 with the ASP.NET and web development workload;
+- Visual Studio 2026 with ASP.NET and web development;
 - .NET 8 SDK;
-- SQL Server running locally;
-- SQL Server Management Studio when database inspection is needed.
+- SQL Server;
+- SSMS for database inspection when needed.
 
 Open:
 
@@ -52,13 +136,13 @@ Open:
 FoundationKit.sln
 ```
 
-Set this project as the startup project:
+Set as startup project:
 
 ```text
 FoundationKit.Workbench.Api
 ```
 
-Configure the API project user secrets:
+Set API project user secrets:
 
 ```json
 {
@@ -68,47 +152,46 @@ Configure the API project user secrets:
 }
 ```
 
-For SQL Express use:
-
-```json
-{
-  "ConnectionStrings": {
-    "Workbench": "Server=.\\SQLEXPRESS;Database=FoundationKitWorkbench;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
-  }
-}
-```
-
-Press `F5`. The API host serves the Blazor WebAssembly application and applies the Workbench EF Core migrations automatically.
+Press `F5`.
 
 Local URLs:
 
-- UI: <http://localhost:5057/>
+- Architecture landing page: <http://localhost:5057/>
+- User portal: <http://localhost:5057/user>
+- Admin portal: <http://localhost:5057/admin>
 - Swagger: <http://localhost:5057/swagger>
 - Health: <http://localhost:5057/api/health>
-- Catalog: <http://localhost:5057/api/catalog>
 
-## Run from PowerShell
+The host applies Workbench EF Core migrations automatically for this local reference application.
+
+## Run with PowerShell or Docker
+
+Existing SQL Server:
 
 ```powershell
 $env:ConnectionStrings__Workbench="Server=.;Database=FoundationKitWorkbench;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
 dotnet run --project .\samples\FoundationKit.Workbench\FoundationKit.Workbench.Api.csproj
 ```
 
-Or start the complete Docker topology:
+Complete Docker topology:
 
 ```powershell
 .\scripts\run-workbench.ps1
 ```
 
-Stop it with:
+Docker URL:
+
+```text
+http://localhost:8080/
+```
+
+Stop:
 
 ```powershell
 .\scripts\stop-workbench.ps1
 ```
 
-Docker serves the Workbench at <http://localhost:8080/>.
-
-## Use the API from Postman
+## Postman walkthrough
 
 Import:
 
@@ -116,55 +199,44 @@ Import:
 postman/FoundationKit.Workbench.postman_collection.json
 ```
 
-The collection contains:
+Run in this order:
 
-- runtime;
-- health;
-- canonical capability catalog;
-- create build brief;
-- get build brief by identifier.
+1. `User Full Stack / Create User Request`.
+2. `Admin Full Stack / Get Submitted Queue`.
+3. `Admin Full Stack / Approve User Request`.
+4. `User Full Stack / Get User Request Status`.
+5. `Admin Full Stack / Get Approved Queue`.
 
-The create request stores the returned identifier in the `buildBriefId` collection variable so the following GET request can read the same SQL Server record.
+The collection stores the created identifier in `userRequestId`.
 
-## Shared API contract
+## Database view
 
-```json
-{
-  "projectName": "نظام إدارة مراسلات",
-  "projectType": "نظام خدمة عملاء",
-  "audience": "موظفو خدمة العملاء والمشرفون",
-  "goal": "إدارة المحادثات والمهام والتصعيد من واجهة داخلية موحدة",
-  "selectedCapabilityIds": [
-    "aggregate-domain-events",
-    "commands-queries",
-    "repository-ports",
-    "ef-repository",
-    "result-http-mapping",
-    "typed-api-results"
-  ],
-  "priorities": "الصلاحيات، سجل التدقيق، سرعة الاستجابة",
-  "notes": "مثال عام غير سري"
-}
+```sql
+USE FoundationKitWorkbench;
+GO
+
+SELECT *
+FROM dbo.BuildBriefs
+ORDER BY CreatedUtc DESC;
+
+SELECT *
+FROM dbo.AdminReviews
+ORDER BY ReviewedUtc DESC;
 ```
 
-Endpoint:
+## Repository reading order
 
-```http
-POST /api/build-briefs
-Content-Type: application/json
+```text
+1. README.md
+2. docs/DUAL-FULL-STACK.md
+3. src/FoundationKit.*
+4. Contracts/User and Contracts/Admin
+5. Application/User and Application/Admin
+6. Endpoints/UserPortalEndpoints.cs and AdminPortalEndpoints.cs
+7. Client/Pages/UserPortal.razor and AdminPortal.razor
+8. Infrastructure/Migrations
+9. Postman collection
 ```
-
-## Reusable packages
-
-| Package | Responsibility |
-|---|---|
-| `FoundationKit.Domain` | Entities, aggregate roots, value objects, exceptions, and domain events |
-| `FoundationKit.Application` | Commands, queries, results, validation, pagination, repository ports, and use-case abstractions |
-| `FoundationKit.Infrastructure` | Provider-neutral EF Core repositories, unit of work, specifications, and in-process domain-event dispatch |
-| `FoundationKit.WebApi` | Result mapping, Problem Details, correlation IDs, and baseline response headers |
-| `FoundationKit.Blazor` | Typed API results, resilient response parsing, and asynchronous UI state |
-
-SQL Server remains outside `src/`. The Workbench API explicitly owns the provider and migrations.
 
 ## Build and verify
 
@@ -173,37 +245,19 @@ dotnet restore FoundationKit.sln
 dotnet build FoundationKit.sln --configuration Release --no-restore
 dotnet test FoundationKit.sln --configuration Release --no-build
 bash scripts/verify-repository.sh
-bash scripts/pack.sh
+bash scripts/smoke-workbench.sh
 ```
 
-CI also publishes the Blazor-hosted API and runs a real SQL Server persistence smoke test.
+CI verifies the hosted Blazor application, Swagger groups, migrations, SQL Server persistence, user creation, admin approval, and the status returned to the user.
 
 ## GitHub Pages
 
 <https://a2sn2.github.io/foundationkit-dotnet/>
 
-Pages publishes the same Blazor WebAssembly client. Because GitHub Pages cannot run ASP.NET Core or SQL Server, the deployed client automatically operates in catalog demo mode and disables database submission. The real persistence path is local through the API host.
+Pages publishes the same Blazor UI. It shows the architecture and both portal experiences, but disables real database writes and admin decisions because GitHub Pages cannot host ASP.NET Core or SQL Server.
 
-## Repository map
+## Production boundary
 
-```text
-src/                                      reusable FoundationKit core
-samples/FoundationKit.Workbench/          ASP.NET Core API, domain logic, SQL Server, migrations
-samples/FoundationKit.Workbench.Client/   Blazor WebAssembly and MudBlazor UI
-samples/FoundationKit.Workbench.Contracts shared API request and response contracts
-tests/                                    core and Workbench tests
-postman/                                  reusable API collection
-catalog/                                  canonical capability data
-deploy/                                   Docker Compose topology
-scripts/                                  verification and local launch commands
-docs/                                     architecture and operations documentation
-```
+This is a reference architecture, not a complete production security model. Identity, authorization, per-user ownership, admin roles, private data handling, rate limiting, outbox delivery, production migrations, observability backends, and deployment topology remain consuming-product decisions.
 
-More detail:
-
-- [Architecture](docs/ARCHITECTURE.md)
-- [Workbench operations](docs/WORKBENCH.md)
-- [Implemented capabilities](docs/FEATURES.md)
-- [Package contracts](docs/PACKAGES.md)
-
-Current package version: `0.1.0`.
+Current reusable package version: `0.1.0`.
