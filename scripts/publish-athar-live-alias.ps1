@@ -27,7 +27,7 @@ function Invoke-Git {
     & git -C $WorkingDirectory @Arguments
     $exitCode = $LASTEXITCODE
     if (-not $IgnoreExitCode -and $exitCode -ne 0) {
-        throw "Git command failed with exit code $exitCode: git $($Arguments -join ' ')"
+        throw "Git command failed with exit code ${exitCode}: git $($Arguments -join ' ')"
     }
 
     return $exitCode
