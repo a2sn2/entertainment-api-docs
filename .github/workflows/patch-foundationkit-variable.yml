@@ -1,0 +1,43 @@
+name: Patch FoundationKit PowerShell Variable
+
+on:
+  push:
+    branches:
+      - feature/free-fixed-athar-link
+    paths:
+      - .github/workflows/patch-foundationkit-variable.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/free-fixed-athar-link
+          fetch-depth: 0
+
+      - name: Fix Windows PowerShell variable delimiter
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("foundationkit.ps1")
+          text = path.read_text(encoding="utf-8")
+          old = 'throw "Child script failed with exit code $LASTEXITCODE: $ScriptPath"'
+          new = 'throw "Child script failed with exit code ${LASTEXITCODE}: $ScriptPath"'
+          if old not in text:
+              raise SystemExit("Expected PowerShell line was not found")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8", newline="\n")
+
+      - name: Commit the patch
+        shell: bash
+        run: |
+          git config user.name "foundationkit-actions"
+          git config user.email "foundationkit-actions@users.noreply.github.com"
+          git add foundationkit.ps1
+          git commit -m "Fix unified manager parsing on Windows PowerShell 5.1"
+          git push origin HEAD:feature/free-fixed-athar-link
