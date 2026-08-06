@@ -97,8 +97,8 @@ jobs:
             artifacts/packages/*.snupkg
           if-no-files-found: error
 
-  workbench-sqlserver-smoke:
-    name: Workbench user-admin SQL Server workflow
+  sqlserver-integration-smoke:
+    name: Workbench and Athar SQL Server integration
     runs-on: ubuntu-latest
     needs: build-test-pack
 
@@ -106,9 +106,13 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Generate temporary SQL password
+      - name: Generate temporary integration credentials
         shell: bash
-        run: echo "FOUNDATIONKIT_SQL_PASSWORD=Fkit!$(openssl rand -hex 12)Aa1" >> "$GITHUB_ENV"
+        run: |
+          echo "FOUNDATIONKIT_SQL_PASSWORD=Fkit!$(openssl rand -hex 12)Aa1" >> "$GITHUB_ENV"
+          echo "ATHAR_SQL_PASSWORD=AtharSql!$(openssl rand -hex 12)Aa1" >> "$GITHUB_ENV"
+          echo "ATHAR_ADMIN_EMAIL=admin@athar.test" >> "$GITHUB_ENV"
+          echo "ATHAR_ADMIN_PASSWORD=AtharAdmin!$(openssl rand -hex 12)Aa1" >> "$GITHUB_ENV"
 
       - name: Start Workbench stack
         run: docker compose -f deploy/docker-compose.yml up --build -d
@@ -144,22 +148,6 @@ jobs:
       - name: Stop Workbench stack
         if: always()
         run: docker compose -f deploy/docker-compose.yml down --volumes --remove-orphans
-
-  athar-sqlserver-smoke:
-    name: Athar production-reference SQL Server workflow
-    runs-on: ubuntu-latest
-    needs: build-test-pack
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Generate temporary Athar credentials
-        shell: bash
-        run: |
-          echo "ATHAR_SQL_PASSWORD=AtharSql!$(openssl rand -hex 12)Aa1" >> "$GITHUB_ENV"
-          echo "ATHAR_ADMIN_EMAIL=admin@athar.test" >> "$GITHUB_ENV"
-          echo "ATHAR_ADMIN_PASSWORD=AtharAdmin!$(openssl rand -hex 12)Aa1" >> "$GITHUB_ENV"
 
       - name: Start Athar stack
         run: docker compose -f deploy/athar-compose.yml up --build -d
