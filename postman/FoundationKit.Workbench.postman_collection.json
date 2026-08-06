@@ -1,8 +1,8 @@
 {
   "info": {
     "_postman_id": "4f6c2d31-93ec-4d6e-b247-2f6ecb359b11",
-    "name": "FoundationKit Workbench API",
-    "description": "Requests generated from the same FoundationKit.Workbench.Contracts models used by the Blazor WebAssembly client. The create payload matches BuildBriefRequest.",
+    "name": "FoundationKit Dual Full-Stack API",
+    "description": "The same user and admin request contracts consumed by the Blazor portals. Run User/Create, then Admin/Queue and Admin/Review, then User/Get Status to see the integration boundary.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -11,81 +11,146 @@
       "value": "http://localhost:5057"
     },
     {
-      "key": "buildBriefId",
+      "key": "userRequestId",
       "value": ""
     }
   ],
   "item": [
     {
-      "name": "Runtime",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": "{{baseUrl}}/api/runtime",
-        "description": "Returns whether the client is connected to the local API and SQL Server runtime."
-      }
-    },
-    {
-      "name": "Health",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": "{{baseUrl}}/api/health",
-        "description": "Checks API and SQL Server connectivity."
-      }
-    },
-    {
-      "name": "Catalog",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": "{{baseUrl}}/api/catalog",
-        "description": "Returns the canonical FoundationKit packages, capabilities, and project ideas."
-      }
-    },
-    {
-      "name": "Create Build Brief",
-      "event": [
+      "name": "Shared Platform",
+      "item": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Created', function () { pm.response.to.have.status(201); });",
-              "const response = pm.response.json();",
-              "pm.collectionVariables.set('buildBriefId', response.id);"
-            ],
-            "type": "text/javascript"
+          "name": "Runtime",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/runtime"
+          }
+        },
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/health"
+          }
+        },
+        {
+          "name": "Capability Catalog",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/catalog"
           }
         }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "X-Correlation-ID",
-            "value": "postman-foundationkit-001"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"projectName\": \"نظام إدارة مراسلات\",\n  \"projectType\": \"نظام خدمة عملاء\",\n  \"audience\": \"موظفو خدمة العملاء والمشرفون\",\n  \"goal\": \"إدارة المحادثات والمهام والتصعيد من واجهة داخلية موحدة\",\n  \"selectedCapabilityIds\": [\n    \"aggregate-domain-events\",\n    \"commands-queries\",\n    \"repository-ports\",\n    \"ef-repository\",\n    \"result-http-mapping\",\n    \"typed-api-results\"\n  ],\n  \"priorities\": \"الصلاحيات، سجل التدقيق، سرعة الاستجابة\",\n  \"notes\": \"هذا مثال مطابق لعقد BuildBriefRequest المشترك.\"\n}"
-        },
-        "url": "{{baseUrl}}/api/build-briefs",
-        "description": "Creates a SQL Server record using the same BuildBriefRequest JSON contract consumed by Blazor."
-      }
+      ]
     },
     {
-      "name": "Get Build Brief",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": "{{baseUrl}}/api/build-briefs/{{buildBriefId}}",
-        "description": "Reads the record created by the previous request."
-      }
+      "name": "User Full Stack",
+      "item": [
+        {
+          "name": "Create User Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Created', function () { pm.response.to.have.status(201); });",
+                  "const response = pm.response.json();",
+                  "pm.collectionVariables.set('userRequestId', response.id);",
+                  "pm.test('Starts submitted', function () { pm.expect(response.status).to.eql('submitted'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-ID",
+                "value": "postman-user-001"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectName\": \"نظام إدارة مراسلات\",\n  \"projectType\": \"نظام خدمة عملاء\",\n  \"audience\": \"موظفو خدمة العملاء والمشرفون\",\n  \"goal\": \"إدارة المحادثات والمهام والتصعيد من واجهة داخلية موحدة\",\n  \"selectedCapabilityIds\": [\n    \"aggregate-domain-events\",\n    \"commands-queries\",\n    \"repository-ports\",\n    \"ef-repository\",\n    \"result-http-mapping\",\n    \"typed-api-results\"\n  ],\n  \"priorities\": \"الصلاحيات، سجل التدقيق، سرعة الاستجابة\",\n  \"notes\": \"مثال عام غير سري مطابق لعقد CreateUserRequest.\"\n}"
+            },
+            "url": "{{baseUrl}}/api/user/requests",
+            "description": "Creates the user-side SQL Server record using CreateUserRequest."
+          }
+        },
+        {
+          "name": "Get User Request Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/user/requests/{{userRequestId}}",
+            "description": "Returns the current state after the admin workflow processes the request."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Full Stack",
+      "item": [
+        {
+          "name": "Get Submitted Queue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/requests?status=submitted",
+            "description": "Reads the SQL-backed admin work queue."
+          }
+        },
+        {
+          "name": "Approve User Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Reviewed', function () { pm.response.to.have.status(200); });",
+                  "const response = pm.response.json();",
+                  "pm.test('Approved', function () { pm.expect(response.status).to.eql('approved'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-ID",
+                "value": "postman-admin-001"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"approve\",\n  \"reviewedBy\": \"Admin User\",\n  \"notes\": \"تمت مراجعة الطلب واعتماده من لوحة الإدارة.\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/requests/{{userRequestId}}/review",
+            "description": "Writes AdminReviews and changes the linked user request status in one unit of work."
+          }
+        },
+        {
+          "name": "Get Approved Queue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/requests?status=approved"
+          }
+        }
+      ]
     }
   ]
 }
