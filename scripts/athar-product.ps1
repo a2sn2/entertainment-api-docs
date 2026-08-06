@@ -1,3 +1,5 @@
+#requires -Version 5.1
+
 [CmdletBinding()]
 param(
     [ValidateSet("Start", "Stop", "Status", "Open", "Lan", "Backup", "Reset")]
@@ -21,20 +23,21 @@ function Assert-Command {
     param([Parameter(Mandatory)][string]$Name)
 
     if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
-        throw "الأداة '$Name' غير مثبتة أو غير موجودة في PATH."
+        throw "Required command '$Name' is not installed or is not available in PATH."
     }
 }
 
 function Assert-Docker {
     Assert-Command "docker"
+
     docker info *> $null
     if ($LASTEXITCODE -ne 0) {
-        throw "Docker Desktop غير شغال. افتحه وانتظر حتى تصبح الخدمة جاهزة ثم أعد المحاولة."
+        throw "Docker Desktop is not ready. Start Docker Desktop, wait until it is running, and try again."
     }
 
     docker compose version *> $null
     if ($LASTEXITCODE -ne 0) {
-        throw "Docker Compose غير متاح ضمن Docker Desktop."
+        throw "Docker Compose is not available through Docker Desktop."
     }
 }
 
@@ -64,8 +67,8 @@ function Initialize-EnvironmentFile {
         $lines,
         [System.Text.UTF8Encoding]::new($false))
 
-    Write-Host "تم إنشاء إعدادات التجربة المحلية في .local/athar-product.env" -ForegroundColor Green
-    Write-Host "هذا الملف مستبعد من Git ولا يتم رفع الأسرار إلى المستودع." -ForegroundColor DarkYellow
+    Write-Host "Created local settings at .local/athar-product.env" -ForegroundColor Green
+    Write-Host "This file is ignored by Git and will not be committed." -ForegroundColor DarkYellow
 }
 
 function Get-EnvironmentValues {
@@ -99,20 +102,20 @@ function Invoke-Compose {
         @ComposeArguments
 
     if ($LASTEXITCODE -ne 0) {
-        throw "فشل أمر Docker Compose. راجع الرسائل السابقة."
+        throw "Docker Compose failed. Review the messages above."
     }
 }
 
 function Wait-UntilReady {
     param([int]$Attempts = 120)
 
-    Write-Host "بانتظار API وقاعدة البيانات..." -ForegroundColor Cyan
+    Write-Host "Waiting for the API and SQL Server..." -ForegroundColor Cyan
 
     for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
         try {
             $response = Invoke-RestMethod -Uri "$BaseUrl/health/ready" -TimeoutSec 3
             if ($null -ne $response) {
-                Write-Host "أثَر جاهز للعمل." -ForegroundColor Green
+                Write-Host "Athar is ready." -ForegroundColor Green
                 return
             }
         }
@@ -122,24 +125,24 @@ function Wait-UntilReady {
     }
 
     Invoke-Compose -ComposeArguments @("logs", "--tail", "150", "athar-api")
-    throw "لم يصل أثَر إلى حالة الجاهزية خلال المهلة المحددة."
+    throw "Athar did not become ready before the timeout."
 }
 
 function Show-AccessInformation {
     $values = Get-EnvironmentValues
 
     Write-Host ""
-    Write-Host "روابط المنتج التجريبي" -ForegroundColor Green
-    Write-Host "  الرئيسية:     $BaseUrl"
-    Write-Host "  الحساب:       $BaseUrl/account"
-    Write-Host "  مبادراتي:     $BaseUrl/initiatives"
-    Write-Host "  الإدارة:      $BaseUrl/admin"
-    Write-Host "  Swagger:      $BaseUrl/swagger"
-    Write-Host "  الجاهزية:     $BaseUrl/health/ready"
+    Write-Host "Athar experimental product" -ForegroundColor Green
+    Write-Host "  Home:          $BaseUrl"
+    Write-Host "  Account:       $BaseUrl/account"
+    Write-Host "  Initiatives:   $BaseUrl/initiatives"
+    Write-Host "  Admin:         $BaseUrl/admin"
+    Write-Host "  Swagger:       $BaseUrl/swagger"
+    Write-Host "  Readiness:     $BaseUrl/health/ready"
     Write-Host ""
-    Write-Host "حساب الإدارة المحلي" -ForegroundColor Cyan
-    Write-Host "  البريد:       $($values['ATHAR_ADMIN_EMAIL'])"
-    Write-Host "  كلمة المرور:  $($values['ATHAR_ADMIN_PASSWORD'])"
+    Write-Host "Local administrator account" -ForegroundColor Cyan
+    Write-Host "  Email:         $($values['ATHAR_ADMIN_EMAIL'])"
+    Write-Host "  Password:      $($values['ATHAR_ADMIN_PASSWORD'])"
     Write-Host ""
 }
 
@@ -153,17 +156,17 @@ function Show-LanUrls {
         Select-Object -ExpandProperty IPAddress -Unique
 
     if (-not $addresses) {
-        Write-Host "لم أجد عنوان IPv4 مناسبًا. افتح ipconfig وتحقق من عنوان الشبكة." -ForegroundColor Yellow
+        Write-Host "No suitable IPv4 address was found. Run ipconfig and check the active adapter." -ForegroundColor Yellow
         return
     }
 
-    Write-Host "روابط محتملة داخل نفس شبكة Wi-Fi/LAN:" -ForegroundColor Cyan
+    Write-Host "Possible URLs for devices on the same Wi-Fi or LAN:" -ForegroundColor Cyan
     foreach ($address in $addresses) {
         Write-Host "  http://${address}:8090"
     }
 
     Write-Host ""
-    Write-Host "إذا لم يفتح الرابط من جهاز آخر، اسمح للمنفذ 8090 في Windows Firewall يدويًا." -ForegroundColor Yellow
+    Write-Host "If another device cannot connect, allow TCP port 8090 through Windows Firewall." -ForegroundColor Yellow
 }
 
 function Backup-Database {
@@ -189,7 +192,7 @@ fi
     Invoke-Compose -ComposeArguments @("exec", "-T", "athar-sqlserver", "bash", "-lc", $backupCommand)
     Invoke-Compose -ComposeArguments @("cp", "athar-sqlserver:$containerPath", (Join-Path $BackupDirectory $fileName))
 
-    Write-Host "تم إنشاء النسخة الاحتياطية:" -ForegroundColor Green
+    Write-Host "Database backup created:" -ForegroundColor Green
     Write-Host "  $(Join-Path $BackupDirectory $fileName)"
 }
 
@@ -206,7 +209,7 @@ switch ($Action) {
         Assert-Docker
         Initialize-EnvironmentFile
         Invoke-Compose -ComposeArguments @("down", "--remove-orphans")
-        Write-Host "تم إيقاف أثَر مع الاحتفاظ ببيانات SQL Server." -ForegroundColor Green
+        Write-Host "Athar stopped. SQL Server data was preserved." -ForegroundColor Green
     }
     "Status" {
         Assert-Docker
@@ -216,7 +219,7 @@ switch ($Action) {
             Invoke-RestMethod -Uri "$BaseUrl/health/ready" -TimeoutSec 3 | ConvertTo-Json -Depth 5
         }
         catch {
-            Write-Host "واجهة الجاهزية غير متاحة الآن." -ForegroundColor Yellow
+            Write-Host "The readiness endpoint is not available." -ForegroundColor Yellow
         }
     }
     "Open" {
@@ -231,13 +234,13 @@ switch ($Action) {
     }
     "Reset" {
         if (-not $Force) {
-            throw "Reset يحذف قاعدة البيانات المحلية. أعد الأمر مع -Force للتأكيد."
+            throw "Reset deletes the local database. Run the command again with -Force to confirm."
         }
 
         Assert-Docker
         Initialize-EnvironmentFile
         Invoke-Compose -ComposeArguments @("down", "--volumes", "--remove-orphans")
         Remove-Item $EnvironmentFile -Force -ErrorAction SilentlyContinue
-        Write-Host "تم حذف الحاويات والبيانات المحلية وإعدادات التجربة." -ForegroundColor Green
+        Write-Host "Removed containers, local data, and experimental settings." -ForegroundColor Green
     }
 }
