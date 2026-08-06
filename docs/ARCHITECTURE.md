@@ -2,20 +2,21 @@
 
 ## Repository purpose
 
-FoundationKit supplies reusable technical building blocks and a verified way to explore them. The repository separates three responsibilities:
+FoundationKit supplies reusable technical building blocks and an official Workbench consumer that proves the integration path.
 
 ```text
-Reusable core packages
+Reusable core packages under src/
         ↓ consumed by
-Local Workbench sample ── SQL Server + migrations + hosted UI
-
-Canonical capability catalog
-        ├── local Workbench API and UI
-        ├── generated Markdown reference
-        └── static GitHub Pages demo
+ASP.NET Core Workbench API
+        ↓ shares contracts with
+Blazor WebAssembly + MudBlazor client
+        ↓ sends the same JSON used by
+Swagger and Postman
+        ↓ persists through
+EF Core + SQL Server + Workbench-owned migrations
 ```
 
-The Workbench is a consuming sample, not a sixth core package. GitHub Pages is a static demo, not a hosted .NET application.
+The Workbench projects are consumers, not additional reusable core packages.
 
 ## Reusable dependency rules
 
@@ -34,11 +35,11 @@ May depend only on the .NET base class library.
 
 ### Application
 
-May depend on Domain. It owns use-case contracts and ports but does not depend on EF Core, ASP.NET Core, SQL Server, or a UI framework.
+May depend on Domain. It owns use-case contracts and ports but does not depend on EF Core, ASP.NET Core, SQL Server, MudBlazor, or product DTOs.
 
 ### Infrastructure
 
-May depend on Application, Domain, and provider-neutral EF Core abstractions. It must not reference a relational provider package or an ASP.NET Core host.
+May depend on Application, Domain, and provider-neutral EF Core abstractions. It must not reference a relational provider or hosted application.
 
 ### WebApi
 
@@ -46,28 +47,72 @@ May depend on Application and the ASP.NET Core shared framework. It adapts class
 
 ### Blazor
 
-Owns browser-side transport and state helpers. It must not reference Domain, Application, Infrastructure, EF Core, or server hosting.
+Owns browser-side transport and state helpers. It must not reference Domain, Application, Infrastructure, EF Core, SQL Server, or server hosting.
 
-Architecture tests enforce assembly references. `scripts/verify-repository.sh` additionally prevents SQL Server provider packages and EF migrations from entering `src/`.
+Architecture tests enforce assembly references. `scripts/verify-repository.sh` additionally rejects provider packages and migrations under `src/`.
 
-## Local Workbench
-
-`samples/FoundationKit.Workbench` is an executable ASP.NET Core application that demonstrates a valid consumer boundary:
+## Official Workbench projects
 
 ```text
-FoundationKit.Workbench
-    ├── references Domain, Application, Infrastructure, and WebApi
-    ├── selects Microsoft.EntityFrameworkCore.SqlServer
-    ├── owns WorkbenchDbContext
-    ├── owns entity configuration and EF Core migrations
-    ├── hosts API endpoints and static UI assets
-    └── stores BuildBrief aggregates in SQL Server
+samples/FoundationKit.Workbench/
+    ASP.NET Core API
+    product domain and application logic
+    WorkbenchDbContext
+    SQL Server provider
+    EF Core migrations
+    Swagger/OpenAPI
+
+samples/FoundationKit.Workbench.Client/
+    Blazor WebAssembly
+    Razor Components
+    MudBlazor
+    WorkbenchApiClient
+    FoundationKit.Blazor consumption
+
+samples/FoundationKit.Workbench.Contracts/
+    ApiRoutes
+    BuildBriefRequest
+    BuildBriefResponse
+    RuntimeResponse
+    HealthResponse
+    CatalogResponse and nested catalog DTOs
 ```
 
-The sample uses FoundationKit in its implemented flow:
+The API references the client as a hosted Blazor WebAssembly project. Running the API project serves both the backend and the frontend from one origin.
+
+## Contract boundary
+
+Transport contracts belong to `FoundationKit.Workbench.Contracts`, not to Domain or Application.
+
+```text
+MudBlazor form
+      ↓
+BuildBriefRequest
+      ↓
+WorkbenchApiClient
+      ↓
+ASP.NET Core endpoint
+      ↓
+BuildBrief.Create
+```
+
+The same request shape is visible in:
+
+- Blazor serialization;
+- Swagger/OpenAPI;
+- the Postman collection;
+- API endpoint binding.
+
+This separation keeps HTTP transport reusable without exposing EF Core entities or aggregate internals to the browser.
+
+## API execution flow
 
 ```text
 POST /api/build-briefs
+        ↓
+BuildBriefRequest binding
+        ↓
+capability ID validation against canonical catalog
         ↓
 BuildBrief.Create returns Result<BuildBrief>
         ↓
@@ -80,50 +125,66 @@ SQL Server commit
 DomainEventsSaveChangesInterceptor
         ↓
 BuildBriefCreatedHandler
+        ↓
+BuildBriefResponse
 ```
 
-The Workbench applies its own migrations on startup with bounded retry because the Docker SQL Server container may still be starting. This behavior is appropriate for the local sample; production products must choose an explicit deployment and migration policy.
+`FoundationKit.WebApi` maps classified failures to RFC 7807 Problem Details. `FoundationKit.Blazor` classifies success, API failures, network failures, timeouts, empty payloads, and invalid JSON.
 
-## Database schema source of truth
+## Database ownership
 
-For the Workbench only, EF Core migrations under:
+For the Workbench only, migrations under:
 
 ```text
 samples/FoundationKit.Workbench/Infrastructure/Migrations/
 ```
 
-are the schema source of truth. The initial migration creates `BuildBriefs` with the project summary, selected capabilities serialized as JSON, notes, priorities, and UTC creation time.
+are the schema source of truth.
 
-No core package owns a database schema.
+The API project owns:
+
+- `Microsoft.EntityFrameworkCore.SqlServer`;
+- `WorkbenchDbContext`;
+- entity configuration;
+- connection strings;
+- migrations;
+- startup migration policy.
+
+No core package owns a provider or database schema.
 
 ## Canonical capability catalog
 
-`catalog/foundationkit.catalog.json` is the only hand-maintained source for:
+`catalog/foundationkit.catalog.json` is the hand-maintained source for implemented capabilities, package metadata, project ideas, adoption steps, and contact metadata.
 
-- implemented package capabilities;
-- public types associated with each capability;
-- project idea recommendations;
-- adoption steps;
-- contact metadata.
+It feeds:
 
-`FoundationKit.CatalogGenerator` validates unique IDs, implemented status, and idea references, then generates `docs/FEATURES.md`. CI compares generated output with the committed file and rejects drift.
+- `GET /api/catalog`;
+- the Blazor client;
+- the GitHub Pages Blazor demo;
+- generated `docs/FEATURES.md`.
 
-The local Workbench returns the catalog from `/api/catalog`. The Pages deployment copies the same file into its static artifact. There is no second feature list hidden in JavaScript or HTML.
+`FoundationKit.CatalogGenerator` validates IDs, implemented status, and idea references. CI rejects generated documentation drift.
 
-## GitHub Pages runtime boundary
+## Swagger and Postman
 
-The Pages workflow deploys only:
+The API enables Swagger/OpenAPI at `/swagger`.
 
-- `site/` static assets;
-- the canonical catalog JSON.
+Swagger documents the same Contracts assembly used by the client. The Postman collection under `postman/` sends matching request JSON and stores the created identifier for follow-up retrieval.
 
-The browser first tries the relative `api/runtime` endpoint. In the local Workbench it receives `mode=local`; on GitHub Pages the endpoint does not exist, so the UI explicitly switches to demo mode. Demo mode:
+Swagger and Postman are external API clients. They do not bypass domain creation, repositories, unit of work, migrations, or SQL Server.
 
-- does not call a backend;
-- does not connect to SQL Server;
-- does not save visitor answers;
-- creates the contact summary locally in the browser;
-- sends nothing until the visitor opens the external GitHub contact action.
+## GitHub Pages boundary
+
+The Pages workflow publishes the Blazor WebAssembly client, not a second JavaScript implementation.
+
+GitHub Pages cannot execute ASP.NET Core or SQL Server. When `/api/runtime` is unavailable, the client:
+
+- switches to demo mode;
+- reads the static canonical catalog;
+- disables database submission;
+- does not pretend that persistence occurred.
+
+The local API-hosted path remains authoritative.
 
 ## Domain events
 
@@ -139,42 +200,37 @@ Clear aggregate event queues
 Dispatch handlers in process
 ```
 
-A database failure dispatches nothing and leaves aggregate queues unchanged. A handler failure occurs after the commit and is surfaced to the caller, but cleared events are not dispatched again automatically. Use an outbox for durable delivery guarantees.
+A database failure dispatches nothing and leaves event queues unchanged. A handler failure occurs after commit and is surfaced to the caller. Use an outbox when durable delivery is required.
 
-## HTTP
+## CI verification
 
-`FoundationKit.WebApi` supplies classified result mapping, RFC 7807 Problem Details, a bounded correlation-ID middleware, and baseline response headers. The Workbench demonstrates these features but still owns its routes and product behavior.
-
-Authentication, authorization, rate limiting, OpenAPI, production TLS, secrets, user identity, and product-specific audit requirements are intentionally not implemented by the reusable core or the public demo.
-
-## CI and operational verification
-
-The primary CI workflow performs:
+CI performs:
 
 1. repository-boundary verification;
-2. JSON, JavaScript, and HTML validation;
-3. restore and Release build with warnings as errors;
-4. catalog validation and generated-doc drift detection;
-5. unit and architecture tests;
-6. creation of five NuGet and symbol packages;
-7. a Dockerized Workbench + SQL Server smoke test that saves and reads a real brief.
+2. catalog and Postman JSON validation;
+3. restore and Release build;
+4. generated capability documentation drift detection;
+5. core and Workbench tests;
+6. Blazor-hosted API publish;
+7. NuGet and symbol packaging;
+8. Dockerized API + Blazor + SQL Server smoke testing;
+9. real create and read persistence verification.
 
-A separate Pages workflow assembles and deploys only static assets.
+## Known production gaps
 
-## Known limits and production gaps
+The Workbench is an architecture and integration reference. It does not yet provide:
 
-Implemented behavior must not be confused with production completeness:
+- authentication and authorization;
+- production secret management;
+- rate limiting;
+- telemetry export;
+- backups and high availability;
+- controlled deployment migrations;
+- durable domain-event delivery;
+- production ingress and TLS policy.
 
-- the Workbench is a local demonstration and discovery tool;
-- there is no authentication or authorization around saved local briefs;
-- startup migration is not a recommended production migration strategy;
-- SQL Server credentials are ephemeral in helper scripts but the Docker topology remains development-only;
-- GitHub contact issues are public;
-- in-process events are not durable;
-- no telemetry backend, distributed cache, queue, outbox, secrets store, or production deployment topology is selected.
-
-These are product and operational decisions, not hidden features of FoundationKit.
+These are explicit product decisions, not hidden FoundationKit features.
 
 ## Versioning
 
-The core is pre-1.0. Package versions are coordinated in `src/Directory.Build.props`. Public API changes must update tests, the canonical catalog when capability behavior changes, generated documentation, and `CHANGELOG.md`.
+The core is pre-1.0. Public API changes require tests, package documentation, catalog updates when capabilities change, generated documentation, and `CHANGELOG.md`.
