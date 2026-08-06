@@ -4,15 +4,19 @@ on:
   pull_request:
     paths:
       - "scripts/athar-product.ps1"
+      - "scripts/expose-athar-tunnel.ps1"
       - "START-ATHAR.cmd"
       - "STOP-ATHAR.cmd"
+      - "EXPOSE-ATHAR.cmd"
       - ".github/workflows/windows-launcher-check.yml"
   push:
     branches: [main]
     paths:
       - "scripts/athar-product.ps1"
+      - "scripts/expose-athar-tunnel.ps1"
       - "START-ATHAR.cmd"
       - "STOP-ATHAR.cmd"
+      - "EXPOSE-ATHAR.cmd"
       - ".github/workflows/windows-launcher-check.yml"
   workflow_dispatch:
 
@@ -33,30 +37,45 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
-      - name: Verify launcher is ASCII-only
+      - name: Verify launchers are ASCII-only
         shell: powershell
         run: |
-          $path = "scripts/athar-product.ps1"
-          $bytes = [System.IO.File]::ReadAllBytes($path)
-          $nonAscii = @($bytes | Where-Object { $_ -gt 127 })
-          if ($nonAscii.Count -gt 0) {
-            throw "The Windows PowerShell 5.1 launcher must remain ASCII-only."
+          $paths = @(
+            "scripts/athar-product.ps1",
+            "scripts/expose-athar-tunnel.ps1"
+          )
+
+          foreach ($path in $paths) {
+            $bytes = [System.IO.File]::ReadAllBytes($path)
+            $nonAscii = @($bytes | Where-Object { $_ -gt 127 })
+            if ($nonAscii.Count -gt 0) {
+              throw "$path must remain ASCII-only for Windows PowerShell 5.1."
+            }
           }
 
-      - name: Parse launcher with Windows PowerShell 5.1
+      - name: Parse launchers with Windows PowerShell 5.1
         shell: powershell
         run: |
-          $tokens = $null
-          $errors = $null
-          [System.Management.Automation.Language.Parser]::ParseFile(
-            (Resolve-Path "scripts/athar-product.ps1"),
-            [ref]$tokens,
-            [ref]$errors) | Out-Null
-          if ($errors.Count -gt 0) {
-            $errors | Format-List | Out-String | Write-Error
-            exit 1
+          $paths = @(
+            "scripts/athar-product.ps1",
+            "scripts/expose-athar-tunnel.ps1"
+          )
+
+          foreach ($path in $paths) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $path),
+              [ref]$tokens,
+              [ref]$errors) | Out-Null
+
+            if ($errors.Count -gt 0) {
+              $errors | Format-List | Out-String | Write-Error
+              exit 1
+            }
+
+            Write-Host "$path parser check passed."
           }
-          Write-Host "Windows PowerShell 5.1 parser check passed."
 
       - name: Smoke test Native status command
         shell: powershell
