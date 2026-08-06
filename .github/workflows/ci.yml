@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   build-test-pack:
-    name: Build, test, examples, and pack
+    name: Build, test, examples, portal, and pack
     runs-on: ubuntu-latest
 
     steps:
@@ -34,11 +34,13 @@ jobs:
       - name: Verify repository boundaries
         run: bash scripts/verify-repository.sh
 
-      - name: Validate JSON assets
+      - name: Validate JSON and Pages assets
         run: |
           python3 -m json.tool catalog/foundationkit.catalog.json >/dev/null
           python3 -m json.tool postman/FoundationKit.Workbench.postman_collection.json >/dev/null
           python3 -m json.tool postman/Athar.Api.postman_collection.json >/dev/null
+          python3 scripts/verify-pages.py
+          node --check site/app.js
 
       - name: Restore
         run: dotnet restore FoundationKit.sln
