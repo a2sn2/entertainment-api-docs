@@ -67,11 +67,11 @@ jobs:
           --self-contained false
           --output artifacts/athar-windows-x64/app
 
-      - name: Add product instructions
+      - name: Add product instructions and launchers
         run: |
           cp docs/EXPERIMENTAL-PRODUCT-AR.md artifacts/athar-windows-x64/README-AR.md
-          cp deploy/athar-compose.yml artifacts/athar-windows-x64/athar-compose.yml
-          cp scripts/athar-product.ps1 artifacts/athar-windows-x64/athar-product.ps1
+          cp deploy/run-athar-published.ps1 artifacts/athar-windows-x64/START-PUBLISHED-ATHAR.ps1
+          cp deploy/start-athar-published.cmd artifacts/athar-windows-x64/START-PUBLISHED-ATHAR.cmd
           (
             cd artifacts
             zip -r athar-experimental-windows-x64.zip athar-windows-x64
