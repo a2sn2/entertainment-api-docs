@@ -69,7 +69,8 @@ jobs:
 
       - name: Add product instructions and launchers
         run: |
-          cp docs/EXPERIMENTAL-PRODUCT-AR.md artifacts/athar-windows-x64/README-AR.md
+          cp deploy/README-PUBLISHED-AR.md artifacts/athar-windows-x64/README-AR.md
+          cp docs/EXPERIMENTAL-PRODUCT-AR.md artifacts/athar-windows-x64/FULL-GUIDE-AR.md
           cp deploy/run-athar-published.ps1 artifacts/athar-windows-x64/START-PUBLISHED-ATHAR.ps1
           cp deploy/start-athar-published.cmd artifacts/athar-windows-x64/START-PUBLISHED-ATHAR.cmd
           (
