@@ -27,7 +27,17 @@ jobs:
         run: python3 scripts/verify-pages.py
 
       - name: Check portal JavaScript syntax
-        run: node --check site/app.js
+        run: |
+          node --check site/app.js
+          node --check site/athar-demo/app.js
+
+      - name: Verify free Athar demo assets
+        run: |
+          test -f site/athar-demo/index.html
+          test -f site/athar-demo/styles.css
+          test -f site/athar-demo/app.js
+          grep -q "DEMO · بدون خادم" site/athar-demo/index.html
+          grep -q "athar-demo/" site/index.html
 
       - name: Prepare GitHub Pages artifact
         run: |
@@ -42,6 +52,9 @@ jobs:
           test -f release/index.html
           test -f release/404.html
           test -f release/portal-manifest.json
+          test -f release/athar-demo/index.html
+          test -f release/athar-demo/styles.css
+          test -f release/athar-demo/app.js
           grep -q '<base href="/foundationkit-dotnet/">' release/index.html
           grep -q 'FoundationKit Atlas' release/index.html
 

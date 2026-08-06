@@ -17,6 +17,32 @@ site/                        static Arabic GitHub Pages repository atlas
 apps/                        reserved for future real products
 ```
 
+## المنتج التجريبي المجاني
+
+أثَر متاح بطريقتين مجانيتين واضحتين:
+
+```text
+1. جهازك
+   المنتج الحقيقي: Blazor + API + Identity + EF Core + SQL Server
+
+2. GitHub Pages
+   تجربة تفاعلية مجانية داخل المتصفح باستخدام localStorage
+```
+
+تشغيل المنتج الحقيقي على جهازك بعد تثبيت Docker Desktop:
+
+```text
+START-ATHAR.cmd
+```
+
+التجربة المجانية على الإنترنت:
+
+**https://a2sn2.github.io/foundationkit-dotnet/athar-demo/**
+
+الدليل الكامل للتشغيل والإيقاف والنسخ الاحتياطي والشبكة المحلية والـTunnel والحزمة المجانية من GitHub Actions:
+
+**[إخراج أثَر كمنتج تجريبي مجاني](docs/EXPERIMENTAL-PRODUCT-AR.md)**
+
 ## FoundationKit Atlas — GitHub Pages
 
 Open the public Arabic repository portal:
@@ -178,6 +204,7 @@ SQL Server
 Read first:
 
 - [منصة أثر](examples/Athar/README.md)
+- [المنتج التجريبي المجاني](docs/EXPERIMENTAL-PRODUCT-AR.md)
 - [جاهزية الإنتاج](docs/PRODUCTION-READINESS-AR.md)
 - [إضافة مشروع جديد](docs/ADDING-A-PROJECT-AR.md)
 - [التشغيل الكامل على Visual Studio 2026](docs/VISUAL-STUDIO-2026-AR.md)
