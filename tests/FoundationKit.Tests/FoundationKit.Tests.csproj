@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\FoundationKit.Domain\FoundationKit.Domain.csproj" />
+    <ProjectReference Include="..\..\src\FoundationKit.Application\FoundationKit.Application.csproj" />
+    <ProjectReference Include="..\..\src\FoundationKit.Infrastructure\FoundationKit.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\FoundationKit.WebApi\FoundationKit.WebApi.csproj" />
+    <ProjectReference Include="..\..\src\FoundationKit.Blazor\FoundationKit.Blazor.csproj" />
+  </ItemGroup>
+</Project>

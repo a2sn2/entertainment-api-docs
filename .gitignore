@@ -1,0 +1,31 @@
+# .NET
+**/bin/
+**/obj/
+*.user
+*.suo
+
+# IDE and operating system
+.vs/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Build, test, package, and coverage output
+artifacts/
+TestResults/
+coverage/
+*.trx
+*.nupkg
+*.snupkg
+
+# Local configuration and secrets
+.env
+.env.*
+.local/
+*.local
+*.secrets.json
+
+# Logs
+*.log
+logs/
