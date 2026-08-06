@@ -53,12 +53,16 @@ function Initialize-EnvironmentFile {
 
     $sqlPassword = New-StrongPassword "AtharSql!"
     $adminPassword = New-StrongPassword "AtharAdmin!"
-
-    @(
+    $lines = @(
         "ATHAR_SQL_PASSWORD=$sqlPassword"
         "ATHAR_ADMIN_EMAIL=admin@athar.local"
         "ATHAR_ADMIN_PASSWORD=$adminPassword"
-    ) | Set-Content -Path $EnvironmentFile -Encoding utf8
+    )
+
+    [System.IO.File]::WriteAllLines(
+        $EnvironmentFile,
+        $lines,
+        [System.Text.UTF8Encoding]::new($false))
 
     Write-Host "تم إنشاء إعدادات التجربة المحلية في .local/athar-product.env" -ForegroundColor Green
     Write-Host "هذا الملف مستبعد من Git ولا يتم رفع الأسرار إلى المستودع." -ForegroundColor DarkYellow
