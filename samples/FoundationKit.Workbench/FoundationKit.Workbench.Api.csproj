@@ -26,11 +26,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\..\catalog\foundationkit.catalog.json">
-      <Link>catalog\foundationkit.catalog.json</Link>
-      <TargetPath>catalog\foundationkit.catalog.json</TargetPath>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
+    <EmbeddedResource Include="..\..\catalog\foundationkit.catalog.json">
+      <LogicalName>FoundationKit.Workbench.Catalog.foundationkit.catalog.json</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 </Project>
