@@ -12,7 +12,7 @@
             <div class="eyebrow">مساحة الإدارة</div>
             <MudText Typo="Typo.h2">مركز قرار المبادرات</MudText>
             <MudText Class="muted-copy mt-2">
-                مؤشرات لحظية وقائمة مراجعة مرتبطة بسجل تدقيق دائم.
+                مؤشرات لحظية، تفاصيل مكتملة قبل القرار، وقائمة مراجعة مرتبطة بسجل تدقيق دائم.
             </MudText>
         </div>
         <MudButton Variant="Variant.Outlined"
@@ -53,111 +53,179 @@
         </MudGrid>
     }
 
-    <MudPaper Class="athar-card pa-6 mt-6" Elevation="0">
-        <div class="list-toolbar">
-            <div>
-                <MudText Typo="Typo.h4">قائمة المراجعة</MudText>
-                <MudText Class="muted-copy">اختر الحالة ثم راجع التفاصيل.</MudText>
-            </div>
-            <MudSelect T="string"
-                       Value="@ViewModel.Status"
-                       ValueChanged="StatusChanged"
-                       Variant="Variant.Outlined"
-                       Margin="Margin.Dense"
-                       Style="min-width: 190px">
-                <MudSelectItem Value="@("submitted")">قيد المراجعة</MudSelectItem>
-                <MudSelectItem Value="@("approved")">المعتمدة</MudSelectItem>
-                <MudSelectItem Value="@("rejected")">المرفوضة</MudSelectItem>
-            </MudSelect>
-        </div>
+    <MudGrid Class="mt-6">
+        <MudItem xs="12" lg="5">
+            <MudPaper Class="athar-card pa-6" Elevation="0">
+                <div class="list-toolbar">
+                    <div>
+                        <MudText Typo="Typo.h4">قائمة المراجعة</MudText>
+                        <MudText Class="muted-copy">اختر الحالة ثم افتح المبادرة.</MudText>
+                    </div>
+                    <MudSelect T="string"
+                               Value="@ViewModel.Status"
+                               ValueChanged="StatusChanged"
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Style="min-width: 170px">
+                        <MudSelectItem Value="@("submitted")">قيد المراجعة</MudSelectItem>
+                        <MudSelectItem Value="@("approved")">المعتمدة</MudSelectItem>
+                        <MudSelectItem Value="@("rejected")">المرفوضة</MudSelectItem>
+                    </MudSelect>
+                </div>
 
-        @if (ViewModel.IsBusy && ViewModel.Items.Count == 0)
-        {
-            <MudProgressLinear Indeterminate="true"
-                               Color="Color.Primary"
-                               Class="mt-5" />
-        }
-        else if (ViewModel.Items.Count == 0)
-        {
-            <div class="empty-state">
-                <MudIcon Icon="@Icons.Material.Filled.TaskAlt"
-                         Size="Size.Large"
-                         Color="Color.Success" />
-                <MudText Typo="Typo.h6">لا توجد عناصر في هذه القائمة</MudText>
-            </div>
-        }
-        else
-        {
-            <div class="admin-grid mt-5">
-                @foreach (var item in ViewModel.Items)
+                @if (ViewModel.IsBusy && ViewModel.Items.Count == 0)
                 {
-                    <article class="admin-item @(item.Id == _selectedId ? "selected" : string.Empty)">
-                        <button type="button"
-                                class="admin-item-header"
-                                @onclick="() => Select(item.Id)">
-                            <span>
-                                <strong>@item.Title</strong>
-                                <small>@item.Category · @item.City</small>
-                            </span>
-                            <MudChip T="string"
-                                     Variant="Variant.Outlined"
-                                     Size="Size.Small"
-                                     Color="@StatusColor(item.Status)">
-                                @StatusLabel(item.Status)
-                            </MudChip>
-                        </button>
-
-                        @if (_selectedId == item.Id)
+                    <MudProgressLinear Indeterminate="true"
+                                       Color="Color.Primary"
+                                       Class="mt-5" />
+                }
+                else if (ViewModel.Items.Count == 0)
+                {
+                    <div class="empty-state compact-empty">
+                        <MudIcon Icon="@Icons.Material.Filled.TaskAlt"
+                                 Size="Size.Large"
+                                 Color="Color.Success" />
+                        <MudText Typo="Typo.h6">لا توجد عناصر في هذه القائمة</MudText>
+                    </div>
+                }
+                else
+                {
+                    <div class="admin-grid mt-5">
+                        @foreach (var item in ViewModel.Items)
                         {
-                            <div class="review-panel">
-                                <MudText Typo="Typo.body2">
-                                    الميزانية: @item.RequestedBudget.ToString("N0")
-                                    · المستفيدون: @item.TargetBeneficiaries.ToString("N0")
-                                </MudText>
+                            <article class="admin-item @(ViewModel.Selected?.Id == item.Id ? "selected" : string.Empty)">
+                                <button type="button"
+                                        class="admin-item-header"
+                                        disabled="@ViewModel.IsBusy"
+                                        @onclick="() => ViewModel.SelectAsync(item.Id)">
+                                    <span>
+                                        <strong>@item.Title</strong>
+                                        <small>@item.Category · @item.City</small>
+                                    </span>
+                                    <MudChip T="string"
+                                             Variant="Variant.Outlined"
+                                             Size="Size.Small"
+                                             Color="@StatusColor(item.Status)">
+                                        @StatusLabel(item.Status)
+                                    </MudChip>
+                                </button>
+                            </article>
+                        }
+                    </div>
+                }
+            </MudPaper>
+        </MudItem>
 
-                                @if (item.Status == InitiativeWorkflow.Submitted)
+        <MudItem xs="12" lg="7">
+            <MudPaper Class="athar-card pa-6 admin-details-shell" Elevation="0">
+                @if (ViewModel.Selected is null)
+                {
+                    <div class="empty-state">
+                        <MudIcon Icon="@Icons.Material.Filled.FactCheck"
+                                 Size="Size.Large"
+                                 Color="Color.Primary" />
+                        <MudText Typo="Typo.h5">اختر مبادرة للمراجعة</MudText>
+                        <MudText Class="muted-copy">
+                            ستظهر هنا كل البيانات التي يحتاجها المسؤول قبل اتخاذ القرار.
+                        </MudText>
+                    </div>
+                }
+                else
+                {
+                    var selected = ViewModel.Selected;
+                    <section class="details-panel admin-details-panel">
+                        <div class="details-heading">
+                            <div>
+                                <div class="eyebrow">طلب رقم @selected.Id</div>
+                                <MudText Typo="Typo.h4">@selected.Title</MudText>
+                                <MudText Typo="Typo.body2" Class="muted-copy mt-2">
+                                    مقدّم المبادرة: @selected.OwnerDisplayName
+                                </MudText>
+                            </div>
+                            <MudChip T="string"
+                                     Color="@StatusColor(selected.Status)"
+                                     Variant="Variant.Filled">
+                                @StatusLabel(selected.Status)
+                            </MudChip>
+                        </div>
+
+                        <MudText Class="details-summary mt-5">@selected.Summary</MudText>
+
+                        <div class="details-grid mt-5">
+                            <div><span>التصنيف</span><strong>@selected.Category</strong></div>
+                            <div><span>المدينة</span><strong>@selected.City</strong></div>
+                            <div><span>الميزانية المطلوبة</span><strong>@selected.RequestedBudget.ToString("N0")</strong></div>
+                            <div><span>المستفيدون المتوقعون</span><strong>@selected.TargetBeneficiaries.ToString("N0")</strong></div>
+                            <div><span>تاريخ الإرسال</span><strong>@selected.CreatedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</strong></div>
+                            <div><span>آخر تحديث</span><strong>@selected.UpdatedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</strong></div>
+                        </div>
+
+                        @if (selected.Reviews.Count > 0)
+                        {
+                            <MudDivider Class="my-5" />
+                            <MudText Typo="Typo.h6">سجل القرارات</MudText>
+                            <div class="review-history mt-3">
+                                @foreach (var review in selected.Reviews)
                                 {
-                                    <MudTextField T="string"
-                                                  Label="ملاحظات القرار"
-                                                  @bind-Value="_reviewNotes"
-                                                  Lines="3"
-                                                  Variant="Variant.Outlined"
-                                                  Class="mt-4" />
-                                    <MudStack Row="true" Spacing="2" Class="mt-4">
-                                        <MudButton Color="Color.Success"
-                                                   Variant="Variant.Filled"
-                                                   Disabled="ViewModel.IsBusy"
-                                                   OnClick="@(() => ReviewAsync(item.Id, InitiativeWorkflow.Approve))">
-                                            اعتماد
-                                        </MudButton>
-                                        <MudButton Color="Color.Error"
-                                                   Variant="Variant.Outlined"
-                                                   Disabled="ViewModel.IsBusy"
-                                                   OnClick="@(() => ReviewAsync(item.Id, InitiativeWorkflow.Reject))">
-                                            رفض
-                                        </MudButton>
-                                    </MudStack>
+                                    <article class="review-entry">
+                                        <div class="review-entry-heading">
+                                            <strong>@DecisionLabel(review.Decision)</strong>
+                                            <span>@review.ReviewedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</span>
+                                        </div>
+                                        <MudText Typo="Typo.body2">المراجع: @review.ReviewerDisplayName</MudText>
+                                        <MudText Class="muted-copy mt-2">
+                                            @(string.IsNullOrWhiteSpace(review.Notes) ? "لا توجد ملاحظات إضافية." : review.Notes)
+                                        </MudText>
+                                    </article>
                                 }
                             </div>
                         }
-                    </article>
-                }
-            </div>
-        }
 
-        @if (!string.IsNullOrWhiteSpace(ViewModel.ErrorMessage))
-        {
-            <MudAlert Severity="Severity.Error"
-                      Variant="Variant.Outlined"
-                      Class="mt-5">
-                @ViewModel.ErrorMessage
-            </MudAlert>
-        }
-    </MudPaper>
+                        @if (selected.Status == InitiativeWorkflow.Submitted)
+                        {
+                            <MudDivider Class="my-5" />
+                            <MudText Typo="Typo.h6">قرار الإدارة</MudText>
+                            <MudTextField T="string"
+                                          Label="ملاحظات القرار"
+                                          HelperText="اشرح سبب القرار بلغة واضحة ليظهر للمستخدم."
+                                          @bind-Value="_reviewNotes"
+                                          Lines="4"
+                                          Variant="Variant.Outlined"
+                                          Class="mt-3" />
+                            <MudStack Row="true" Spacing="2" Class="mt-4 flex-wrap">
+                                <MudButton Color="Color.Success"
+                                           Variant="Variant.Filled"
+                                           Disabled="ViewModel.IsBusy"
+                                           StartIcon="@Icons.Material.Filled.CheckCircle"
+                                           OnClick="@(() => ReviewAsync(selected.Id, InitiativeWorkflow.Approve))">
+                                    اعتماد المبادرة
+                                </MudButton>
+                                <MudButton Color="Color.Error"
+                                           Variant="Variant.Outlined"
+                                           Disabled="ViewModel.IsBusy"
+                                           StartIcon="@Icons.Material.Filled.Cancel"
+                                           OnClick="@(() => ReviewAsync(selected.Id, InitiativeWorkflow.Reject))">
+                                    رفض المبادرة
+                                </MudButton>
+                            </MudStack>
+                        }
+                    </section>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(ViewModel.ErrorMessage))
+                {
+                    <MudAlert Severity="Severity.Error"
+                              Variant="Variant.Outlined"
+                              Class="mt-5">
+                        @ViewModel.ErrorMessage
+                    </MudAlert>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
 </MudContainer>
 
 @code {
-    private Guid? _selectedId;
     private string? _reviewNotes;
 
     protected override async Task OnInitializedAsync()
@@ -166,16 +234,10 @@
         await ViewModel.LoadAsync();
     }
 
-    private void Select(Guid id)
-    {
-        _selectedId = _selectedId == id ? null : id;
-        _reviewNotes = null;
-    }
-
     private async Task StatusChanged(string status)
     {
         ViewModel.Status = status;
-        _selectedId = null;
+        _reviewNotes = null;
         await ViewModel.LoadAsync();
     }
 
@@ -186,10 +248,9 @@
         {
             Snackbar.Add(
                 decision == InitiativeWorkflow.Approve
-                    ? "تم اعتماد المبادرة."
-                    : "تم رفض المبادرة.",
+                    ? "تم اعتماد المبادرة وحفظ سجل القرار."
+                    : "تم رفض المبادرة وحفظ سجل القرار.",
                 Severity.Success);
-            _selectedId = null;
             _reviewNotes = null;
         }
     }
@@ -209,6 +270,11 @@
             InitiativeWorkflow.Rejected => "مرفوضة",
             _ => "قيد المراجعة"
         };
+
+    private static string DecisionLabel(string decision) =>
+        decision == InitiativeWorkflow.Approve
+            ? "اعتماد"
+            : "رفض";
 
     private void OnStateChanged() =>
         _ = InvokeAsync(StateHasChanged);
