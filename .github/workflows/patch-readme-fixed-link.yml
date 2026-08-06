@@ -6,12 +6,16 @@ on:
       - feature/free-fixed-athar-link
     paths:
       - .github/workflows/patch-readme-fixed-link.yml
+  pull_request:
+    paths:
+      - .github/workflows/patch-readme-fixed-link.yml
 
 permissions:
   contents: write
 
 jobs:
   patch:
+    if: github.event_name == 'push' || github.event.pull_request.head.ref == 'feature/free-fixed-athar-link'
     runs-on: ubuntu-latest
     steps:
       - name: Check out feature branch
