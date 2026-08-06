@@ -1,0 +1,16 @@
+<Router AppAssembly="@typeof(App).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <PageTitle>الصفحة غير موجودة</PageTitle>
+        <LayoutView Layout="@typeof(Layout.MainLayout)">
+            <MudContainer MaxWidth="MaxWidth.Medium" Class="py-16 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.ExploreOff" Size="Size.Large" />
+                <MudText Typo="Typo.h4" Class="mt-4">الصفحة غير موجودة</MudText>
+                <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary" Class="mt-4">العودة للرئيسية</MudButton>
+            </MudContainer>
+        </LayoutView>
+    </NotFound>
+</Router>
