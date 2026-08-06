@@ -37,15 +37,19 @@ unexpected_top_level="$(
     ! -name 'CONTRIBUTING.md' \
     ! -name 'Directory.Build.props' \
     ! -name 'Directory.Packages.props' \
+    ! -name 'EXPOSE-ATHAR.cmd' \
     ! -name 'FoundationKit.sln' \
     ! -name 'LICENSE' \
     ! -name 'README.md' \
     ! -name 'SECURITY.md' \
+    ! -name 'START-ATHAR.cmd' \
+    ! -name 'STOP-ATHAR.cmd' \
     ! -name 'apps' \
     ! -name 'catalog' \
     ! -name 'deploy' \
     ! -name 'docs' \
     ! -name 'examples' \
+    ! -name 'foundationkit.ps1' \
     ! -name 'global.json' \
     ! -name 'postman' \
     ! -name 'samples' \
@@ -79,7 +83,12 @@ fi
 
 required_files=(
   "README.md"
+  "foundationkit.ps1"
+  "START-ATHAR.cmd"
+  "STOP-ATHAR.cmd"
+  "EXPOSE-ATHAR.cmd"
   ".github/workflows/pages.yml"
+  ".github/workflows/windows-launcher-check.yml"
   "catalog/foundationkit.catalog.json"
   "docs/FEATURES.md"
   "docs/WORKBENCH.md"
@@ -122,6 +131,8 @@ required_files=(
   "postman/Athar.Api.postman_collection.json"
   "deploy/docker-compose.yml"
   "deploy/athar-compose.yml"
+  "scripts/athar-product.ps1"
+  "scripts/expose-athar-tunnel.ps1"
   "scripts/smoke-athar.sh"
   "scripts/run-athar.ps1"
   "scripts/run-athar.sh"
