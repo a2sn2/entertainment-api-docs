@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   build-test-pack:
-    name: Build, test, catalog, contracts, and pack
+    name: Build, test, examples, portal, and pack
     runs-on: ubuntu-latest
 
     steps:
@@ -34,10 +34,13 @@ jobs:
       - name: Verify repository boundaries
         run: bash scripts/verify-repository.sh
 
-      - name: Validate catalog and Postman collection
+      - name: Validate JSON and Pages assets
         run: |
           python3 -m json.tool catalog/foundationkit.catalog.json >/dev/null
           python3 -m json.tool postman/FoundationKit.Workbench.postman_collection.json >/dev/null
+          python3 -m json.tool postman/Athar.Api.postman_collection.json >/dev/null
+          python3 scripts/verify-pages.py
+          node --check site/app.js
 
       - name: Restore
         run: dotnet restore FoundationKit.sln
@@ -60,7 +63,7 @@ jobs:
           --no-build
           --logger "trx;LogFileName=foundationkit.trx"
 
-      - name: Publish Blazor-hosted API
+      - name: Publish Workbench
         run: >-
           dotnet publish
           samples/FoundationKit.Workbench/FoundationKit.Workbench.Api.csproj
@@ -68,7 +71,15 @@ jobs:
           --no-build
           --output artifacts/workbench
 
-      - name: Pack
+      - name: Publish Athar
+        run: >-
+          dotnet publish
+          examples/Athar/Athar.Api/Athar.Api.csproj
+          --configuration Release
+          --no-build
+          --output artifacts/athar
+
+      - name: Pack reusable core
         run: bash scripts/pack.sh Release artifacts/packages
 
       - name: Upload test results
@@ -88,8 +99,8 @@ jobs:
             artifacts/packages/*.snupkg
           if-no-files-found: error
 
-  workbench-sqlserver-smoke:
-    name: User and admin portals with SQL Server smoke test
+  sqlserver-integration-smoke:
+    name: Workbench and Athar SQL Server integration
     runs-on: ubuntu-latest
     needs: build-test-pack
 
@@ -97,9 +108,13 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Generate temporary SQL password
+      - name: Generate temporary integration credentials
         shell: bash
-        run: echo "FOUNDATIONKIT_SQL_PASSWORD=Fkit!$(openssl rand -hex 12)Aa1" >> "$GITHUB_ENV"
+        run: |
+          echo "FOUNDATIONKIT_SQL_PASSWORD=Fkit!$(openssl rand -hex 12)Aa1" >> "$GITHUB_ENV"
+          echo "ATHAR_SQL_PASSWORD=AtharSql!$(openssl rand -hex 12)Aa1" >> "$GITHUB_ENV"
+          echo "ATHAR_ADMIN_EMAIL=admin@athar.test" >> "$GITHUB_ENV"
+          echo "ATHAR_ADMIN_PASSWORD=AtharAdmin!$(openssl rand -hex 12)Aa1" >> "$GITHUB_ENV"
 
       - name: Start Workbench stack
         run: docker compose -f deploy/docker-compose.yml up --build -d
@@ -115,7 +130,7 @@ jobs:
           docker compose -f deploy/docker-compose.yml ps
           exit 1
 
-      - name: Verify Blazor portals and Swagger groups
+      - name: Verify Workbench portals and Swagger
         run: |
           curl --fail --silent http://localhost:8080/ | grep -q "blazor.webassembly.js"
           curl --fail --silent http://localhost:8080/user | grep -q "blazor.webassembly.js"
@@ -125,13 +140,49 @@ jobs:
           grep -q "GetAdminRequestQueue" <<< "$swagger"
           grep -q "ReviewUserRequest" <<< "$swagger"
 
-      - name: Run user-admin SQL Server workflow
+      - name: Run Workbench SQL workflow
         run: bash scripts/smoke-workbench.sh
 
-      - name: Print service logs on failure
+      - name: Print Workbench logs on failure
         if: failure()
         run: docker compose -f deploy/docker-compose.yml logs --no-color --tail=300
 
       - name: Stop Workbench stack
         if: always()
         run: docker compose -f deploy/docker-compose.yml down --volumes --remove-orphans
+
+      - name: Start Athar stack
+        run: docker compose -f deploy/athar-compose.yml up --build -d
+
+      - name: Wait for Athar readiness
+        run: |
+          for attempt in {1..150}; do
+            if curl --fail --silent http://localhost:8090/health/ready >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose -f deploy/athar-compose.yml ps
+          exit 1
+
+      - name: Verify Arabic client and API surface
+        run: |
+          curl --fail --silent http://localhost:8090/ | grep -q "blazor.webassembly.js"
+          curl --fail --silent http://localhost:8090/account | grep -q "blazor.webassembly.js"
+          curl --fail --silent http://localhost:8090/initiatives | grep -q "blazor.webassembly.js"
+          curl --fail --silent http://localhost:8090/admin | grep -q "blazor.webassembly.js"
+          swagger="$(curl --fail --silent http://localhost:8090/swagger/v1/swagger.json)"
+          grep -q "RegisterAtharUser" <<< "$swagger"
+          grep -q "CreateAtharInitiative" <<< "$swagger"
+          grep -q "ReviewAtharInitiative" <<< "$swagger"
+
+      - name: Run Athar end-to-end workflow
+        run: bash scripts/smoke-athar.sh
+
+      - name: Print Athar logs on failure
+        if: failure()
+        run: docker compose -f deploy/athar-compose.yml logs --no-color --tail=400
+
+      - name: Stop Athar stack
+        if: always()
+        run: docker compose -f deploy/athar-compose.yml down --volumes --remove-orphans

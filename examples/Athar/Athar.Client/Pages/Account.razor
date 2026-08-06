@@ -1,0 +1,152 @@
+@page "/account"
+@implements IDisposable
+@inject AccountViewModel ViewModel
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<PageTitle>الحساب — منصة أثر</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="py-12">
+    <MudPaper Class="athar-card account-shell" Elevation="0">
+        <div class="account-intro">
+            <div class="eyebrow">بوابة آمنة</div>
+            <MudText Typo="Typo.h3">ادخل إلى مساحة أثَر</MudText>
+            <MudText Class="muted-copy mt-3">
+                المصادقة تستخدم Cookie آمنة، وقفلًا بعد المحاولات المتكررة،
+                وحماية CSRF لكل عملية كتابة.
+            </MudText>
+        </div>
+
+        <MudTabs Rounded="true" ApplyEffectsToContainer="true"
+                 PanelClass="pa-6">
+            <MudTabPanel Text="تسجيل الدخول">
+                <MudForm @ref="_loginForm">
+                    <MudTextField T="string"
+                                  Label="البريد الإلكتروني"
+                                  @bind-Value="ViewModel.Login.Email"
+                                  Required="true"
+                                  InputType="InputType.Email"
+                                  Variant="Variant.Outlined" />
+                    <MudTextField T="string"
+                                  Label="كلمة المرور"
+                                  @bind-Value="ViewModel.Login.Password"
+                                  Required="true"
+                                  InputType="InputType.Password"
+                                  Variant="Variant.Outlined"
+                                  Class="mt-4" />
+                    <MudCheckBox T="bool"
+                                 Label="تذكرني"
+                                 @bind-Value="ViewModel.Login.RememberMe"
+                                 Class="mt-3" />
+                    <MudButton FullWidth="true"
+                               Color="Color.Primary"
+                               Variant="Variant.Filled"
+                               Size="Size.Large"
+                               Disabled="ViewModel.IsBusy"
+                               OnClick="LoginAsync"
+                               Class="mt-5">
+                        @(ViewModel.IsBusy ? "جاري الدخول..." : "دخول")
+                    </MudButton>
+                </MudForm>
+            </MudTabPanel>
+
+            <MudTabPanel Text="إنشاء حساب">
+                <MudForm @ref="_registerForm">
+                    <MudTextField T="string"
+                                  Label="الاسم"
+                                  @bind-Value="ViewModel.Register.DisplayName"
+                                  Required="true"
+                                  Variant="Variant.Outlined" />
+                    <MudTextField T="string"
+                                  Label="البريد الإلكتروني"
+                                  @bind-Value="ViewModel.Register.Email"
+                                  Required="true"
+                                  InputType="InputType.Email"
+                                  Variant="Variant.Outlined"
+                                  Class="mt-4" />
+                    <MudTextField T="string"
+                                  Label="كلمة المرور"
+                                  HelperText="10 أحرف على الأقل، وتتضمن حرفًا كبيرًا وصغيرًا ورقمًا ورمزًا."
+                                  @bind-Value="ViewModel.Register.Password"
+                                  Required="true"
+                                  InputType="InputType.Password"
+                                  Variant="Variant.Outlined"
+                                  Class="mt-4" />
+                    <MudButton FullWidth="true"
+                               Color="Color.Primary"
+                               Variant="Variant.Filled"
+                               Size="Size.Large"
+                               Disabled="ViewModel.IsBusy"
+                               OnClick="RegisterAsync"
+                               Class="mt-5">
+                        @(ViewModel.IsBusy ? "جاري الإنشاء..." : "إنشاء الحساب")
+                    </MudButton>
+                </MudForm>
+            </MudTabPanel>
+        </MudTabs>
+
+        @if (!string.IsNullOrWhiteSpace(ViewModel.ErrorMessage))
+        {
+            <MudAlert Severity="Severity.Error"
+                      Variant="Variant.Outlined"
+                      Class="mt-5">
+                @ViewModel.ErrorMessage
+            </MudAlert>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private MudForm? _loginForm;
+    private MudForm? _registerForm;
+
+    protected override void OnInitialized()
+    {
+        ViewModel.StateChanged += OnStateChanged;
+    }
+
+    private async Task LoginAsync()
+    {
+        if (_loginForm is null)
+            return;
+
+        await _loginForm.Validate();
+        if (!_loginForm.IsValid)
+            return;
+
+        await ViewModel.LoginAsync();
+        CompleteAuthentication();
+    }
+
+    private async Task RegisterAsync()
+    {
+        if (_registerForm is null)
+            return;
+
+        await _registerForm.Validate();
+        if (!_registerForm.IsValid)
+            return;
+
+        await ViewModel.RegisterAsync();
+        CompleteAuthentication();
+    }
+
+    private void CompleteAuthentication()
+    {
+        if (ViewModel.CurrentUser is null)
+            return;
+
+        Snackbar.Add(
+            $"مرحبًا {ViewModel.CurrentUser.DisplayName}",
+            Severity.Success);
+        Navigation.NavigateTo("/initiatives");
+    }
+
+    private void OnStateChanged() =>
+        _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        ViewModel.StateChanged -= OnStateChanged;
+    }
+}

@@ -41,13 +41,16 @@ unexpected_top_level="$(
     ! -name 'LICENSE' \
     ! -name 'README.md' \
     ! -name 'SECURITY.md' \
+    ! -name 'apps' \
     ! -name 'catalog' \
     ! -name 'deploy' \
     ! -name 'docs' \
+    ! -name 'examples' \
     ! -name 'global.json' \
     ! -name 'postman' \
     ! -name 'samples' \
     ! -name 'scripts' \
+    ! -name 'site' \
     ! -name 'src' \
     ! -name 'tests' \
     ! -name 'tools' \
@@ -76,10 +79,13 @@ fi
 
 required_files=(
   "README.md"
+  ".github/workflows/pages.yml"
   "catalog/foundationkit.catalog.json"
   "docs/FEATURES.md"
   "docs/WORKBENCH.md"
   "docs/DUAL-FULL-STACK.md"
+  "docs/PRODUCTION-READINESS-AR.md"
+  "docs/ADDING-A-PROJECT-AR.md"
   "samples/FoundationKit.Workbench/FoundationKit.Workbench.Api.csproj"
   "samples/FoundationKit.Workbench/Program.cs"
   "samples/FoundationKit.Workbench/Endpoints/SystemEndpoints.cs"
@@ -93,13 +99,42 @@ required_files=(
   "samples/FoundationKit.Workbench.Client/Pages/Home.razor"
   "samples/FoundationKit.Workbench.Client/Pages/UserPortal.razor"
   "samples/FoundationKit.Workbench.Client/Pages/AdminPortal.razor"
-  "samples/FoundationKit.Workbench.Client/Services/WorkbenchApiClient.cs"
-  "samples/FoundationKit.Workbench.Contracts/FoundationKit.Workbench.Contracts.csproj"
   "samples/FoundationKit.Workbench.Contracts/User/UserContracts.cs"
   "samples/FoundationKit.Workbench.Contracts/Admin/AdminContracts.cs"
-  "samples/FoundationKit.Workbench.Contracts/Workflow/WorkflowContracts.cs"
+  "examples/Athar/README.md"
+  "examples/Athar/Athar.Domain/Initiative.cs"
+  "examples/Athar/Athar.Application/InitiativeManager.cs"
+  "examples/Athar/Athar.Infrastructure/AtharDbContext.cs"
+  "examples/Athar/Athar.Infrastructure/Migrations/20260806180000_InitialAthar.cs"
+  "examples/Athar/Athar.Infrastructure/Migrations/AtharDbContextModelSnapshot.cs"
+  "examples/Athar/Athar.Contracts/Contracts.cs"
+  "examples/Athar/Athar.Api/Program.cs"
+  "examples/Athar/Athar.Api/Endpoints.cs"
+  "examples/Athar/Athar.Api/DatabaseExceptionMiddleware.cs"
+  "examples/Athar/Athar.Client/Services/AtharApiClient.cs"
+  "examples/Athar/Athar.Client/ViewModels/ViewModels.cs"
+  "examples/Athar/Athar.Client/Pages/Home.razor"
+  "examples/Athar/Athar.Client/Pages/Account.razor"
+  "examples/Athar/Athar.Client/Pages/Initiatives.razor"
+  "examples/Athar/Athar.Client/Pages/Admin.razor"
+  "tests/Athar.Tests/InitiativeTests.cs"
   "postman/FoundationKit.Workbench.postman_collection.json"
+  "postman/Athar.Api.postman_collection.json"
   "deploy/docker-compose.yml"
+  "deploy/athar-compose.yml"
+  "scripts/smoke-athar.sh"
+  "scripts/run-athar.ps1"
+  "scripts/run-athar.sh"
+  "scripts/stop-athar.ps1"
+  "scripts/stop-athar.sh"
+  "scripts/verify-pages.py"
+  "site/index.html"
+  "site/styles.css"
+  "site/app.js"
+  "site/portal-manifest.json"
+  "site/favicon.svg"
+  "src/FoundationKit.Application/Models/EntityDto.cs"
+  "src/FoundationKit.Blazor/Mvvm/ViewModelBase.cs"
 )
 
 for required_file in "${required_files[@]}"; do
@@ -109,32 +144,39 @@ for required_file in "${required_files[@]}"; do
   fi
 done
 
-api_project="samples/FoundationKit.Workbench/FoundationKit.Workbench.Api.csproj"
-client_project="samples/FoundationKit.Workbench.Client/FoundationKit.Workbench.Client.csproj"
-postman_collection="postman/FoundationKit.Workbench.postman_collection.json"
+workbench_api="samples/FoundationKit.Workbench/FoundationKit.Workbench.Api.csproj"
+workbench_client="samples/FoundationKit.Workbench.Client/FoundationKit.Workbench.Client.csproj"
+athar_api="examples/Athar/Athar.Api/Athar.Api.csproj"
+athar_client="examples/Athar/Athar.Client/Athar.Client.csproj"
+pages_workflow=".github/workflows/pages.yml"
 
-if ! grep -q 'Microsoft.EntityFrameworkCore.SqlServer' "$api_project"; then
-  echo "Workbench API must explicitly own the SQL Server provider dependency." >&2
+if ! grep -q 'Microsoft.EntityFrameworkCore.SqlServer' "$workbench_api"; then
+  echo "Workbench API must explicitly own SQL Server." >&2
   exit 1
 fi
 
-if ! grep -q 'FoundationKit.Workbench.Contracts' "$api_project"; then
-  echo "Workbench API must reference the shared Contracts project." >&2
-  exit 1
-fi
-
-if ! grep -q 'FoundationKit.Workbench.Client' "$api_project"; then
-  echo "Workbench API must host the Blazor WebAssembly client." >&2
-  exit 1
-fi
-
-if ! grep -q 'MudBlazor' "$client_project"; then
+if ! grep -q 'MudBlazor' "$workbench_client"; then
   echo "Workbench client must use MudBlazor." >&2
   exit 1
 fi
 
-if ! grep -q 'FoundationKit.Blazor' "$client_project"; then
-  echo "Workbench client must consume the reusable FoundationKit.Blazor package." >&2
+if ! grep -q 'Microsoft.AspNetCore.Identity.EntityFrameworkCore' "$athar_api"; then
+  echo "Athar API must explicitly own ASP.NET Core Identity persistence." >&2
+  exit 1
+fi
+
+if ! grep -q 'Microsoft.EntityFrameworkCore.SqlServer' "$athar_api"; then
+  echo "Athar API must explicitly own SQL Server." >&2
+  exit 1
+fi
+
+if ! grep -q 'MudBlazor' "$athar_client"; then
+  echo "Athar client must use MudBlazor." >&2
+  exit 1
+fi
+
+if ! grep -q 'FoundationKit.Blazor' "$athar_client"; then
+  echo "Athar client must consume FoundationKit.Blazor." >&2
   exit 1
 fi
 
@@ -144,7 +186,9 @@ client_persistence_leaks="$(
     --include='*.csproj' \
     -- 'Microsoft.EntityFrameworkCore\|Microsoft.EntityFrameworkCore.SqlServer' \
     samples/FoundationKit.Workbench.Client \
-    samples/FoundationKit.Workbench.Contracts || true
+    samples/FoundationKit.Workbench.Contracts \
+    examples/Athar/Athar.Client \
+    examples/Athar/Athar.Contracts || true
 )"
 
 if [[ -n "$client_persistence_leaks" ]]; then
@@ -153,39 +197,61 @@ if [[ -n "$client_persistence_leaks" ]]; then
   exit 1
 fi
 
-if ! grep -q 'CreateUserRequest' "$postman_collection"; then
-  echo "Postman collection must document the user request contract." >&2
+if ! grep -q 'CreateUserRequest' postman/FoundationKit.Workbench.postman_collection.json; then
+  echo "Workbench Postman collection must document the user request contract." >&2
   exit 1
 fi
 
-if ! grep -q 'reviewedBy' "$postman_collection" || ! grep -q 'decision' "$postman_collection"; then
-  echo "Postman collection must document the admin review request fields." >&2
+if ! grep -q 'clientRequestId' postman/Athar.Api.postman_collection.json; then
+  echo "Athar Postman collection must verify idempotent creation." >&2
   exit 1
 fi
 
-if ! grep -q '/api/user' samples/FoundationKit.Workbench/Endpoints/UserPortalEndpoints.cs; then
-  echo "User vertical slice must expose a dedicated user route group." >&2
+if ! grep -q 'X-CSRF-TOKEN' postman/Athar.Api.postman_collection.json; then
+  echo "Athar Postman collection must demonstrate anti-CSRF protection." >&2
   exit 1
 fi
 
-if ! grep -q '/api/admin' samples/FoundationKit.Workbench/Endpoints/AdminPortalEndpoints.cs; then
-  echo "Admin vertical slice must expose a dedicated admin route group." >&2
+if ! grep -q 'AddIdentity' examples/Athar/Athar.Api/Program.cs; then
+  echo "Athar must configure ASP.NET Core Identity." >&2
   exit 1
 fi
 
-if ! grep -q 'AdminReviews' samples/FoundationKit.Workbench/Infrastructure/Migrations/20260806164000_DualPortalWorkflow.cs; then
-  echo "Dual-stack migration must persist the admin review side of the workflow." >&2
+if ! grep -q 'AddRateLimiter' examples/Athar/Athar.Api/Program.cs; then
+  echo "Athar must configure rate limiting." >&2
   exit 1
 fi
 
-if ! grep -q 'USER FULL STACK' samples/FoundationKit.Workbench.Client/Pages/UserPortal.razor; then
-  echo "User portal must identify its full-stack responsibility clearly." >&2
+if ! grep -q 'AddAntiforgery' examples/Athar/Athar.Api/Program.cs; then
+  echo "Athar must configure anti-CSRF protection." >&2
   exit 1
 fi
 
-if ! grep -q 'ADMIN FULL STACK' samples/FoundationKit.Workbench.Client/Pages/AdminPortal.razor; then
-  echo "Admin portal must identify its full-stack responsibility clearly." >&2
+if ! grep -q 'RowVersion' examples/Athar/Athar.Domain/Initiative.cs; then
+  echo "Athar aggregate must expose optimistic concurrency." >&2
   exit 1
 fi
 
-echo "Dual full-stack repository boundary verification passed."
+if ! grep -q 'AuditEntries' examples/Athar/Athar.Infrastructure/AtharDbContext.cs; then
+  echo "Athar must persist audit entries." >&2
+  exit 1
+fi
+
+if ! grep -q 'ViewModelBase' examples/Athar/Athar.Client/ViewModels/ViewModels.cs; then
+  echo "Athar must demonstrate Blazor-oriented MVVM." >&2
+  exit 1
+fi
+
+if ! grep -q 'EntityDto' examples/Athar/Athar.Contracts/Contracts.cs; then
+  echo "Athar must demonstrate generic DTO bases." >&2
+  exit 1
+fi
+
+if ! grep -q 'cp -R site release' "$pages_workflow"; then
+  echo "GitHub Pages must publish the dedicated static repository portal." >&2
+  exit 1
+fi
+
+python3 scripts/verify-pages.py
+
+echo "FoundationKit, Workbench, Athar, and Pages portal verification passed."

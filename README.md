@@ -1,63 +1,57 @@
 # FoundationKit for .NET
 
 [![FoundationKit CI](https://github.com/a2sn2/foundationkit-dotnet/actions/workflows/ci.yml/badge.svg)](https://github.com/a2sn2/foundationkit-dotnet/actions/workflows/ci.yml)
-[![Blazor Pages Demo](https://github.com/a2sn2/foundationkit-dotnet/actions/workflows/pages.yml/badge.svg)](https://a2sn2.github.io/foundationkit-dotnet/)
+[![FoundationKit Atlas](https://github.com/a2sn2/foundationkit-dotnet/actions/workflows/pages.yml/badge.svg)](https://a2sn2.github.io/foundationkit-dotnet/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Target: .NET 8](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/)
 
-FoundationKit is the official reusable .NET core in this repository. Its reference application is deliberately split into two complete end-to-end sections:
+FoundationKit is a reusable .NET production baseline for domain-driven, Clean Architecture applications.
 
-1. **User Full Stack** — database, domain, application logic, request/response contracts, API, typed frontend client, Blazor UI, and user UX.
-2. **Admin Full Stack** — database queries and review records, domain transition, application logic, admin contracts, API, typed frontend client, Blazor UI, and admin UX.
-
-The two sections connect through one explicit request lifecycle:
+The repository has deliberately different layers of proof:
 
 ```text
-User creates request
-        ↓
-submitted
-        ↓
-Admin reviews request
-        ↓
-approved or rejected
-        ↓
-User reads the updated status
+src/FoundationKit.*          reusable core packages
+samples/Workbench            architecture discovery and dual-stack workflow
+examples/Athar               complete Arabic production-reference product
+site/                        static Arabic GitHub Pages repository atlas
+apps/                        reserved for future real products
 ```
 
-## Architecture at a glance
+## FoundationKit Atlas — GitHub Pages
+
+Open the public Arabic repository portal:
+
+**https://a2sn2.github.io/foundationkit-dotnet/**
+
+The portal lists every actual Blazor `@page` route in Workbench and Athar, plus the reusable packages, API surfaces, documentation, CI, Postman, Docker, tests, and production gates. Every item explains:
+
+- what it is;
+- why it exists;
+- where its source lives;
+- whether it is static, local, or requires SQL Server;
+- how data flows through the related layers.
+
+GitHub Pages is intentionally a **static documentation and preview portal**. It does not impersonate the ASP.NET Core API, Identity, or SQL Server. Real writes, authentication, migrations, reviews, and audit records run through the local or hosted applications.
+
+The portal manifest is validated against the Razor source files by `scripts/verify-pages.py`; adding a new `@page` without documenting it fails CI.
+
+## الصورة الكاملة
 
 ```text
-                              REUSABLE CORE
-        FoundationKit.Domain / Application / Infrastructure / WebApi / Blazor
-                                     │
-                  ┌──────────────────┴──────────────────┐
-                  │                                     │
-           USER FULL STACK                       ADMIN FULL STACK
-                  │                                     │
-          Pages/UserPortal.razor                Pages/AdminPortal.razor
-                  │                                     │
-           typed API client                      typed API client
-                  │                                     │
-       Contracts/User + User API            Contracts/Admin + Admin API
-                  │                                     │
-       CreateUserRequestUseCase             ReviewUserRequestUseCase
-                  │                                     │
-        BuildBrief aggregate            AdminReview + BuildBrief transition
-                  │                                     │
-          BuildBriefs table                  AdminReviews table
-                  └──────────────────┬──────────────────┘
-                                     │
-                       SHARED WORKFLOW + UNIT OF WORK
+                         FOUNDATIONKIT CORE
+ Domain | Application | Infrastructure | WebApi | Blazor
+                                │
+              ┌─────────────────┴─────────────────┐
+              │                                   │
+      WORKBENCH REFERENCE                 ATHAR PRODUCT EXAMPLE
+  user/admin architecture map         complete Arabic full-stack app
+              │                                   │
+      SQL-backed review flow       Identity + CSRF + Roles + Audit
+                                                  │
+                              User UI ↔ API ↔ Admin UI ↔ SQL Server
 ```
 
-Read the full architecture first:
-
-- [Dual Full-Stack Architecture](docs/DUAL-FULL-STACK.md)
-- [Technical Architecture](docs/ARCHITECTURE.md)
-- [Workbench Operations](docs/WORKBENCH.md)
-- [Implemented Core Capabilities](docs/FEATURES.md)
-
-## What belongs to the reusable core
+## 1 — Reusable Core
 
 ```text
 src/FoundationKit.Domain
@@ -67,68 +61,145 @@ src/FoundationKit.WebApi
 src/FoundationKit.Blazor
 ```
 
-These packages remain product-independent. They do not own SQL Server, migrations, Workbench rules, admin behavior, user behavior, or UI design.
+Core capabilities include:
 
-## What belongs to the reference application
+- entities, aggregate roots, value objects, and domain events;
+- commands, queries, use cases, validation, pagination, and classified results;
+- generic repository/specification/unit-of-work abstractions;
+- provider-neutral EF Core adapters;
+- Problem Details, correlation IDs, and security headers;
+- typed Blazor API results and resilient response parsing;
+- `EntityDto<TId>` and `AuditedEntityDto<TId>`;
+- Blazor-oriented `ViewModelBase` and `ListViewModel<T>`.
 
-```text
-samples/FoundationKit.Workbench/                API host, domain, use cases, EF Core, SQL Server
-samples/FoundationKit.Workbench.Contracts/      User, Admin, Workflow, and shared transport contracts
-samples/FoundationKit.Workbench.Client/         Blazor WebAssembly + MudBlazor UI/UX
-postman/                                         executable API walkthrough
-deploy/                                          local Docker topology
-```
+The core never owns a product database, SQL Server migrations, roles, UI design, or business rules.
 
-## User Full Stack
+## 2 — Workbench Reference
 
-```text
-SQL Server → EF Core → BuildBrief → CreateUserRequestUseCase
-→ CreateUserRequest → POST /api/user/requests
-→ WorkbenchApiClient → /user Blazor UI
-```
-
-User endpoints:
-
-| Method | Route | Purpose |
-|---|---|---|
-| `POST` | `/api/user/requests` | Create a request in `submitted` state |
-| `GET` | `/api/user/requests/{id}` | Read the latest status |
-
-## Admin Full Stack
+The Workbench explains two connected vertical slices:
 
 ```text
-SQL Server → EfAdminQueueReader / AdminReview
-→ ReviewUserRequestUseCase → AdminReviewRequest
-→ /api/admin/requests → WorkbenchApiClient → /admin Blazor UI
+User Full Stack
+    ↓ submitted request
+Admin Full Stack
+    ↓ approved or rejected
+User reads updated status
 ```
 
-Admin endpoints:
+Projects:
 
-| Method | Route | Purpose |
-|---|---|---|
-| `GET` | `/api/admin/requests?status=submitted` | Read the admin queue |
-| `POST` | `/api/admin/requests/{id}/review` | Approve or reject a user request |
+```text
+samples/FoundationKit.Workbench/
+samples/FoundationKit.Workbench.Contracts/
+samples/FoundationKit.Workbench.Client/
+```
 
-The review operation inserts `AdminReviews` and changes `BuildBriefs.Status` through the same unit of work.
+Documentation:
 
-## Shared platform endpoints
+- [Dual Full-Stack Architecture](docs/DUAL-FULL-STACK.md)
+- [Workbench Operations](docs/WORKBENCH.md)
+- [Technical Architecture](docs/ARCHITECTURE.md)
 
-| Method | Route | Purpose |
-|---|---|---|
-| `GET` | `/api/runtime` | Local or static-demo runtime |
-| `GET` | `/api/health` | API and SQL Server health |
-| `GET` | `/api/catalog` | Canonical FoundationKit capability catalog |
+## 3 — منصة أثَر: المشروع العربي الاحترافي
 
-Swagger documents all three groups: Shared Platform, User Full Stack, and Admin Full Stack.
+**أثَر** هو المثال الكامل الذي يثبت ربط FoundationKit بمنتج حقيقي من البداية إلى النهاية.
 
-## Run in Visual Studio 2026
+فكرته: منصة لإدارة المبادرات المجتمعية؛ المستخدم ينشئ حسابًا ويقدّم مبادرة ويتابعها، والإدارة تراجع وتعتمد أو ترفض مع سجل تدقيق دائم.
 
-Requirements:
+```text
+examples/Athar/
+├── Athar.Domain
+├── Athar.Application
+├── Athar.Infrastructure
+├── Athar.Contracts
+├── Athar.Api
+└── Athar.Client
 
-- Visual Studio 2026 with ASP.NET and web development;
-- .NET 8 SDK;
-- SQL Server;
-- SSMS for database inspection when needed.
+tests/Athar.Tests
+postman/Athar.Api.postman_collection.json
+deploy/athar-compose.yml
+```
+
+### User Full Stack
+
+```text
+Blazor Arabic UI
+    ↓
+InitiativesViewModel
+    ↓
+AtharApiClient
+    ↓
+CreateInitiativeRequest
+    ↓
+POST /api/v1/initiatives
+    ↓
+InitiativeManager
+    ↓
+Initiative Aggregate
+    ↓
+EF Core + SQL Server
+```
+
+### Admin Full Stack
+
+```text
+Arabic Admin Dashboard
+    ↓
+AdminViewModel
+    ↓
+AtharApiClient
+    ↓
+GET /api/v1/admin/initiatives
+POST /api/v1/admin/initiatives/{id}/review
+    ↓
+InitiativeManager
+    ↓
+InitiativeReview + AuditEntry + Status transition
+    ↓
+SQL Server
+```
+
+### Security and operational baseline
+
+- ASP.NET Core Identity;
+- Cookie Authentication;
+- User and Administrator roles;
+- password policy and lockout;
+- anti-CSRF token on every write;
+- rate limiting;
+- idempotent initiative creation;
+- optimistic concurrency with `RowVersion`;
+- audit trail;
+- SQL Server migrations and startup retry;
+- live/ready health endpoints;
+- Swagger and Postman;
+- Docker and CI smoke testing.
+
+Read first:
+
+- [منصة أثر](examples/Athar/README.md)
+- [جاهزية الإنتاج](docs/PRODUCTION-READINESS-AR.md)
+- [إضافة مشروع جديد](docs/ADDING-A-PROJECT-AR.md)
+- [التشغيل الكامل على Visual Studio 2026](docs/VISUAL-STUDIO-2026-AR.md)
+
+## Repository layout
+
+```text
+src/          reusable FoundationKit packages
+samples/      architecture samples
+examples/     complete reference products
+apps/         reserved for real products using the same boundaries
+site/         static GitHub Pages repository atlas
+tests/        core, Workbench, and product tests
+postman/      executable API collections
+deploy/       Docker topologies
+scripts/      verification, Pages validation, and smoke tests
+docs/         architecture, operations, local run, and production gates
+catalog/      canonical core capability catalog
+tools/        repository tooling
+```
+
+## Visual Studio 2026
 
 Open:
 
@@ -136,107 +207,18 @@ Open:
 FoundationKit.sln
 ```
 
-Set as startup project:
+Available startup projects:
 
 ```text
-FoundationKit.Workbench.Api
+FoundationKit.Workbench.Api   http://localhost:5057
+Athar.Api                     http://localhost:5068
 ```
 
-Set API project user secrets:
+Each API hosts its own Blazor WebAssembly client. Do not run the Client project separately when testing the complete API + UI + SQL Server path.
 
-```json
-{
-  "ConnectionStrings": {
-    "Workbench": "Server=.;Database=FoundationKitWorkbench;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
-  }
-}
-```
+Follow the detailed Arabic setup, User Secrets, SQL Server, migrations, user flow, administrator flow, and troubleshooting guide:
 
-Press `F5`.
-
-Local URLs:
-
-- Architecture landing page: <http://localhost:5057/>
-- User portal: <http://localhost:5057/user>
-- Admin portal: <http://localhost:5057/admin>
-- Swagger: <http://localhost:5057/swagger>
-- Health: <http://localhost:5057/api/health>
-
-The host applies Workbench EF Core migrations automatically for this local reference application.
-
-## Run with PowerShell or Docker
-
-Existing SQL Server:
-
-```powershell
-$env:ConnectionStrings__Workbench="Server=.;Database=FoundationKitWorkbench;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
-dotnet run --project .\samples\FoundationKit.Workbench\FoundationKit.Workbench.Api.csproj
-```
-
-Complete Docker topology:
-
-```powershell
-.\scripts\run-workbench.ps1
-```
-
-Docker URL:
-
-```text
-http://localhost:8080/
-```
-
-Stop:
-
-```powershell
-.\scripts\stop-workbench.ps1
-```
-
-## Postman walkthrough
-
-Import:
-
-```text
-postman/FoundationKit.Workbench.postman_collection.json
-```
-
-Run in this order:
-
-1. `User Full Stack / Create User Request`.
-2. `Admin Full Stack / Get Submitted Queue`.
-3. `Admin Full Stack / Approve User Request`.
-4. `User Full Stack / Get User Request Status`.
-5. `Admin Full Stack / Get Approved Queue`.
-
-The collection stores the created identifier in `userRequestId`.
-
-## Database view
-
-```sql
-USE FoundationKitWorkbench;
-GO
-
-SELECT *
-FROM dbo.BuildBriefs
-ORDER BY CreatedUtc DESC;
-
-SELECT *
-FROM dbo.AdminReviews
-ORDER BY ReviewedUtc DESC;
-```
-
-## Repository reading order
-
-```text
-1. README.md
-2. docs/DUAL-FULL-STACK.md
-3. src/FoundationKit.*
-4. Contracts/User and Contracts/Admin
-5. Application/User and Application/Admin
-6. Endpoints/UserPortalEndpoints.cs and AdminPortalEndpoints.cs
-7. Client/Pages/UserPortal.razor and AdminPortal.razor
-8. Infrastructure/Migrations
-9. Postman collection
-```
+**[تشغيل FoundationKit وWorkbench ومنصة أثَر على Visual Studio 2026](docs/VISUAL-STUDIO-2026-AR.md)**
 
 ## Build and verify
 
@@ -245,19 +227,18 @@ dotnet restore FoundationKit.sln
 dotnet build FoundationKit.sln --configuration Release --no-restore
 dotnet test FoundationKit.sln --configuration Release --no-build
 bash scripts/verify-repository.sh
-bash scripts/smoke-workbench.sh
+python3 scripts/verify-pages.py
 ```
 
-CI verifies the hosted Blazor application, Swagger groups, migrations, SQL Server persistence, user creation, admin approval, and the status returned to the user.
+Docker smoke paths:
 
-## GitHub Pages
+```bash
+bash scripts/smoke-workbench.sh
+bash scripts/smoke-athar.sh
+```
 
-<https://a2sn2.github.io/foundationkit-dotnet/>
+## Production statement
 
-Pages publishes the same Blazor UI. It shows the architecture and both portal experiences, but disables real database writes and admin decisions because GitHub Pages cannot host ASP.NET Core or SQL Server.
+FoundationKit provides a tested production baseline. A real deployment is approved only after the product-specific environment passes the security, data recovery, observability, performance, and acceptance gates documented in [PRODUCTION-READINESS-AR.md](docs/PRODUCTION-READINESS-AR.md).
 
-## Production boundary
-
-This is a reference architecture, not a complete production security model. Identity, authorization, per-user ownership, admin roles, private data handling, rate limiting, outbox delivery, production migrations, observability backends, and deployment topology remain consuming-product decisions.
-
-Current reusable package version: `0.1.0`.
+Current package version: `0.1.0`.
