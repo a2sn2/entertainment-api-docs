@@ -43,7 +43,7 @@ public sealed class AsyncStateTests
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
 
-        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             state.ExecuteAsync(
                 token => Task.FromCanceled<ApiResult<string>>(token),
                 cancellation.Token));
