@@ -4,30 +4,37 @@ on:
   push:
     branches: [main]
     paths:
+      - "FoundationKit.sln"
       - "platform/core/**"
       - "platform/tests/FoundationKit.Tests/**"
       - "platform/scripts/pack-foundation.*"
+      - "platform/Directory.Build.props"
       - "platform/Directory.Packages.props"
+      - "core/**"
       - ".github/workflows/foundationkit-ci.yml"
   pull_request:
     paths:
+      - "FoundationKit.sln"
       - "platform/core/**"
       - "platform/tests/FoundationKit.Tests/**"
       - "platform/scripts/pack-foundation.*"
+      - "platform/Directory.Build.props"
       - "platform/Directory.Packages.props"
+      - "core/**"
       - ".github/workflows/foundationkit-ci.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: foundationkit-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate-packages:
     name: Build, test and pack FoundationKit
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: platform
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -35,14 +42,14 @@ jobs:
           dotnet-version: "8.0.x"
           cache: true
           cache-dependency-path: platform/**/*.csproj
-      - name: Restore
-        run: dotnet restore EntertainmentDocs.sln
-      - name: Build
-        run: dotnet build EntertainmentDocs.sln --configuration Release --no-restore
+      - name: Restore core solution
+        run: dotnet restore FoundationKit.sln
+      - name: Build core solution
+        run: dotnet build FoundationKit.sln --configuration Release --no-restore
       - name: Test FoundationKit
-        run: dotnet test tests/FoundationKit.Tests/FoundationKit.Tests.csproj --configuration Release --no-build
+        run: dotnet test platform/tests/FoundationKit.Tests/FoundationKit.Tests.csproj --configuration Release
       - name: Pack
-        run: bash scripts/pack-foundation.sh Release artifacts/foundation
+        run: bash platform/scripts/pack-foundation.sh Release artifacts/foundation
       - name: Upload packages
         uses: actions/upload-artifact@v4
         with:

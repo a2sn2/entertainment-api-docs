@@ -1,20 +1,150 @@
 <!doctype html>
-<html lang="en" dir="ltr">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="description" content="Interactive documentation portal for the Entertainment Services API.">
-  <meta name="theme-color" content="#071b33">
+  <meta name="description" content="FoundationKit for .NET — حوّل فكرتك إلى أساس معماري واضح قبل أن تبدأ البرمجة.">
+  <meta name="theme-color" content="#080b16">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="assets/css/tokens.css">
-  <link rel="stylesheet" href="assets/css/base.css">
-  <link rel="stylesheet" href="assets/css/layout.css">
-  <link rel="stylesheet" href="assets/css/components.css">
-  <link rel="stylesheet" href="assets/css/pages.css">
-  <title>Entertainment Services API Documentation</title>
+  <link rel="stylesheet" href="assets/css/showcase.css">
+  <title>FoundationKit — ماذا تريد أن تبني اليوم؟</title>
 </head>
-<body data-page="home" data-root=".">
-  <main class="app-main" id="main-content"><div class="page-container" id="page-root" tabindex="-1"></div></main>
-  <script type="module" src="src/presentation/main.js"></script>
+<body>
+  <div class="ambient" aria-hidden="true">
+    <span class="orb orb-one"></span>
+    <span class="orb orb-two"></span>
+    <span class="orb orb-three"></span>
+    <span class="grid"></span>
+  </div>
+
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="FoundationKit home">
+      <span class="brand-mark">FK</span>
+      <span>
+        <strong>FoundationKit</strong>
+        <small>for .NET</small>
+      </span>
+    </a>
+    <nav aria-label="روابط رئيسية">
+      <a href="https://github.com/a2sn2/entertainment-api-docs/blob/main/core/README.md" target="_blank" rel="noreferrer">الكور</a>
+      <a href="https://github.com/a2sn2/entertainment-api-docs/blob/main/samples/EntertainmentDocs/README.md" target="_blank" rel="noreferrer">المشروع المرجعي</a>
+      <a href="https://github.com/a2sn2/entertainment-api-docs/blob/main/docs/architecture/REPOSITORY-BOUNDARIES.md" target="_blank" rel="noreferrer">المعمارية</a>
+      <a href="pages/api-reference.html">مرجع API</a>
+      <a class="nav-cta" href="https://github.com/a2sn2" target="_blank" rel="noreferrer">GitHub</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="eyebrow"><span></span> reusable .NET engineering foundation</div>
+      <h1 id="hero-title">ماذا تريد أن تبني اليوم؟</h1>
+      <p class="hero-copy">
+        اكتب فكرتك كما هي. سنحوّلها داخل المتصفح إلى خريطة أولية توضّح الطبقات التي يحتاجها المنتج،
+        ثم نفتح لك الطريق لمناقشتها مع <strong>ALHassan ALShami</strong>.
+      </p>
+
+      <form class="idea-card" id="idea-form">
+        <label for="idea-input">فكرتك</label>
+        <textarea id="idea-input" name="idea" maxlength="360" rows="5" required
+          placeholder="مثال: أريد بناء نظام داخلي لتنظيم مهام الموظفين ومتابعة الإنجاز..."></textarea>
+        <div class="idea-meta">
+          <div class="chips" aria-label="أفكار سريعة">
+            <button type="button" class="chip" data-idea="أريد بناء نظام داخلي لإدارة العمليات والمهام والصلاحيات">نظام داخلي</button>
+            <button type="button" class="chip" data-idea="أريد بناء منصة ذكاء اصطناعي تساعد المستخدمين على تحليل البيانات">منصة AI</button>
+            <button type="button" class="chip" data-idea="أريد بناء API آمن وقابل للتوسع لمنتج مالي">Fintech API</button>
+            <button type="button" class="chip" data-idea="أريد أتمتة عملية يدوية متكررة داخل الشركة">أتمتة</button>
+          </div>
+          <span id="idea-counter" aria-live="polite">0 / 360</span>
+        </div>
+        <button class="primary-action" type="submit">
+          <span>حوّل الفكرة إلى مشروع</span>
+          <span aria-hidden="true">←</span>
+        </button>
+        <p class="privacy-note">لا تُرسل الفكرة لأي خادم. التحليل يحدث محليًا داخل متصفحك.</p>
+      </form>
+    </section>
+
+    <section class="result-section" id="result-section" hidden aria-live="polite">
+      <div class="result-heading">
+        <div>
+          <span class="status-dot"></span>
+          <span id="result-status">تم التقاط الفكرة</span>
+        </div>
+        <button type="button" class="ghost-button" id="start-over">فكرة جديدة</button>
+      </div>
+
+      <article class="idea-summary">
+        <p class="section-kicker">Your idea</p>
+        <blockquote id="idea-output"></blockquote>
+        <div class="analysis-tags" id="analysis-tags"></div>
+      </article>
+
+      <div class="foundation-progress" aria-label="مراحل بناء الأساس">
+        <div class="progress-line"><span id="progress-fill"></span></div>
+        <ol id="progress-steps">
+          <li>فهم المشكلة</li>
+          <li>تحديد الحدود</li>
+          <li>تشكيل الطبقات</li>
+          <li>تجهيز نقطة البداية</li>
+        </ol>
+      </div>
+
+      <div class="layer-grid" id="layer-grid"></div>
+
+      <article class="contact-card">
+        <div>
+          <p class="section-kicker">The foundation is ready</p>
+          <h2>الآن يبدأ المنتج الحقيقي.</h2>
+          <p>
+            FoundationKit يمنح المشروع حدودًا نظيفة وأساسًا قابلًا للاختبار والنمو، لكنه لا يستبدل تحليل العمل
+            وفهم المستخدمين واتخاذ القرارات. لهذا تبدأ الخطوة التالية بحوار.
+          </p>
+          <p class="signature">أنا <strong>ALHassan ALShami</strong>، مطور أنظمة وتطبيقات ويب، وسأساعدك في تحويل الفكرة إلى خطة بناء واضحة.</p>
+        </div>
+        <div class="contact-actions">
+          <button type="button" class="secondary-action" id="copy-summary">انسخ ملخص الفكرة</button>
+          <a class="primary-action" id="contact-link" href="https://github.com/a2sn2/entertainment-api-docs/issues/new?template=project-idea.yml" target="_blank" rel="noreferrer">
+            ناقش الفكرة معي
+          </a>
+          <small>نموذج GitHub عام؛ لا تضع معلومات سرية أو تجارية حساسة.</small>
+        </div>
+      </article>
+    </section>
+
+    <section class="repo-story" aria-labelledby="repo-story-title">
+      <div class="section-intro">
+        <p class="section-kicker">One repository, clear ownership</p>
+        <h2 id="repo-story-title">كل جزء يعرف مسؤوليته.</h2>
+      </div>
+      <div class="story-grid">
+        <article>
+          <span class="story-index">01</span>
+          <h3>FoundationKit Core</h3>
+          <p>حزم تقنية قابلة لإعادة الاستخدام، مستقلة عن قواعد أي منتج أو مزود قاعدة بيانات.</p>
+          <a href="https://github.com/a2sn2/entertainment-api-docs/blob/main/core/README.md" target="_blank" rel="noreferrer">استكشف الكور</a>
+        </article>
+        <article>
+          <span class="story-index">02</span>
+          <h3>EntertainmentDocs</h3>
+          <p>أول مشروع مرجعي يثبت Identity وJWT وSQL Server وBlazor وDocker وCI على الكور.</p>
+          <a href="https://github.com/a2sn2/entertainment-api-docs/blob/main/samples/EntertainmentDocs/README.md" target="_blank" rel="noreferrer">افتح المشروع المرجعي</a>
+        </article>
+        <article>
+          <span class="story-index">03</span>
+          <h3>Future Products</h3>
+          <p>مشاريع مستقلة تستهلك حزم FoundationKit وتحافظ على نطاقها وعقودها وواجهاتها.</p>
+          <a href="https://github.com/a2sn2/entertainment-api-docs/blob/main/templates/README.md" target="_blank" rel="noreferrer">ابدأ منتجًا جديدًا</a>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>FoundationKit for .NET</span>
+    <span>Built by ALHassan ALShami · <span id="current-year"></span></span>
+  </footer>
+
+  <noscript>هذه الصفحة تحتاج JavaScript لتشغيل تجربة تحليل الفكرة.</noscript>
+  <script type="module" src="src/showcase.js"></script>
 </body>
 </html>

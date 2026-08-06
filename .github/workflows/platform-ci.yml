@@ -49,6 +49,22 @@ jobs:
           dotnet-version: "8.0.x"
           cache: true
           cache-dependency-path: platform/**/*.csproj
+      - name: Validate Showcase assets
+        working-directory: ${{ github.workspace }}
+        run: |
+          node --check src/showcase.js
+          python3 -m json.tool manifest.webmanifest >/dev/null
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          class StrictEnoughParser(HTMLParser):
+              pass
+
+          parser = StrictEnoughParser()
+          for path in (Path("index.html"), Path("404.html")):
+              parser.feed(path.read_text(encoding="utf-8"))
+          PY
       - name: Validate Postman JSON
         run: |
           python3 -m json.tool postman/EntertainmentDocs.postman_collection.json >/dev/null

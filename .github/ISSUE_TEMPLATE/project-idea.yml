@@ -1,0 +1,55 @@
+name: Project idea
+description: Share a public, non-confidential project idea with ALHassan ALShami
+title: "[Project idea]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Build with FoundationKit
+
+        This issue is public. Do not include passwords, private customer information, internal documents, financial secrets, or confidential business details.
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What do you want to build?
+      description: Describe the problem and the result you want, without confidential details.
+      placeholder: I want to build...
+    validations:
+      required: true
+
+  - type: textarea
+    id: users
+    attributes:
+      label: Who will use it?
+      description: Describe the main users or teams.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Current stage
+      options:
+        - Idea only
+        - Requirements in progress
+        - Existing prototype
+        - Existing system needing improvement
+        - Production system
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: What would a successful first version achieve?
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: public-confirmation
+    attributes:
+      label: Public information confirmation
+      options:
+        - label: I confirm that this issue contains no confidential or sensitive information.
+          required: true
