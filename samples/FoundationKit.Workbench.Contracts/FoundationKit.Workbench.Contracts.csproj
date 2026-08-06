@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>FoundationKit.Workbench.Contracts</RootNamespace>
+    <AssemblyName>FoundationKit.Workbench.Contracts</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+</Project>
