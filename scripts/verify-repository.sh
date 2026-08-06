@@ -50,6 +50,7 @@ unexpected_top_level="$(
     ! -name 'postman' \
     ! -name 'samples' \
     ! -name 'scripts' \
+    ! -name 'site' \
     ! -name 'src' \
     ! -name 'tests' \
     ! -name 'tools' \
@@ -78,6 +79,7 @@ fi
 
 required_files=(
   "README.md"
+  ".github/workflows/pages.yml"
   "catalog/foundationkit.catalog.json"
   "docs/FEATURES.md"
   "docs/WORKBENCH.md"
@@ -125,6 +127,12 @@ required_files=(
   "scripts/run-athar.sh"
   "scripts/stop-athar.ps1"
   "scripts/stop-athar.sh"
+  "scripts/verify-pages.py"
+  "site/index.html"
+  "site/styles.css"
+  "site/app.js"
+  "site/portal-manifest.json"
+  "site/favicon.svg"
   "src/FoundationKit.Application/Models/EntityDto.cs"
   "src/FoundationKit.Blazor/Mvvm/ViewModelBase.cs"
 )
@@ -140,6 +148,7 @@ workbench_api="samples/FoundationKit.Workbench/FoundationKit.Workbench.Api.cspro
 workbench_client="samples/FoundationKit.Workbench.Client/FoundationKit.Workbench.Client.csproj"
 athar_api="examples/Athar/Athar.Api/Athar.Api.csproj"
 athar_client="examples/Athar/Athar.Client/Athar.Client.csproj"
+pages_workflow=".github/workflows/pages.yml"
 
 if ! grep -q 'Microsoft.EntityFrameworkCore.SqlServer' "$workbench_api"; then
   echo "Workbench API must explicitly own SQL Server." >&2
@@ -238,4 +247,11 @@ if ! grep -q 'EntityDto' examples/Athar/Athar.Contracts/Contracts.cs; then
   exit 1
 fi
 
-echo "FoundationKit, Workbench, and Athar repository verification passed."
+if ! grep -q 'cp -R site release' "$pages_workflow"; then
+  echo "GitHub Pages must publish the dedicated static repository portal." >&2
+  exit 1
+fi
+
+python3 scripts/verify-pages.py
+
+echo "FoundationKit, Workbench, Athar, and Pages portal verification passed."
