@@ -6,19 +6,27 @@ All notable repository and package changes are documented here.
 
 ### Added
 
-- Local `FoundationKit.Workbench` ASP.NET Core sample that consumes the reusable packages and persists project briefs in SQL Server.
-- Workbench-owned EF Core migration for the `BuildBriefs` schema.
-- Docker Compose topology and one-command PowerShell/Bash launchers that open the Workbench automatically.
-- Creative shared discovery UI for implemented capabilities, project ideas, adoption guidance, and project-brief generation.
-- Static GitHub Pages demo that uses the same UI and clearly operates without backend execution or persistence.
-- Canonical `catalog/foundationkit.catalog.json` source for packages, implemented capabilities, ideas, adoption steps, and contact metadata.
-- Catalog validation and generated `docs/FEATURES.md` workflow.
-- Workbench unit tests and a CI smoke test against a real SQL Server container.
+- Official `FoundationKit.Workbench.Client` Blazor WebAssembly project using Razor Components and MudBlazor.
+- Official `FoundationKit.Workbench.Contracts` project containing shared routes, requests, responses, runtime, health, and catalog contracts.
+- Typed `WorkbenchApiClient` built on the reusable `FoundationKit.Blazor.ApiClientBase`.
+- Swagger/OpenAPI documentation for the Workbench API.
+- Postman collection using the same `BuildBriefRequest` JSON contract consumed by Blazor.
+- Hosted Blazor WebAssembly delivery from the ASP.NET Core Workbench API.
+- GitHub Pages workflow that publishes the Blazor client itself in explicit demo mode.
+- Docker and CI verification that the hosted Blazor client, Swagger document, API, migrations, and SQL Server persistence operate together.
 
 ### Changed
 
-- Repository boundary verification now permits explicit `samples`, `site`, `catalog`, `tools`, and `deploy` roles while still preventing provider coupling or migrations inside reusable packages.
-- README, architecture, package, contributing, and security documentation now distinguish core packages, the local Workbench, and the static Pages demo.
+- Renamed the executable Workbench project to `FoundationKit.Workbench.Api` while preserving its product domain, application logic, EF Core configuration, and migrations.
+- Replaced the handwritten HTML/CSS/JavaScript frontend with Blazor WebAssembly and MudBlazor.
+- Moved API transport models out of the API application layer into the shared Contracts project.
+- Updated the solution, tests, Docker image, repository verification, documentation, and local Visual Studio instructions for the new architecture.
+- GitHub Pages now publishes one frontend implementation instead of maintaining a separate JavaScript UI.
+
+### Removed
+
+- Legacy `site/` static Workbench implementation.
+- API-local `BuildBriefRequest` and `BuildBriefResponse` duplicates.
 
 ## [0.1.0] - 2026-08-06
 
@@ -28,6 +36,7 @@ All notable repository and package changes are documented here.
 - Provider-neutral EF Core persistence adapters and in-process domain-event dispatch.
 - Result mapping, correlation IDs, security headers, typed API results, and asynchronous UI state.
 - Package, symbol-package, architecture-test, documentation, and CI foundations.
+- Local SQL Server Workbench consumer, canonical capability catalog, generated capability documentation, Docker launchers, and persistence smoke testing.
 
 ### Fixed
 
