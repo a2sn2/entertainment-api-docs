@@ -3,6 +3,7 @@ name: Athar Experimental Product Package
 on:
   workflow_dispatch:
   push:
+    branches: [main]
     tags:
       - "experimental-v*"
 
