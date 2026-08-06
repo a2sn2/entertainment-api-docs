@@ -1,6 +1,5 @@
 using Athar.Client.Services;
 using Athar.Contracts;
-using FoundationKit.Application.Pagination;
 using FoundationKit.Blazor.Mvvm;
 
 namespace Athar.Client.ViewModels;
@@ -52,11 +51,43 @@ public sealed class InitiativesViewModel(AtharApiClient api)
 
     public InitiativeDetailsDto? LastCreated { get; private set; }
 
+    public InitiativeDetailsDto? Selected { get; private set; }
+
     public string? Search { get; set; }
 
     public string? Status { get; set; }
 
-    public Task LoadAsync() => RunAsync(async () =>
+    public Task LoadAsync() => RunAsync(LoadCoreAsync);
+
+    public Task CreateAsync() => RunAsync(async () =>
+    {
+        var result = await api.CreateInitiativeAsync(Draft);
+        if (result.IsFailure || result.Value is null)
+        {
+            SetError(result.Error ?? "تعذر إنشاء المبادرة.");
+            return;
+        }
+
+        LastCreated = result.Value;
+        Selected = result.Value;
+        Draft = new CreateInitiativeRequest();
+        await LoadCoreAsync();
+    });
+
+    public Task SelectAsync(Guid id) => RunAsync(async () =>
+    {
+        var result = await api.GetInitiativeAsync(id);
+        if (result.IsFailure || result.Value is null)
+        {
+            SetError(result.Error ?? "تعذر تحميل تفاصيل المبادرة.");
+            return;
+        }
+
+        Selected = result.Value;
+        NotifyStateChanged();
+    });
+
+    private async Task LoadCoreAsync()
     {
         var result = await api.GetMyInitiativesAsync(
             search: Search,
@@ -70,22 +101,7 @@ public sealed class InitiativesViewModel(AtharApiClient api)
 
         Items = result.Value.Items;
         NotifyStateChanged();
-    });
-
-    public Task CreateAsync() => RunAsync(async () =>
-    {
-        var result = await api.CreateInitiativeAsync(Draft);
-        if (result.IsFailure || result.Value is null)
-        {
-            SetError(result.Error ?? "تعذر إنشاء المبادرة.");
-            return;
-        }
-
-        LastCreated = result.Value;
-        Draft = new CreateInitiativeRequest();
-        NotifyStateChanged();
-        await LoadAsync();
-    });
+    }
 }
 
 public sealed class AdminViewModel(AtharApiClient api)
@@ -93,11 +109,51 @@ public sealed class AdminViewModel(AtharApiClient api)
 {
     public AdminDashboardResponse? Dashboard { get; private set; }
 
-    public string Status { get; set; } = "submitted";
+    public InitiativeDetailsDto? Selected { get; private set; }
+
+    public string Status { get; set; } = InitiativeWorkflow.Submitted;
 
     public string? Search { get; set; }
 
-    public Task LoadAsync() => RunAsync(async () =>
+    public Task LoadAsync() => RunAsync(LoadCoreAsync);
+
+    public Task SelectAsync(Guid id) => RunAsync(async () =>
+    {
+        var result = await api.GetInitiativeAsync(id);
+        if (result.IsFailure || result.Value is null)
+        {
+            SetError(result.Error ?? "تعذر تحميل تفاصيل المبادرة.");
+            return;
+        }
+
+        Selected = result.Value;
+        NotifyStateChanged();
+    });
+
+    public Task ReviewAsync(
+        Guid initiativeId,
+        string decision,
+        string? notes) => RunAsync(async () =>
+    {
+        var result = await api.ReviewInitiativeAsync(
+            initiativeId,
+            new ReviewInitiativeRequest
+            {
+                Decision = decision,
+                Notes = notes
+            });
+
+        if (result.IsFailure || result.Value is null)
+        {
+            SetError(result.Error ?? "تعذر حفظ قرار المراجعة.");
+            return;
+        }
+
+        Selected = result.Value;
+        await LoadCoreAsync();
+    });
+
+    private async Task LoadCoreAsync()
     {
         var dashboardTask = api.GetAdminDashboardAsync();
         var queueTask = api.GetAdminInitiativesAsync(
@@ -124,27 +180,5 @@ public sealed class AdminViewModel(AtharApiClient api)
         Dashboard = dashboard.Value;
         Items = queue.Value.Items;
         NotifyStateChanged();
-    });
-
-    public Task ReviewAsync(
-        Guid initiativeId,
-        string decision,
-        string? notes) => RunAsync(async () =>
-    {
-        var result = await api.ReviewInitiativeAsync(
-            initiativeId,
-            new ReviewInitiativeRequest
-            {
-                Decision = decision,
-                Notes = notes
-            });
-
-        if (result.IsFailure)
-        {
-            SetError(result.Error ?? "تعذر حفظ قرار المراجعة.");
-            return;
-        }
-
-        await LoadAsync();
-    });
+    }
 }
