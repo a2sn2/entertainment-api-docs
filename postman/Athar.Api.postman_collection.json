@@ -2,31 +2,32 @@
   "info": {
     "_postman_id": "7ef5aef2-7d14-4be9-8dca-athar000001",
     "name": "منصة أثر — FoundationKit Production Reference",
-    "description": "تسلسل عربي كامل: CSRF، تسجيل مستخدم، إنشاء مبادرة، دخول الإدارة، المراجعة، ثم قراءة الحالة.",
+    "description": "تسلسل عربي قابل لإعادة التشغيل: CSRF، مستخدم فريد، إنشاء مبادرة ومنع تكرارها، خروج، دخول الإدارة، تجديد CSRF، المراجعة، ثم التحقق من القرار.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:5068" },
     { "key": "csrfToken", "value": "" },
-    { "key": "userEmail", "value": "user@athar.local" },
+    { "key": "userEmail", "value": "" },
     { "key": "userPassword", "value": "AtharUser!2026Aa" },
     { "key": "adminEmail", "value": "admin@athar.local" },
     { "key": "adminPassword", "value": "AtharAdmin!2026Aa" },
+    { "key": "clientRequestId", "value": "" },
     { "key": "initiativeId", "value": "" }
   ],
   "item": [
     {
-      "name": "1 — الأمان",
+      "name": "1 — بدء جلسة المستخدم",
       "item": [
         {
-          "name": "الحصول على رمز CSRF",
+          "name": "CSRF للزائر",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('تم إنشاء رمز الحماية', function () { pm.response.to.have.status(200); });",
+                  "pm.test('تم إنشاء رمز حماية للزائر', function () { pm.response.to.have.status(200); });",
                   "pm.collectionVariables.set('csrfToken', pm.response.json().requestToken);"
                 ]
               }
@@ -37,14 +38,34 @@
             "header": [],
             "url": "{{baseUrl}}/api/v1/security/antiforgery"
           }
-        }
-      ]
-    },
-    {
-      "name": "2 — المستخدم",
-      "item": [
+        },
         {
-          "name": "إنشاء حساب",
+          "name": "إنشاء حساب مستخدم فريد",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const stamp = Date.now();",
+                  "pm.collectionVariables.set('userEmail', `athar.user.${stamp}@example.test`);",
+                  "pm.collectionVariables.set('clientRequestId', pm.variables.replaceIn('{{$guid}}'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('تم إنشاء الحساب وتسجيل الدخول', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().isAuthenticated).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -59,14 +80,42 @@
           }
         },
         {
-          "name": "إنشاء مبادرة",
+          "name": "تجديد CSRF بعد دخول المستخدم",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('تم إنشاء المبادرة', function () { pm.response.to.have.status(201); });",
+                  "pm.test('تم تجديد رمز المستخدم', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set('csrfToken', pm.response.json().requestToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/security/antiforgery"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 — دورة مبادرة المستخدم",
+      "item": [
+        {
+          "name": "إنشاء المبادرة",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('تم إنشاء المبادرة بحالة submitted', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().status).to.eql('submitted');",
+                  "});",
                   "pm.collectionVariables.set('initiativeId', pm.response.json().id);"
                 ]
               }
@@ -77,17 +126,62 @@
             "header": [
               { "key": "Content-Type", "value": "application/json" },
               { "key": "X-CSRF-TOKEN", "value": "{{csrfToken}}" },
-              { "key": "X-Correlation-ID", "value": "postman-athar-user-001" }
+              { "key": "X-Correlation-ID", "value": "postman-athar-user-create" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"clientRequestId\": \"11111111-2222-3333-4444-555555555555\",\n  \"title\": \"مختبر تعلّم متنقل\",\n  \"summary\": \"مبادرة توصل جلسات تعليم رقمية عملية إلى المدارس الواقعة خارج مراكز المدن.\",\n  \"category\": \"تعليم\",\n  \"city\": \"صنعاء\",\n  \"requestedBudget\": 25000,\n  \"targetBeneficiaries\": 320\n}"
+              "raw": "{\n  \"clientRequestId\": \"{{clientRequestId}}\",\n  \"title\": \"مختبر تعلّم متنقل\",\n  \"summary\": \"مبادرة توصل جلسات تعليم رقمية عملية إلى المدارس الواقعة خارج مراكز المدن.\",\n  \"category\": \"تعليم\",\n  \"city\": \"صنعاء\",\n  \"requestedBudget\": 25000,\n  \"targetBeneficiaries\": 320\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/initiatives"
+          }
+        },
+        {
+          "name": "إعادة نفس الطلب — تحقق Idempotency",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('لم يتم إنشاء سجل ثانٍ', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('initiativeId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-CSRF-TOKEN", "value": "{{csrfToken}}" },
+              { "key": "X-Correlation-ID", "value": "postman-athar-user-duplicate" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientRequestId\": \"{{clientRequestId}}\",\n  \"title\": \"مختبر تعلّم متنقل\",\n  \"summary\": \"مبادرة توصل جلسات تعليم رقمية عملية إلى المدارس الواقعة خارج مراكز المدن.\",\n  \"category\": \"تعليم\",\n  \"city\": \"صنعاء\",\n  \"requestedBudget\": 25000,\n  \"targetBeneficiaries\": 320\n}"
             },
             "url": "{{baseUrl}}/api/v1/initiatives"
           }
         },
         {
           "name": "قائمة مبادراتي",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('المبادرة موجودة في قائمة المستخدم', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const ids = pm.response.json().items.map(x => x.id);",
+                  "  pm.expect(ids).to.include(pm.collectionVariables.get('initiativeId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
@@ -95,7 +189,18 @@
           }
         },
         {
-          "name": "تسجيل الخروج",
+          "name": "تسجيل خروج المستخدم",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('تم تسجيل خروج المستخدم', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -109,10 +214,44 @@
       ]
     },
     {
-      "name": "3 — الإدارة",
+      "name": "3 — بدء جلسة الإدارة",
       "item": [
         {
+          "name": "CSRF بعد خروج المستخدم",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('تم إنشاء رمز للزائر قبل دخول الإدارة', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set('csrfToken', pm.response.json().requestToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/security/antiforgery"
+          }
+        },
+        {
           "name": "دخول المسؤول",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('دخل المسؤول بدور Administrator', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().roles).to.include('Administrator');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -127,6 +266,31 @@
           }
         },
         {
+          "name": "تجديد CSRF بعد دخول المسؤول",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('تم تجديد رمز المسؤول', function () { pm.response.to.have.status(200); });",
+                  "pm.collectionVariables.set('csrfToken', pm.response.json().requestToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/security/antiforgery"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 — مراجعة الإدارة",
+      "item": [
+        {
           "name": "لوحة المؤشرات",
           "request": {
             "method": "GET",
@@ -136,6 +300,21 @@
         },
         {
           "name": "قائمة قيد المراجعة",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('المبادرة ظهرت في قائمة الإدارة', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const ids = pm.response.json().items.map(x => x.id);",
+                  "  pm.expect(ids).to.include(pm.collectionVariables.get('initiativeId'));",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
@@ -144,12 +323,29 @@
         },
         {
           "name": "اعتماد المبادرة",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('تم اعتماد المبادرة وحفظ المراجعة', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('approved');",
+                  "  pm.expect(body.reviews.length).to.be.above(0);",
+                  "  pm.expect(body.reviews[0].notes).to.include('Postman');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
               { "key": "X-CSRF-TOKEN", "value": "{{csrfToken}}" },
-              { "key": "X-Correlation-ID", "value": "postman-athar-admin-001" }
+              { "key": "X-Correlation-ID", "value": "postman-athar-admin-review" }
             ],
             "body": {
               "mode": "raw",
@@ -161,10 +357,26 @@
       ]
     },
     {
-      "name": "4 — التحقق النهائي",
+      "name": "5 — التحقق النهائي",
       "item": [
         {
           "name": "تفاصيل المبادرة بعد القرار",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('الحالة والملاحظات محفوظة', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const body = pm.response.json();",
+                  "  pm.expect(body.status).to.eql('approved');",
+                  "  pm.expect(body.reviews[0].notes).to.include('Postman');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
@@ -173,6 +385,17 @@
         },
         {
           "name": "Readiness",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('قاعدة البيانات جاهزة', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
