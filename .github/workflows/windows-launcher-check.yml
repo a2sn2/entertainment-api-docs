@@ -1,8 +1,9 @@
-name: Athar Windows Launcher Check
+name: FoundationKit Windows Launcher Check
 
 on:
   pull_request:
     paths:
+      - "foundationkit.ps1"
       - "scripts/athar-product.ps1"
       - "scripts/expose-athar-tunnel.ps1"
       - "START-ATHAR.cmd"
@@ -12,6 +13,7 @@ on:
   push:
     branches: [main]
     paths:
+      - "foundationkit.ps1"
       - "scripts/athar-product.ps1"
       - "scripts/expose-athar-tunnel.ps1"
       - "START-ATHAR.cmd"
@@ -41,6 +43,7 @@ jobs:
         shell: powershell
         run: |
           $paths = @(
+            "foundationkit.ps1",
             "scripts/athar-product.ps1",
             "scripts/expose-athar-tunnel.ps1"
           )
@@ -57,6 +60,7 @@ jobs:
         shell: powershell
         run: |
           $paths = @(
+            "foundationkit.ps1",
             "scripts/athar-product.ps1",
             "scripts/expose-athar-tunnel.ps1"
           )
@@ -77,7 +81,17 @@ jobs:
             Write-Host "$path parser check passed."
           }
 
-      - name: Smoke test Native status command
+      - name: Smoke test unified help
+        shell: powershell
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File ".\foundationkit.ps1" help
+
+      - name: Smoke test unified doctor
+        shell: powershell
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File ".\foundationkit.ps1" doctor
+
+      - name: Smoke test Athar Native status command
         shell: powershell
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File ".\scripts\athar-product.ps1" -Action Status -Mode Native
