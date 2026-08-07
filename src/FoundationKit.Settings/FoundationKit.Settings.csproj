@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Provider-neutral hierarchical settings resolution contracts and in-memory reference source for FoundationKit consumers.</Description>
+  </PropertyGroup>
+</Project>
