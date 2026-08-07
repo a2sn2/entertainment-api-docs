@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <!--
+      xUnit tests intentionally use behavior-oriented underscore-separated names
+      because they read as executable specifications in CI. CA1707 is a public API
+      naming rule and does not improve security or package compatibility for tests.
+    -->
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+  </PropertyGroup>
+</Project>
