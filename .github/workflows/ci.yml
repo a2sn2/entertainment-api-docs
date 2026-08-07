@@ -168,10 +168,16 @@ jobs:
       - name: Generate temporary integration credentials
         shell: bash
         run: |
-          echo "FOUNDATIONKIT_SQL_PASSWORD=Fkit!$(openssl rand -hex 12)Aa1" >> "$GITHUB_ENV"
-          echo "ATHAR_SQL_PASSWORD=AtharSql!$(openssl rand -hex 12)Aa1" >> "$GITHUB_ENV"
+          foundationkit_sql_password="Fkit!$(openssl rand -hex 12)Aa1"
+          athar_sql_password="AtharSql!$(openssl rand -hex 12)Aa1"
+          athar_admin_password="AtharAdmin!$(openssl rand -hex 12)Aa1"
+          echo "::add-mask::$foundationkit_sql_password"
+          echo "::add-mask::$athar_sql_password"
+          echo "::add-mask::$athar_admin_password"
+          echo "FOUNDATIONKIT_SQL_PASSWORD=$foundationkit_sql_password" >> "$GITHUB_ENV"
+          echo "ATHAR_SQL_PASSWORD=$athar_sql_password" >> "$GITHUB_ENV"
           echo "ATHAR_ADMIN_EMAIL=admin@athar.test" >> "$GITHUB_ENV"
-          echo "ATHAR_ADMIN_PASSWORD=AtharAdmin!$(openssl rand -hex 12)Aa1" >> "$GITHUB_ENV"
+          echo "ATHAR_ADMIN_PASSWORD=$athar_admin_password" >> "$GITHUB_ENV"
 
       - name: Start Workbench stack
         run: docker compose -f deploy/docker-compose.yml up --build -d
