@@ -61,8 +61,8 @@ No capability is promoted merely because a class or empty package exists.
 
 ## Phase E — Platform and organization
 
-- [ ] Settings hierarchy.
-- [ ] Feature management/feature flags.
+- [x] Settings hierarchy v1: provider-neutral scopes, deterministic fallback/source precedence, bounded values, and Workbench runtime proof.
+- [x] Feature Management v1: settings-backed Boolean decisions with explicit defaults and fail-closed invalid configuration, proven by Workbench.
 - [ ] Organization/branch/department/team hierarchy.
 - [ ] Multi-tenancy context and isolation contracts.
 - [ ] Localization/culture/time-zone foundation.
@@ -160,20 +160,25 @@ The repository currently has extracted reusable/reference packages for:
 - Workflow;
 - Approvals v1;
 - Notifications v1;
-- SMTP notification provider v1 (`FoundationKit.Notifications.Smtp`).
+- SMTP notification provider v1 (`FoundationKit.Notifications.Smtp`);
+- Settings v1 (`FoundationKit.Settings`);
+- Feature Management v1 (`FoundationKit.FeatureManagement`).
 
-Athar provides current consumer evidence for the security, identity, authorization, workflow, narrow approval, notification, and SMTP-provider surfaces. The capability maturity values remain conservative and do not imply production certification.
+Athar provides current consumer evidence for the security, identity, authorization, workflow, narrow approval, notification, and SMTP-provider surfaces. Workbench provides runtime consumer evidence for Settings and Feature Management. The capability maturity values remain conservative and do not imply production certification.
 
-## Current extraction boundary
+## Current continuation boundary
 
-The current extraction cycle is intentionally closed after SMTP provider v1.
+Issue #64 reopens the consumer-driven extraction cycle for general-purpose system capabilities while preserving the same stop rule: no empty package and no invented organizational/product policy.
 
-The following items remain **not ready for package extraction** without broader implementation or a real consumer:
+The next candidate that can be implemented without owner policy is **Localization/culture/time-zone foundation**, because deterministic culture selection, directionality, and explicitly supported time-zone identifiers can be bounded and demonstrated through Workbench without selecting a deployment provider or legal/business rule.
 
-- **Files / Documents** — Athar currently has no reusable upload/storage/document lifecycle consumer.
-- **Background Jobs** — there is no delayed/scheduled/recurring work abstraction or runtime consumer.
-- **Messaging** — the existing in-process domain-event dispatcher is an application infrastructure mechanism, not an integration-event/outbox/inbox implementation.
-- **Idempotency** — Athar has real reference behavior through owner-scoped `ClientRequestId` lookup plus a unique database constraint, but no reusable reservation/store/replay contract has been proven yet.
-- **Concurrency** — Athar has SQL Server `rowversion` plus 409 conflict handling, but no reusable public precondition/token contract has been proven yet.
+The following items remain **not ready for package extraction** until a concrete consumer proves their semantics:
 
-The next package should therefore be driven by a new concrete product requirement or by a second consumer that proves one of these boundaries. Until then, keeping those capabilities Planned/ReferenceOnly is more accurate than creating empty or product-shaped packages.
+- **Files / Documents** — Athar/Workbench currently have no reusable upload/storage/document lifecycle consumer.
+- **Background Jobs** — there is no delayed/scheduled/recurring work runtime consumer yet.
+- **Messaging** — the existing in-process domain-event dispatcher is not integration-event/outbox/inbox delivery.
+- **Idempotency** — Athar has owner-scoped `ClientRequestId` lookup plus a unique database constraint, but no reusable reservation/store/replay contract is proven yet.
+- **Concurrency** — Athar has SQL Server `rowversion` plus 409 conflict handling, but no reusable public precondition/token contract is proven yet.
+- **Organization / Multi-Tenancy** — the reusable core must not invent hierarchy, tenant identity, or isolation topology before a product requires them.
+
+Provider/vendor choices, legal retention, rollout targeting policy, tenancy topology, and business organization semantics remain explicit owner/organization decisions rather than defaults embedded into FoundationKit.
