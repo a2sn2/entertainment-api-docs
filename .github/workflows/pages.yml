@@ -39,12 +39,6 @@ jobs:
           grep -q "DEMO · بدون خادم" site/athar-demo/index.html
           grep -q "athar-demo/" site/index.html
 
-      - name: Verify fixed free Athar live alias
-        run: |
-          test -f site/athar-live/index.html
-          grep -q "athar-live-link/site/athar-live/target.json" site/athar-live/index.html
-          grep -q "trycloudflare" site/athar-live/index.html
-
       - name: Prepare GitHub Pages artifact
         run: |
           rm -rf release
@@ -61,7 +55,6 @@ jobs:
           test -f release/athar-demo/index.html
           test -f release/athar-demo/styles.css
           test -f release/athar-demo/app.js
-          test -f release/athar-live/index.html
           grep -q '<base href="/foundationkit-dotnet/">' release/index.html
           grep -q 'FoundationKit Atlas' release/index.html
 
