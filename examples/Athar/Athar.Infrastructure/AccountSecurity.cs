@@ -26,7 +26,7 @@ public sealed class AccountSecurityDeliveryOptions
 public sealed class SmtpAccountNotificationSender(
     IOptions<AccountSecurityDeliveryOptions> options,
     ILogger<SmtpAccountNotificationSender> logger)
-    : IIdentityNotificationSender
+    : IAccountNotificationSender
 {
     private static readonly Action<ILogger, Exception?> DeliveryNotConfiguredLog =
         LoggerMessage.Define(
@@ -66,20 +66,20 @@ public sealed class SmtpAccountNotificationSender(
 
     public Task<bool> SendSecurityNotificationAsync(
         string destinationEmail,
-        IdentitySecurityNotification notification,
+        AccountSecurityNotification notification,
         CancellationToken cancellationToken = default)
     {
         var (subject, action) = notification switch
         {
-            IdentitySecurityNotification.PasswordChanged =>
+            AccountSecurityNotification.PasswordChanged =>
                 ("تنبيه أمني — تم تغيير كلمة المرور", "تم تغيير كلمة مرور حسابك"),
-            IdentitySecurityNotification.PasswordReset =>
+            AccountSecurityNotification.PasswordReset =>
                 ("تنبيه أمني — تمت إعادة تعيين كلمة المرور", "تمت إعادة تعيين كلمة مرور حسابك"),
-            IdentitySecurityNotification.MfaEnabled =>
+            AccountSecurityNotification.MfaEnabled =>
                 ("تنبيه أمني — تم تفعيل المصادقة الثنائية", "تمت إضافة عامل مصادقة ثنائية إلى حسابك"),
-            IdentitySecurityNotification.MfaDisabled =>
+            AccountSecurityNotification.MfaDisabled =>
                 ("تنبيه أمني — تم تعطيل المصادقة الثنائية", "تمت إزالة عامل المصادقة الثنائية من حسابك"),
-            IdentitySecurityNotification.RecoveryCodesRegenerated =>
+            AccountSecurityNotification.RecoveryCodesRegenerated =>
                 ("تنبيه أمني — تم تجديد رموز الاسترداد", "تم إبطال رموز الاسترداد السابقة وإنشاء مجموعة جديدة لحسابك"),
             _ => throw new ArgumentOutOfRangeException(nameof(notification), notification, null)
         };
