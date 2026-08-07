@@ -1,9 +1,11 @@
 using FoundationKit.Application.Abstractions;
 using FoundationKit.Application.Events;
 using FoundationKit.Application.Persistence;
+using FoundationKit.FeatureManagement;
 using FoundationKit.Infrastructure;
 using FoundationKit.Infrastructure.Events;
 using FoundationKit.Infrastructure.Persistence;
+using FoundationKit.Settings;
 using FoundationKit.WebApi;
 using FoundationKit.Workbench.Application;
 using FoundationKit.Workbench.Application.Admin;
@@ -19,6 +21,20 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddFoundationInfrastructure();
 builder.Services.AddFoundationWebApi();
+builder.Services.AddSingleton<ISettingSource>(_ => new InMemorySettingSource(
+[
+    new SettingEntry(
+        SettingScope.Global,
+        WorkbenchPlatformReference.DefaultCultureSetting,
+        "ar-YE"),
+    new SettingEntry(
+        SettingScope.Global,
+        SettingBackedFeatureEvaluator.GetEnabledSettingKey(
+            WorkbenchPlatformReference.CatalogPreviewFeature),
+        "true")
+]));
+builder.Services.AddSingleton<ISettingReader, SettingReader>();
+builder.Services.AddSingleton<IFeatureEvaluator, SettingBackedFeatureEvaluator>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
