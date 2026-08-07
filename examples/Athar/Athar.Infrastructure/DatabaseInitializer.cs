@@ -20,14 +20,31 @@ public static class DatabaseInitializer
             .GetRequiredService<IOptions<DatabaseStartupOptions>>()
             .Value;
 
-        await MigrateWithRetryAsync(
-            services.GetRequiredService<AtharDbContext>(),
+        if (startup.ApplyMigrationsOnStartup)
+        {
+            await MigrateWithRetryAsync(
+                services.GetRequiredService<AtharDbContext>(),
+                logger,
+                startup,
+                cancellationToken);
+        }
+        else
+        {
+            await ValidateSchemaWithRetryAsync(
+                services.GetRequiredService<AtharDbContext>(),
+                logger,
+                startup,
+                cancellationToken);
+        }
+
+        if (startup.SeedRolesOnStartup)
+            await SeedRolesAsync(services, cancellationToken);
+
+        await SeedAdministratorAsync(
+            services,
             logger,
             startup,
             cancellationToken);
-
-        await SeedRolesAsync(services, cancellationToken);
-        await SeedAdministratorAsync(services, logger, cancellationToken);
     }
 
     private static async Task MigrateWithRetryAsync(
@@ -71,6 +88,60 @@ public static class DatabaseInitializer
             lastError);
     }
 
+    private static async Task ValidateSchemaWithRetryAsync(
+        AtharDbContext dbContext,
+        ILogger logger,
+        DatabaseStartupOptions options,
+        CancellationToken cancellationToken)
+    {
+        Exception? lastError = null;
+
+        for (var attempt = 1; attempt <= options.MigrationAttempts; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                if (!await dbContext.Database.CanConnectAsync(cancellationToken))
+                    throw new InvalidOperationException("Athar database is not reachable.");
+
+                var pending = (await dbContext.Database
+                        .GetPendingMigrationsAsync(cancellationToken))
+                    .ToArray();
+
+                if (pending.Length > 0)
+                {
+                    throw new InvalidOperationException(
+                        "Athar database has pending migrations. Apply reviewed migrations through the controlled deployment process before starting the application: "
+                        + string.Join(", ", pending));
+                }
+
+                logger.LogInformation(
+                    "Athar database schema validation completed on attempt {Attempt}; no pending migrations were found.",
+                    attempt);
+                return;
+            }
+            catch (Exception exception)
+                when (attempt < options.MigrationAttempts)
+            {
+                lastError = exception;
+                logger.LogWarning(
+                    exception,
+                    "Athar database schema validation attempt {Attempt}/{Maximum} failed. Retrying.",
+                    attempt,
+                    options.MigrationAttempts);
+
+                await Task.Delay(
+                    TimeSpan.FromSeconds(options.DelaySeconds),
+                    cancellationToken);
+            }
+        }
+
+        throw new InvalidOperationException(
+            "Athar database schema validation failed after the configured retries.",
+            lastError);
+    }
+
     private static async Task SeedRolesAsync(
         IServiceProvider services,
         CancellationToken cancellationToken)
@@ -99,6 +170,7 @@ public static class DatabaseInitializer
     private static async Task SeedAdministratorAsync(
         IServiceProvider services,
         ILogger logger,
+        DatabaseStartupOptions startup,
         CancellationToken cancellationToken)
     {
         var options = services
@@ -110,6 +182,12 @@ public static class DatabaseInitializer
             logger.LogInformation(
                 "Admin seeding is disabled. Create the production administrator through the controlled onboarding process.");
             return;
+        }
+
+        if (!startup.SeedRolesOnStartup)
+        {
+            throw new InvalidOperationException(
+                "AdminSeed requires explicit development role seeding. Enable DatabaseStartup:SeedRolesOnStartup only in a controlled development/test environment.");
         }
 
         if (string.IsNullOrWhiteSpace(options.Email)
@@ -128,11 +206,8 @@ public static class DatabaseInitializer
         {
             if (!await userManager.IsInRoleAsync(existing, AtharRoles.Administrator))
             {
-                var addRole = await userManager.AddToRoleAsync(
-                    existing,
-                    AtharRoles.Administrator);
-
-                EnsureIdentitySucceeded(addRole, "إضافة دور المسؤول");
+                throw new InvalidOperationException(
+                    "AdminSeed refuses to promote an existing non-administrator account. Use the controlled administrator onboarding process instead.");
             }
 
             return;
