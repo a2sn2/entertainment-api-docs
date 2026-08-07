@@ -93,7 +93,7 @@ public sealed record SettingScope
                 $"Setting scope identifier cannot exceed {MaximumIdentifierLength} characters.");
         }
 
-        if (normalizedIdentifier.IndexOf('\0', StringComparison.Ordinal) >= 0)
+        if (normalizedIdentifier.IndexOf('\0') >= 0)
         {
             throw new ArgumentException(
                 "Setting scope identifier cannot contain a null character.",
@@ -107,7 +107,7 @@ public sealed record SettingScope
 
     public string? Identifier { get; }
 
-    public override string ToString() => Identifier is null ? Kind : $"{Kind}:{Identifier}";
+    public override string ToString() => Kind;
 }
 
 public sealed record SettingEntry
@@ -126,7 +126,7 @@ public sealed record SettingEntry
                 $"Setting value cannot exceed {MaximumValueLength} characters.");
         }
 
-        if (value.IndexOf('\0', StringComparison.Ordinal) >= 0)
+        if (value.IndexOf('\0') >= 0)
         {
             throw new ArgumentException(
                 "Setting value cannot contain a null character.",
