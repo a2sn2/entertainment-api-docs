@@ -32,10 +32,10 @@ The model in this document is the first machine-oriented contract for that direc
 |---|---|
 | `Stable` | Reusable FoundationKit contract/implementation is part of the current supported core. |
 | `Preview` | Reusable direction exists but is still being hardened or broadened. |
-| `ReferenceOnly` | Proven in Workbench/Athar or another consumer, but not yet extracted as a reusable capability package. |
+| `ReferenceOnly` | A real reusable boundary or package is implemented and/or proven by a reference consumer, but adoption, compatibility, provider, or production evidence is still too limited for `Preview` or `Stable`. |
 | `Planned` | Defined in the capability graph so dependencies and future composition remain coherent; implementation must not be claimed yet. |
 
-This distinction is mandatory. A profile containing a planned capability describes a **target system composition**, not a claim that the feature can already be generated.
+This distinction is mandatory. A profile containing a planned capability describes a **target system composition**, not a claim that the feature can already be generated. `ReferenceOnly` likewise does not mean production approval; it means the stated reference-level surface is real and must be described without implying broader unimplemented behavior.
 
 ## Current catalog groups
 
@@ -188,21 +188,23 @@ The same manifest must eventually drive:
 
 The capability catalog is not permission to create dozens of empty packages. Extraction should be vertical and evidence-driven.
 
-Recommended sequence:
+Current sequence status:
 
-1. Capability model, resolver, profiles, manifest contract — **this v1 step**.
-2. Composer validation and machine-readable catalog export.
-3. First reusable capability packages: Security/Auditing/Authorization foundations.
-4. Workflow + Approvals as the first higher-level business capability family.
-5. Notifications + Files + Jobs/Messaging.
-6. Settings/Feature Management/Organization/Multi-Tenancy.
-7. Search/Reporting/Privacy/Retention and finance building blocks.
-8. Provider families.
-9. CLI and visual Workbench composer.
+1. Capability model, resolver, profiles, and manifest contract — **implemented**.
+2. Composer validation and machine-readable catalog export — **implemented at reference/tooling level**.
+3. Auditing, Security, Identity, and Authorization reusable boundaries — **extracted with conservative maturity levels**.
+4. Workflow and the narrow Approvals v1 decision/maker-checker surface — **extracted as `ReferenceOnly`**.
+5. Notifications + Files + Jobs/Messaging — **planned next family**.
+6. Settings/Feature Management/Organization/Multi-Tenancy — planned.
+7. Search/Reporting/Privacy/Retention and finance building blocks — planned.
+8. Provider families — planned.
+9. CLI and visual Workbench composer expansion — planned beyond current reference tooling.
 10. AI abstractions only after provider-neutral boundaries and observability rules are established.
+
+Advanced approvals such as sequential, parallel, quorum, delegation, escalation, and dynamic approver routing remain future work even though the narrow v1 capability is implemented.
 
 Each extraction must preserve the dependency direction and current security baseline.
 
 ## Non-goals of v1
 
-This first step does **not** claim that every catalog item is implemented, production-ready, or available as a NuGet package. It establishes the stable vocabulary and dependency rules needed to build those capabilities without turning FoundationKit into a monolith.
+The catalog does **not** claim that every item is implemented, production-ready, or available as a NuGet package. It establishes shared vocabulary and dependency rules, while each capability's maturity and dedicated documentation state what is actually implemented.
