@@ -7,6 +7,7 @@ using FoundationKit.Identity;
 using FoundationKit.Infrastructure.Persistence;
 using FoundationKit.Security;
 using FoundationKit.WebApi.Results;
+using FoundationKit.Workflow;
 
 namespace FoundationKit.Tests;
 
@@ -25,6 +26,7 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Security",
             "FoundationKit.Identity",
             "FoundationKit.Authorization",
+            "FoundationKit.Workflow",
             "Microsoft.EntityFrameworkCore",
             "Microsoft.AspNetCore");
     }
@@ -41,6 +43,7 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Security",
             "FoundationKit.Identity",
             "FoundationKit.Authorization",
+            "FoundationKit.Workflow",
             "Microsoft.EntityFrameworkCore",
             "Microsoft.AspNetCore");
     }
@@ -56,6 +59,7 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Security",
             "FoundationKit.Identity",
             "FoundationKit.Authorization",
+            "FoundationKit.Workflow",
             "Microsoft.EntityFrameworkCore.SqlServer",
             "Npgsql.EntityFrameworkCore.PostgreSQL",
             "Microsoft.EntityFrameworkCore.Sqlite",
@@ -73,6 +77,7 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Security",
             "FoundationKit.Identity",
             "FoundationKit.Authorization",
+            "FoundationKit.Workflow",
             "Microsoft.EntityFrameworkCore");
     }
 
@@ -89,6 +94,7 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Security",
             "FoundationKit.Identity",
             "FoundationKit.Authorization",
+            "FoundationKit.Workflow",
             "Microsoft.EntityFrameworkCore");
     }
 
@@ -103,12 +109,13 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Security",
             "FoundationKit.Identity",
             "FoundationKit.Authorization",
+            "FoundationKit.Workflow",
             "Microsoft.EntityFrameworkCore",
             "Microsoft.AspNetCore");
     }
 
     [Fact]
-    public void Security_does_not_depend_on_identity_authorization_or_persistence_layers()
+    public void Security_does_not_depend_on_identity_authorization_workflow_or_persistence_layers()
     {
         AssertNoReferences(
             typeof(TrustedProxySecurity).Assembly,
@@ -116,27 +123,48 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Blazor",
             "FoundationKit.Identity",
             "FoundationKit.Authorization",
+            "FoundationKit.Workflow",
             "Microsoft.EntityFrameworkCore");
     }
 
     [Fact]
-    public void Identity_does_not_depend_on_authorization_or_persistence_layers()
+    public void Identity_does_not_depend_on_authorization_workflow_or_persistence_layers()
     {
         AssertNoReferences(
             typeof(AccountSecurityOptions).Assembly,
             "FoundationKit.Infrastructure",
             "FoundationKit.Blazor",
             "FoundationKit.Authorization",
+            "FoundationKit.Workflow",
             "Microsoft.EntityFrameworkCore");
     }
 
     [Fact]
-    public void Authorization_does_not_depend_on_persistence_or_product_layers()
+    public void Authorization_does_not_depend_on_workflow_persistence_or_product_layers()
     {
         AssertNoReferences(
             typeof(PermissionDefinition).Assembly,
             "FoundationKit.Infrastructure",
             "FoundationKit.Blazor",
+            "FoundationKit.Workflow",
+            "Microsoft.EntityFrameworkCore",
+            "Athar.Domain",
+            "Athar.Application",
+            "Athar.Infrastructure",
+            "Athar.Api");
+    }
+
+    [Fact]
+    public void Workflow_depends_on_auditing_but_not_identity_authorization_or_product_layers()
+    {
+        AssertNoReferences(
+            typeof(WorkflowDefinition).Assembly,
+            "FoundationKit.Infrastructure",
+            "FoundationKit.WebApi",
+            "FoundationKit.Blazor",
+            "FoundationKit.Security",
+            "FoundationKit.Identity",
+            "FoundationKit.Authorization",
             "Microsoft.EntityFrameworkCore",
             "Athar.Domain",
             "Athar.Application",
