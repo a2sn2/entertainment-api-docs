@@ -7,6 +7,7 @@ using FoundationKit.Domain.Primitives;
 using FoundationKit.Identity;
 using FoundationKit.Infrastructure.Persistence;
 using FoundationKit.Notifications;
+using FoundationKit.Notifications.Smtp;
 using FoundationKit.Security;
 using FoundationKit.WebApi.Results;
 using FoundationKit.Workflow;
@@ -31,6 +32,7 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Workflow",
             "FoundationKit.Approvals",
             "FoundationKit.Notifications",
+            "FoundationKit.Notifications.Smtp",
             "Microsoft.EntityFrameworkCore",
             "Microsoft.AspNetCore");
     }
@@ -50,6 +52,7 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Workflow",
             "FoundationKit.Approvals",
             "FoundationKit.Notifications",
+            "FoundationKit.Notifications.Smtp",
             "Microsoft.EntityFrameworkCore",
             "Microsoft.AspNetCore");
     }
@@ -68,6 +71,7 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Workflow",
             "FoundationKit.Approvals",
             "FoundationKit.Notifications",
+            "FoundationKit.Notifications.Smtp",
             "Microsoft.EntityFrameworkCore.SqlServer",
             "Npgsql.EntityFrameworkCore.PostgreSQL",
             "Microsoft.EntityFrameworkCore.Sqlite",
@@ -88,6 +92,7 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Workflow",
             "FoundationKit.Approvals",
             "FoundationKit.Notifications",
+            "FoundationKit.Notifications.Smtp",
             "Microsoft.EntityFrameworkCore");
     }
 
@@ -107,6 +112,7 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Workflow",
             "FoundationKit.Approvals",
             "FoundationKit.Notifications",
+            "FoundationKit.Notifications.Smtp",
             "Microsoft.EntityFrameworkCore");
     }
 
@@ -124,12 +130,13 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Workflow",
             "FoundationKit.Approvals",
             "FoundationKit.Notifications",
+            "FoundationKit.Notifications.Smtp",
             "Microsoft.EntityFrameworkCore",
             "Microsoft.AspNetCore");
     }
 
     [Fact]
-    public void Security_does_not_depend_on_identity_authorization_workflow_approvals_notifications_or_persistence_layers()
+    public void Security_does_not_depend_on_identity_authorization_workflow_approvals_notifications_or_providers()
     {
         AssertNoReferences(
             typeof(TrustedProxySecurity).Assembly,
@@ -140,11 +147,12 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Workflow",
             "FoundationKit.Approvals",
             "FoundationKit.Notifications",
+            "FoundationKit.Notifications.Smtp",
             "Microsoft.EntityFrameworkCore");
     }
 
     [Fact]
-    public void Identity_does_not_depend_on_authorization_workflow_approvals_notifications_or_persistence_layers()
+    public void Identity_does_not_depend_on_authorization_workflow_approvals_notifications_or_providers()
     {
         AssertNoReferences(
             typeof(AccountSecurityOptions).Assembly,
@@ -154,11 +162,12 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Workflow",
             "FoundationKit.Approvals",
             "FoundationKit.Notifications",
+            "FoundationKit.Notifications.Smtp",
             "Microsoft.EntityFrameworkCore");
     }
 
     [Fact]
-    public void Authorization_does_not_depend_on_workflow_approvals_notifications_persistence_or_product_layers()
+    public void Authorization_does_not_depend_on_workflow_approvals_notifications_providers_or_product_layers()
     {
         AssertNoReferences(
             typeof(PermissionDefinition).Assembly,
@@ -167,6 +176,7 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Workflow",
             "FoundationKit.Approvals",
             "FoundationKit.Notifications",
+            "FoundationKit.Notifications.Smtp",
             "Microsoft.EntityFrameworkCore",
             "Athar.Domain",
             "Athar.Application",
@@ -175,7 +185,7 @@ public sealed class ArchitectureRulesTests
     }
 
     [Fact]
-    public void Workflow_depends_on_auditing_but_not_identity_authorization_approvals_notifications_or_product_layers()
+    public void Workflow_depends_on_auditing_but_not_identity_authorization_approvals_notifications_or_providers()
     {
         AssertNoReferences(
             typeof(WorkflowDefinition).Assembly,
@@ -187,6 +197,7 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Authorization",
             "FoundationKit.Approvals",
             "FoundationKit.Notifications",
+            "FoundationKit.Notifications.Smtp",
             "Microsoft.EntityFrameworkCore",
             "Athar.Domain",
             "Athar.Application",
@@ -195,7 +206,7 @@ public sealed class ArchitectureRulesTests
     }
 
     [Fact]
-    public void Approvals_compose_workflow_authorization_and_auditing_without_notification_provider_or_product_dependencies()
+    public void Approvals_compose_workflow_authorization_and_auditing_without_notifications_or_providers()
     {
         AssertNoReferences(
             typeof(ApprovalPolicy).Assembly,
@@ -205,6 +216,7 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Security",
             "FoundationKit.Identity",
             "FoundationKit.Notifications",
+            "FoundationKit.Notifications.Smtp",
             "Microsoft.EntityFrameworkCore",
             "Microsoft.AspNetCore",
             "Athar.Domain",
@@ -214,7 +226,7 @@ public sealed class ArchitectureRulesTests
     }
 
     [Fact]
-    public void Notifications_is_provider_neutral_and_does_not_depend_on_product_layers()
+    public void Notifications_is_provider_neutral_and_does_not_depend_on_smtp_or_product_layers()
     {
         AssertNoReferences(
             typeof(NotificationMessage).Assembly,
@@ -226,9 +238,34 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Authorization",
             "FoundationKit.Workflow",
             "FoundationKit.Approvals",
+            "FoundationKit.Notifications.Smtp",
             "Microsoft.EntityFrameworkCore",
             "Microsoft.AspNetCore",
             "System.Net.Mail",
+            "Athar.Domain",
+            "Athar.Application",
+            "Athar.Infrastructure",
+            "Athar.Api");
+    }
+
+    [Fact]
+    public void Smtp_provider_depends_on_notifications_but_not_product_or_server_layers()
+    {
+        AssertNoReferences(
+            typeof(SmtpNotificationSender).Assembly,
+            "FoundationKit.Domain",
+            "FoundationKit.Application",
+            "FoundationKit.Infrastructure",
+            "FoundationKit.WebApi",
+            "FoundationKit.Blazor",
+            "FoundationKit.Auditing",
+            "FoundationKit.Security",
+            "FoundationKit.Identity",
+            "FoundationKit.Authorization",
+            "FoundationKit.Workflow",
+            "FoundationKit.Approvals",
+            "Microsoft.EntityFrameworkCore",
+            "Microsoft.AspNetCore",
             "Athar.Domain",
             "Athar.Application",
             "Athar.Infrastructure",
