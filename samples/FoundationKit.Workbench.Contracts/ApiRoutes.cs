@@ -5,6 +5,7 @@ public static class ApiRoutes
     public const string Runtime = "api/runtime";
     public const string Catalog = "api/catalog";
     public const string Health = "api/health";
+    public const string PlatformReference = "api/platform-reference";
 
     public static class User
     {
