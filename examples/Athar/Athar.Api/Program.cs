@@ -6,6 +6,7 @@ using Athar.Contracts;
 using Athar.Domain;
 using Athar.Infrastructure;
 using FoundationKit.Application.Persistence;
+using FoundationKit.Authorization;
 using FoundationKit.Identity;
 using FoundationKit.Infrastructure;
 using FoundationKit.Infrastructure.Events;
@@ -40,6 +41,10 @@ builder.Services.AddFoundationWebApi();
 builder.Services.AddFoundationTrustedProxyForwarding(reverseProxySecurity);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<Athar.Application.ICurrentUser, CurrentUserAccessor>();
+builder.Services.AddScoped<IAuthorizationSubject>(serviceProvider =>
+    serviceProvider.GetRequiredService<Athar.Application.ICurrentUser>());
+builder.Services.AddSingleton(AtharPermissions.CreateRolePermissionMap());
+builder.Services.AddScoped<IAuthorizationEvaluator, RolePermissionAuthorizationEvaluator>();
 builder.Services.AddScoped<IInitiativeManager, InitiativeManager>();
 builder.Services.AddScoped<IInitiativeQueryService, InitiativeQueryService>();
 builder.Services.AddScoped<IAuditWriter, AuditWriter>();
