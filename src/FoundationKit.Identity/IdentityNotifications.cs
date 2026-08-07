@@ -1,6 +1,6 @@
 namespace FoundationKit.Identity;
 
-public enum IdentitySecurityNotification
+public enum AccountSecurityNotification
 {
     PasswordChanged,
     PasswordReset,
@@ -9,7 +9,7 @@ public enum IdentitySecurityNotification
     RecoveryCodesRegenerated
 }
 
-public interface IIdentityNotificationSender
+public interface IAccountNotificationSender
 {
     Task<bool> SendEmailConfirmationAsync(
         string destinationEmail,
@@ -23,6 +23,6 @@ public interface IIdentityNotificationSender
 
     Task<bool> SendSecurityNotificationAsync(
         string destinationEmail,
-        IdentitySecurityNotification notification,
+        AccountSecurityNotification notification,
         CancellationToken cancellationToken = default);
 }
