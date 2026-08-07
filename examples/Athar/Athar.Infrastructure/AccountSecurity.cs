@@ -44,6 +44,12 @@ public sealed class SmtpAccountNotificationSender(
     ILogger<SmtpAccountNotificationSender> logger)
     : IAccountNotificationSender
 {
+    private static readonly Action<ILogger, Exception?> DeliveryNotConfiguredLog =
+        LoggerMessage.Define(
+            LogLevel.Warning,
+            new EventId(2101, "AccountNotificationNotConfigured"),
+            "Account notification delivery is not configured. No account token was logged or returned.");
+
     private readonly AccountSecurityOptions _options = options.Value;
 
     public Task<bool> SendEmailConfirmationAsync(
@@ -79,8 +85,7 @@ public sealed class SmtpAccountNotificationSender(
         if (string.IsNullOrWhiteSpace(_options.SmtpHost)
             || string.IsNullOrWhiteSpace(_options.FromAddress))
         {
-            logger.LogWarning(
-                "Account notification delivery is not configured. No account token was logged or returned.");
+            DeliveryNotConfiguredLog(logger, null);
             return false;
         }
 
