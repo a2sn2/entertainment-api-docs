@@ -86,7 +86,7 @@ jobs:
       - name: Generate CycloneDX dependency SBOM
         run: |
           mkdir -p artifacts/security
-          dotnet list FoundationKit.sln package --include-transitive --format json --no-restore > artifacts/security/dotnet-packages.json
+          dotnet list FoundationKit.sln package --include-transitive --format json > artifacts/security/dotnet-packages.json
           python3 scripts/security/generate-sbom.py artifacts/security/dotnet-packages.json artifacts/security/foundationkit.cdx.json
           python3 -m json.tool artifacts/security/foundationkit.cdx.json >/dev/null
 
