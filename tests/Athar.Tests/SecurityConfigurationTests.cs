@@ -1,7 +1,7 @@
 using System.Net;
 using System.Security.Claims;
 using Athar.Api;
-using Microsoft.AspNetCore.Builder;
+using FoundationKit.Security;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
@@ -183,9 +183,9 @@ public sealed class SecurityConfigurationTests
         first.Connection.RemoteIpAddress = IPAddress.Parse("192.0.2.10");
         var second = new DefaultHttpContext();
         second.Connection.RemoteIpAddress = IPAddress.Parse("192.0.2.11");
-        Assert.Equal("ip:192.0.2.10", AtharRateLimitPartitions.Authentication(first));
-        Assert.Equal("ip:192.0.2.11", AtharRateLimitPartitions.Authentication(second));
-        Assert.NotEqual(AtharRateLimitPartitions.Authentication(first), AtharRateLimitPartitions.Authentication(second));
+        Assert.Equal("ip:192.0.2.10", FoundationRateLimitPartitions.Authentication(first));
+        Assert.Equal("ip:192.0.2.11", FoundationRateLimitPartitions.Authentication(second));
+        Assert.NotEqual(FoundationRateLimitPartitions.Authentication(first), FoundationRateLimitPartitions.Authentication(second));
     }
 
     [Fact]
@@ -199,7 +199,7 @@ public sealed class SecurityConfigurationTests
                 authenticationType: "test"))
         };
         context.Connection.RemoteIpAddress = IPAddress.Parse("192.0.2.10");
-        Assert.Equal($"user:{userId}", AtharRateLimitPartitions.Write(context));
+        Assert.Equal($"user:{userId}", FoundationRateLimitPartitions.Write(context));
     }
 
     [Fact]
@@ -217,7 +217,7 @@ public sealed class SecurityConfigurationTests
 
         Assert.Equal(client, context.Connection.RemoteIpAddress);
         Assert.Equal("https", context.Request.Scheme);
-        Assert.Equal($"ip:{client}", AtharRateLimitPartitions.Authentication(context));
+        Assert.Equal($"ip:{client}", FoundationRateLimitPartitions.Authentication(context));
     }
 
     [Fact]
@@ -235,7 +235,7 @@ public sealed class SecurityConfigurationTests
 
         Assert.Equal(directClient, context.Connection.RemoteIpAddress);
         Assert.Equal("http", context.Request.Scheme);
-        Assert.Equal($"ip:{directClient}", AtharRateLimitPartitions.Authentication(context));
+        Assert.Equal($"ip:{directClient}", FoundationRateLimitPartitions.Authentication(context));
     }
 
     private const string SecureConnectionString =
@@ -275,14 +275,11 @@ public sealed class SecurityConfigurationTests
         HttpContext context,
         IPAddress trustedProxy)
     {
-        var options = new ForwardedHeadersOptions
+        var options = TrustedProxySecurity.CreateForwardedHeadersOptions(new TrustedProxyOptions
         {
-            ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
-            ForwardLimit = 1
-        };
-        options.KnownNetworks.Clear();
-        options.KnownProxies.Clear();
-        options.KnownProxies.Add(trustedProxy);
+            Enabled = true,
+            KnownProxies = [trustedProxy.ToString()]
+        });
 
         var middleware = new ForwardedHeadersMiddleware(
             _ => Task.CompletedTask,
