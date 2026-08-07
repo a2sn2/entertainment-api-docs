@@ -172,6 +172,28 @@ Athar is the first consumer: `InitiativeWorkflow` defines its own submitted/appr
 
 See `docs/capabilities/WORKFLOW.md` for the full boundary and consumer evidence.
 
+## FoundationKit.Approvals
+
+Public building blocks:
+
+- `ApprovalDecision` and `ApprovalDecisions`;
+- `ApprovalResolution`;
+- `ApprovalEligibility`;
+- `ApprovalPolicy`;
+- `ApprovalDecisionAudit`.
+
+The package composes `FoundationKit.Workflow`, `FoundationKit.Authorization`, and `FoundationKit.Auditing`. It does not own identity persistence, ASP.NET Core policies, EF migrations, approver-routing tables, queues, schedulers, or product UI.
+
+`ApprovalDecisions` accepts only normalized `approve` and `reject` tokens and resolves them through a consumer-owned `WorkflowDefinition`; unknown decisions or unavailable transitions fail closed.
+
+`ApprovalPolicy` evaluates an explicit product-supplied permission and a maker-checker boundary. Permission denial is evaluated first, and a checker with the same normalized actor identifier as the maker is rejected.
+
+Athar is the first consumer in its application-layer initiative review flow. The reusable gate does not replace the aggregate invariant: `Initiative.Review` still rejects self-review and invalid transitions as defense-in-depth, while Athar retains its persistence, audit entry, domain events, concurrency, routes, and DTOs.
+
+Advanced sequential, parallel, quorum, delegation, escalation, dynamic routing, and approval persistence are not implemented by v1.
+
+See `docs/capabilities/APPROVALS.md` for the full boundary and consumer evidence.
+
 ## Capability catalog contract
 
 The human-facing implemented feature list is maintained in `catalog/foundationkit.catalog.json`. Every catalog capability must correspond to existing tested behavior and public surface. The catalog generator rejects unknown idea references and any status other than `implemented`.
