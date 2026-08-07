@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\src\FoundationKit.Auditing\FoundationKit.Auditing.csproj" />
     <ProjectReference Include="..\..\src\FoundationKit.Security\FoundationKit.Security.csproj" />
     <ProjectReference Include="..\..\src\FoundationKit.Identity\FoundationKit.Identity.csproj" />
+    <ProjectReference Include="..\..\src\FoundationKit.Authorization\FoundationKit.Authorization.csproj" />
     <ProjectReference Include="..\..\tools\FoundationKit.Composer\FoundationKit.Composer.csproj" />
   </ItemGroup>
 </Project>
