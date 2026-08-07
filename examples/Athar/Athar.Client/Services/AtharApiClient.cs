@@ -148,7 +148,7 @@ public sealed class AtharApiClient(HttpClient httpClient)
     }
 
     public Task<ApiResult<MfaEnableResponse>> RegenerateRecoveryCodesAsync(
-        MfaSetupRequest request,
+        MfaRecoveryCodesRequest request,
         CancellationToken cancellationToken = default) =>
         SendProtectedAsync<MfaEnableResponse>(
             HttpMethod.Post,
