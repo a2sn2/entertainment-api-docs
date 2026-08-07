@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Provider-neutral audit-event contracts, validation, and recording primitives for FoundationKit.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FoundationKit.Application\FoundationKit.Application.csproj" />
+  </ItemGroup>
+</Project>
