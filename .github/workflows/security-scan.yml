@@ -86,9 +86,13 @@ jobs:
       - name: Generate isolated test credentials
         shell: bash
         run: |
-          echo "ATHAR_SQL_PASSWORD=AtharSecuritySql!$(openssl rand -hex 12)Aa1" >> "$GITHUB_ENV"
+          athar_sql_password="AtharSecuritySql!$(openssl rand -hex 12)Aa1"
+          athar_admin_password="AtharSecurityAdmin!$(openssl rand -hex 12)Aa1"
+          echo "::add-mask::$athar_sql_password"
+          echo "::add-mask::$athar_admin_password"
+          echo "ATHAR_SQL_PASSWORD=$athar_sql_password" >> "$GITHUB_ENV"
           echo "ATHAR_ADMIN_EMAIL=security.admin@athar.test" >> "$GITHUB_ENV"
-          echo "ATHAR_ADMIN_PASSWORD=AtharSecurityAdmin!$(openssl rand -hex 12)Aa1" >> "$GITHUB_ENV"
+          echo "ATHAR_ADMIN_PASSWORD=$athar_admin_password" >> "$GITHUB_ENV"
 
       - name: Start isolated Athar security stack
         run: docker compose -f deploy/athar-compose.yml up --build -d
