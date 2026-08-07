@@ -45,6 +45,8 @@ All notable repository and package changes are documented here.
 - `FoundationKit.Settings` reference capability with bounded keys/values, caller-defined opaque scopes, deterministic most-specific-first resolution, deterministic source precedence, and an in-memory reference source that rejects duplicate addresses.
 - `FoundationKit.FeatureManagement` reference capability with bounded feature IDs, settings-backed Boolean enablement, explicit defaults, and fail-closed handling for invalid explicit configuration.
 - Workbench runtime adoption of Settings and Feature Management through `GET /api/platform-reference`, covered by the SQL Server integration smoke workflow.
+- `FoundationKit.Localization` reference capability with canonical culture metadata, BCL-derived RTL/LTR directionality, deterministic exact/parent/default fallback, explicit invalid-request provenance, and bounded provider-neutral time-zone identifiers.
+- Workbench runtime adoption of Localization through the same platform-reference endpoint, proving `ar-YE` as `RightToLeft` and `UTC` as the configured time-zone identity in the SQL integration smoke workflow.
 
 ### Changed
 
@@ -52,7 +54,7 @@ All notable repository and package changes are documented here.
 - `FoundationKit.sln`, repository verification, CI, documentation, and package versions now include Athar.
 - CI publishes and tests both the Workbench and Athar against real SQL Server containers.
 - GitHub Pages now deploys the standalone Arabic repository atlas instead of presenting one product client as the entire repository.
-- Reusable package output increases to fifteen NuGet packages plus fifteen symbol packages after adding Settings and Feature Management to the previously extracted Auditing, Security, Identity, Authorization, Workflow, Approvals, Notifications, and SMTP-provider capability family.
+- Reusable package output increases to sixteen NuGet packages plus sixteen symbol packages after adding Localization to the Settings/Feature Management and earlier reusable capability family.
 - Capability extraction guidance requires a concrete consumer and a reusable independent boundary before creating a new package; Files/Documents, Jobs, Messaging, Idempotency, Concurrency, Organization, and Multi-Tenancy remain Planned/ReferenceOnly where current evidence is product-specific or incomplete.
 
 ## [0.1.0] - 2026-08-06

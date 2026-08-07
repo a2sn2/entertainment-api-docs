@@ -18,26 +18,28 @@ This document records the current consumer-driven capability extraction status. 
 | SMTP provider v1 | `FoundationKit.Notifications.Smtp` | Athar account-security delivery | ReferenceOnly |
 | Settings v1 | `FoundationKit.Settings` | Workbench platform reference | ReferenceOnly |
 | Feature Management v1 | `FoundationKit.FeatureManagement` | Workbench platform reference | ReferenceOnly |
+| Localization v1 | `FoundationKit.Localization` | Workbench platform reference | ReferenceOnly |
 
-After Settings and Feature Management are verified and merged, the repository package output is expected to be fifteen reusable FoundationKit NuGet packages plus fifteen symbol packages. The exact CI evidence must be recorded on the pull request before merge rather than asserted here in advance.
+After Localization is verified and merged, the reusable package output is expected to be sixteen FoundationKit NuGet packages plus sixteen symbol packages. The exact current-head CI evidence belongs in PR #66 before merge rather than being asserted here in advance.
 
-## Previously verified merge evidence
+## Verified merge evidence
 
-The earlier extraction sequence was merged through pull-request gates rather than direct edits to `main`:
+The capability sequence is merged through pull-request gates rather than direct edits to `main`:
 
 - Workflow extraction — PR #59, merged to `main` at `9331460f...`.
 - Approvals v1 — PR #60, merged to `main` at `745e33f8...`.
 - Notifications v1 — PR #61, merged to `main` at `ef64a6d3...`.
 - SMTP provider v1 — PR #62, merged to `main` at `d12f34fe...`.
 - Consumer-driven extraction closure — PR #63, merged to `main` at `5141f572...`.
+- Settings + Feature Management — PR #65, merged to `main` at `72f15909...`.
 
-PR #63 verified the then-current 13-package baseline with CI `31218305535`, Security Scan `31218302115`, and CodeQL `31218304349`, including 152 automated tests, real SQL Server integration, Athar E2E/non-root checks, and isolated backup/restore verification.
+PR #65 verified its exact final source head with CI `31221346528`, Security Scan `31221346353`, and CodeQL `31221346445`: 342 tracked text files scanned, 198 NuGet components in the SBOM, zero build warnings/errors, 167 automated tests, 15 NuGet + 15 symbol packages, Workbench SQL/runtime capability assertions, Athar E2E/non-root, and isolated backup/restore verification.
 
 These automated results are technical repository evidence. They are not independent organizational approval, Production Approval, ISO certification, or formal Segregation-of-Duties evidence.
 
 ## General-purpose continuation — Issue #64
 
-Issue #64 reopens the cycle with a stricter goal: continue building broadly useful system capabilities until the next useful step requires a real owner/product/organizational decision.
+Issue #64 continues the cycle with a stricter goal: build broadly useful system capabilities until the next useful step requires a real owner/product/organizational decision.
 
 The rule remains consumer-first:
 
@@ -50,7 +52,7 @@ The rule remains consumer-first:
 
 The reusable package provides bounded setting keys/values, opaque caller-defined scopes, deterministic most-specific-first resolution, deterministic source precedence, and an immutable in-memory reference source.
 
-Workbench proves runtime use through `GET /api/platform-reference`, resolving `workbench.experience.default-culture` from global scope.
+Workbench proves runtime use through `GET /api/platform-reference`.
 
 Important boundary: Settings is **not** a secret store and does not select persistence, encryption, KMS, tenant hierarchy, organization hierarchy, administration UI, or refresh policy.
 
@@ -62,9 +64,17 @@ Workbench proves runtime use through `GET /api/platform-reference`, and the SQL 
 
 Important boundary: v1 does not implement percentage rollouts, user/segment targeting, experiments, schedules, vendor SDKs, or arbitrary rule execution.
 
+### Localization v1
+
+The reusable package provides canonical culture metadata, RTL/LTR directionality from BCL culture data, bounded supported-culture sets, deterministic exact/parent/default fallback, explicit invalid-request provenance, and a bounded opaque time-zone identifier.
+
+Workbench supplies `ar-YE` and `UTC` through Settings and proves Localization through `GET /api/platform-reference`; the integration smoke flow asserts exact `ar-YE` resolution, `RightToLeft`, and `UTC` before exercising the existing SQL user/admin workflow.
+
+Important boundary: Localization v1 does not select a translation/resource provider, persist user/tenant preferences, negotiate HTTP languages, perform OS-specific time-zone conversion, or invent Windows/IANA mappings.
+
 ## Current next autonomous candidate
 
-**Localization / culture / time-zone foundation** is the next candidate that can be designed without selecting an external provider or inventing business hierarchy. Its scope should stay limited to bounded supported cultures, directionality, deterministic fallback, and explicit time-zone identifiers; resource storage/translation provider and user/tenant persistence remain consumer concerns.
+**Caching v1** is the next capability that can be extracted without an owner/provider decision. The reusable boundary can define bounded keys, bounded byte payloads, explicit TTL, cache miss semantics, remove operations, and an in-memory reference provider using BCL time primitives. Workbench can prove the boundary on an existing read path without choosing Redis or distributed consistency semantics.
 
 ## Capabilities that still require stronger consumer evidence or owner semantics
 

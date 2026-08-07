@@ -1,4 +1,5 @@
 using FoundationKit.FeatureManagement;
+using FoundationKit.Localization;
 using FoundationKit.Settings;
 using FoundationKit.Workbench.Contracts;
 using FoundationKit.Workbench.Infrastructure;
@@ -25,20 +26,27 @@ public static class SystemEndpoints
         api.MapGet("/platform-reference", async (
                 ISettingReader settings,
                 IFeatureEvaluator features,
+                SupportedCultureSet supportedCultures,
                 CancellationToken cancellationToken) =>
             {
-                var culture = await settings.ResolveAsync(
+                var cultureSetting = await settings.ResolveAsync(
                     WorkbenchPlatformReference.DefaultCultureSetting,
                     SettingResolutionContext.Global,
                     cancellationToken);
+                var timeZoneSetting = await settings.ResolveAsync(
+                    WorkbenchPlatformReference.DefaultTimeZoneSetting,
+                    SettingResolutionContext.Global,
+                    cancellationToken);
 
-                if (culture is null)
+                if (cultureSetting is null || timeZoneSetting is null)
                 {
                     return Results.Problem(
                         title: "Workbench platform reference is not configured.",
                         statusCode: StatusCodes.Status503ServiceUnavailable);
                 }
 
+                var culture = supportedCultures.Resolve(cultureSetting.Value);
+                var timeZone = new TimeZoneId(timeZoneSetting.Value);
                 var feature = await features.EvaluateAsync(
                     new FeatureDefinition(
                         WorkbenchPlatformReference.CatalogPreviewFeature,
@@ -47,14 +55,18 @@ public static class SystemEndpoints
                     cancellationToken);
 
                 return Results.Ok(new PlatformReferenceResponse(
-                    culture.Value,
-                    culture.Scope.ToString(),
+                    culture.Culture.Name,
+                    culture.Culture.Direction.ToString(),
+                    culture.Source.ToString(),
+                    cultureSetting.Scope.ToString(),
+                    timeZone.Value,
+                    timeZoneSetting.Scope.ToString(),
                     feature.IsEnabled,
                     feature.Source.ToString(),
                     feature.MatchedScope?.ToString()));
             })
             .WithName("GetWorkbenchPlatformReference")
-            .WithSummary("Proves the reusable Settings and Feature Management capabilities through a live Workbench consumer.")
+            .WithSummary("Proves the reusable Settings, Feature Management, and Localization capabilities through a live Workbench consumer.")
             .Produces<PlatformReferenceResponse>()
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 

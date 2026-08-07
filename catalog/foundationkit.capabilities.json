@@ -124,9 +124,9 @@
       "id": "localization",
       "displayName": "Localization",
       "kind": "optional",
-      "maturity": "planned",
+      "maturity": "referenceOnly",
       "category": "Experience",
-      "description": "Language, culture, RTL/LTR, time-zone and formatting conventions.",
+      "description": "Bounded culture metadata, RTL/LTR directionality, deterministic supported-culture fallback, and provider-neutral time-zone identity.",
       "dependencies": [
         "kernel"
       ]

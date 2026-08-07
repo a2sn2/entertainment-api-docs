@@ -5,6 +5,7 @@ using FoundationKit.FeatureManagement;
 using FoundationKit.Infrastructure;
 using FoundationKit.Infrastructure.Events;
 using FoundationKit.Infrastructure.Persistence;
+using FoundationKit.Localization;
 using FoundationKit.Settings;
 using FoundationKit.WebApi;
 using FoundationKit.Workbench;
@@ -30,12 +31,19 @@ builder.Services.AddSingleton<ISettingSource>(_ => new InMemorySettingSource(
         "ar-YE"),
     new SettingEntry(
         SettingScope.Global,
+        WorkbenchPlatformReference.DefaultTimeZoneSetting,
+        "UTC"),
+    new SettingEntry(
+        SettingScope.Global,
         SettingBackedFeatureEvaluator.GetEnabledSettingKey(
             WorkbenchPlatformReference.CatalogPreviewFeature),
         "true")
 ]));
 builder.Services.AddSingleton<ISettingReader, SettingReader>();
 builder.Services.AddSingleton<IFeatureEvaluator, SettingBackedFeatureEvaluator>();
+builder.Services.AddSingleton(_ => new SupportedCultureSet(
+    ["ar-YE", "en-US"],
+    "ar-YE"));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {

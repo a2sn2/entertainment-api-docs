@@ -149,6 +149,13 @@ feature-management
       -> kernel
 ```
 
+### Localization
+
+```text
+localization
+  -> kernel
+```
+
 ### Documents
 
 ```text
@@ -213,17 +220,18 @@ Current sequence status:
 5. Notifications bounded message/delivery contracts — **extracted as `ReferenceOnly` with Athar consumer evidence**.
 6. SMTP notification provider v1 — **extracted as reusable `FoundationKit.Notifications.Smtp` and consumed by Athar; maturity remains `ReferenceOnly`**.
 7. Settings v1 and Feature Management v1 — **extracted as reusable packages with Workbench runtime evidence; both remain `ReferenceOnly`**.
-8. Issue #64 — **continues the general-purpose capability baseline using the same consumer-first stop rule**.
-9. Localization/culture/time-zone — **next provider-neutral candidate because it can be bounded and proven without choosing an external provider or business hierarchy**.
-10. Files/Documents, Jobs/Messaging, Organization/Multi-Tenancy, Search/Reporting/Privacy/Retention, and finance building blocks — **remain planned until consumer evidence and/or required product semantics justify extraction**.
-11. Idempotency and Concurrency — **retain current Athar reference behavior, but no separate reusable package is claimed yet**.
-12. Provider-family expansion — **planned beyond the current SQL Server reference behavior and SMTP provider v1**.
-13. CLI and visual Workbench composer expansion — **planned beyond current reference tooling**.
-14. AI abstractions — **planned only after provider-neutral boundaries and observability rules are established**.
+8. Localization v1 — **extracted as `FoundationKit.Localization` with Workbench runtime proof for canonical culture resolution, RTL/LTR directionality, and opaque time-zone identity; maturity remains `ReferenceOnly`**.
+9. Issue #64 — **continues the general-purpose capability baseline using the same consumer-first stop rule**.
+10. Caching v1 — **next autonomous provider-neutral candidate; Redis/distributed-provider semantics remain separate**.
+11. Files/Documents, Jobs/Messaging, Organization/Multi-Tenancy, Search/Reporting/Privacy/Retention, and finance building blocks — **remain planned until consumer evidence and/or required product semantics justify extraction**.
+12. Idempotency and Concurrency — **retain current Athar reference behavior, but no separate reusable package is claimed yet**.
+13. Provider-family expansion — **planned beyond the current SQL Server reference behavior and SMTP provider v1**.
+14. CLI and visual Workbench composer expansion — **planned beyond current reference tooling**.
+15. AI abstractions — **planned only after provider-neutral boundaries and observability rules are established**.
 
 Advanced approvals such as sequential, parallel, quorum, delegation, escalation, and dynamic approver routing remain future work even though the narrow v1 capability is implemented. Notification templates, preferences, queues, retry orchestration, delivery history, and additional channels likewise remain future work beyond the reference v1 boundary. The extracted SMTP provider is a narrow transport adapter; it does not imply those higher-level notification capabilities.
 
-Settings v1 deliberately does not become a secret store, and Feature Management v1 deliberately does not become a percentage-rollout/experimentation engine. Those capabilities express reusable deterministic boundaries while leaving provider, organizational, and rollout policies to consuming products.
+Settings v1 deliberately does not become a secret store, Feature Management v1 deliberately does not become a percentage-rollout/experimentation engine, and Localization v1 deliberately does not become a translation store or OS-specific time-zone conversion provider. These capabilities express reusable deterministic boundaries while leaving provider, organizational, and product policies to consuming systems.
 
 Each extraction must preserve the dependency direction and current security baseline. A new package should not be created merely to reduce the number of planned items: it must have a concrete consumer and an independently useful boundary.
 

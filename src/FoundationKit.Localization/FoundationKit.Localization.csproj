@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Provider-neutral culture, directionality, fallback, and time-zone identity contracts for FoundationKit consumers.</Description>
+  </PropertyGroup>
+</Project>
