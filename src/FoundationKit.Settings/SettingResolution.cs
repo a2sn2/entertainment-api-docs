@@ -110,7 +110,7 @@ public sealed class CompositeSettingSource : ISettingSource
 
 public sealed class InMemorySettingSource : ISettingSource
 {
-    private readonly IReadOnlyDictionary<SettingAddress, SettingEntry> _entries;
+    private readonly Dictionary<SettingAddress, SettingEntry> _entries;
 
     public InMemorySettingSource(IEnumerable<SettingEntry> entries)
     {
