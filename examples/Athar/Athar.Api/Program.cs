@@ -149,7 +149,7 @@ builder.Services.AddRateLimiter(options =>
 
 builder.Services.AddOptions<DatabaseStartupOptions>()
     .Bind(builder.Configuration.GetSection(DatabaseStartupOptions.SectionName))
-    .Validate(options => options.MigrationAttempts is >= 1 and <= 300 && options.DelaySeconds is >= 1 && options.DelaySeconds <= 30,
+    .Validate(options => options.MigrationAttempts is >= 1 and <= 300 && options.DelaySeconds is >= 1 and <= 30,
         "DatabaseStartup values are outside the supported range.")
     .ValidateOnStart();
 
