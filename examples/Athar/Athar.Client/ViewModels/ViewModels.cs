@@ -19,6 +19,7 @@ public sealed class AccountViewModel(
     public MfaSetupRequest MfaSetupRequest { get; } = new();
     public MfaCodeRequest MfaCode { get; } = new();
     public MfaDisableRequest MfaDisable { get; } = new();
+    public MfaRecoveryCodesRequest MfaRecoveryCodes { get; } = new();
 
     public CurrentUserResponse? CurrentUser { get; private set; }
     public MfaStatusResponse? MfaStatus { get; private set; }
@@ -167,6 +168,8 @@ public sealed class AccountViewModel(
             return;
         }
 
+        MfaDisable.CurrentPassword = string.Empty;
+        MfaDisable.Code = string.Empty;
         CurrentUser = null;
         MfaStatus = null;
         MfaSetup = null;
@@ -178,13 +181,15 @@ public sealed class AccountViewModel(
 
     public Task RegenerateRecoveryCodesAsync() => RunAsync(async () =>
     {
-        var result = await api.RegenerateRecoveryCodesAsync(MfaSetupRequest);
+        var result = await api.RegenerateRecoveryCodesAsync(MfaRecoveryCodes);
         if (result.IsFailure || result.Value is null)
         {
             SetError(result.Error ?? "تعذر إنشاء رموز استرداد جديدة.");
             return;
         }
 
+        MfaRecoveryCodes.CurrentPassword = string.Empty;
+        MfaRecoveryCodes.Code = string.Empty;
         RecoveryCodes = result.Value.RecoveryCodes;
         SuccessMessage = "تم إبطال رموز الاسترداد السابقة وإنشاء مجموعة جديدة.";
         await LoadMfaStatusCoreAsync();
