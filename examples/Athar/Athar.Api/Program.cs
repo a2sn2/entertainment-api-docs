@@ -77,11 +77,11 @@ builder.Services
     {
         options.User.RequireUniqueEmail = true;
         options.SignIn.RequireConfirmedEmail = accountSecurity.RequireConfirmedEmail;
-        options.Password.RequiredLength = 10;
-        options.Password.RequireDigit = true;
-        options.Password.RequireLowercase = true;
-        options.Password.RequireUppercase = true;
-        options.Password.RequireNonAlphanumeric = true;
+        options.Password.RequiredLength = accountSecurity.PasswordRequiredLength;
+        options.Password.RequireDigit = accountSecurity.PasswordRequireDigit;
+        options.Password.RequireLowercase = accountSecurity.PasswordRequireLowercase;
+        options.Password.RequireUppercase = accountSecurity.PasswordRequireUppercase;
+        options.Password.RequireNonAlphanumeric = accountSecurity.PasswordRequireNonAlphanumeric;
         options.Lockout.AllowedForNewUsers = true;
         options.Lockout.MaxFailedAccessAttempts = 5;
         options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
@@ -167,6 +167,8 @@ builder.Services.AddOptions<AdminSeedOptions>()
 
 builder.Services.AddOptions<AccountSecurityOptions>()
     .Bind(builder.Configuration.GetSection(AccountSecurityOptions.SectionName))
+    .Validate(options => options.PasswordRequiredLength is >= 1 and <= 128,
+        "AccountSecurity:PasswordRequiredLength must be between 1 and 128.")
     .Validate(options => options.SmtpPort is >= 1 and <= 65535,
         "AccountSecurity:SmtpPort must be a valid TCP port.")
     .ValidateOnStart();
