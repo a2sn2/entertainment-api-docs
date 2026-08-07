@@ -1,0 +1,14 @@
+{
+  "name": "MySystem",
+  "profile": "enterprise",
+  "includeCapabilities": [
+    "documents",
+    "search"
+  ],
+  "excludeCapabilities": [
+    "localization"
+  ],
+  "providers": [
+    "provider-sqlserver"
+  ]
+}
