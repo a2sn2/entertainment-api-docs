@@ -19,7 +19,6 @@ public sealed class SecurityConfigurationTests
             ["DatabaseStartup:ApplyMigrationsOnStartup"] = "true",
             ["DatabaseStartup:SeedRolesOnStartup"] = "true"
         });
-
         ProductionConfigurationValidator.Validate(configuration, isDevelopment: true);
     }
 
@@ -27,8 +26,7 @@ public sealed class SecurityConfigurationTests
     public void Production_rejects_wildcard_allowed_hosts()
     {
         var configuration = BuildConfiguration(new Dictionary<string, string?> { ["AllowedHosts"] = "*" });
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            ProductionConfigurationValidator.Validate(configuration, isDevelopment: false));
+        var exception = Assert.Throws<InvalidOperationException>(() => ProductionConfigurationValidator.Validate(configuration, false));
         Assert.True(exception.Message.Contains("AllowedHosts", StringComparison.Ordinal));
     }
 
@@ -40,8 +38,7 @@ public sealed class SecurityConfigurationTests
             ["AllowedHosts"] = "athar.example.invalid",
             ["AdminSeed:Enabled"] = "true"
         });
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            ProductionConfigurationValidator.Validate(configuration, isDevelopment: false));
+        var exception = Assert.Throws<InvalidOperationException>(() => ProductionConfigurationValidator.Validate(configuration, false));
         Assert.True(exception.Message.Contains("AdminSeed", StringComparison.Ordinal));
     }
 
@@ -53,8 +50,7 @@ public sealed class SecurityConfigurationTests
             ["AllowedHosts"] = "athar.example.invalid",
             ["DatabaseStartup:ApplyMigrationsOnStartup"] = "true"
         });
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            ProductionConfigurationValidator.Validate(configuration, isDevelopment: false));
+        var exception = Assert.Throws<InvalidOperationException>(() => ProductionConfigurationValidator.Validate(configuration, false));
         Assert.True(exception.Message.Contains("migrations", StringComparison.OrdinalIgnoreCase));
     }
 
@@ -66,8 +62,7 @@ public sealed class SecurityConfigurationTests
             ["AllowedHosts"] = "athar.example.invalid",
             ["DatabaseStartup:SeedRolesOnStartup"] = "true"
         });
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            ProductionConfigurationValidator.Validate(configuration, isDevelopment: false));
+        var exception = Assert.Throws<InvalidOperationException>(() => ProductionConfigurationValidator.Validate(configuration, false));
         Assert.True(exception.Message.Contains("role seeding", StringComparison.OrdinalIgnoreCase));
     }
 
@@ -79,9 +74,18 @@ public sealed class SecurityConfigurationTests
             ["AllowedHosts"] = "athar.example.invalid",
             ["ConnectionStrings:Athar"] = SecureConnectionString
         });
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            ProductionConfigurationValidator.Validate(configuration, isDevelopment: false));
+        var exception = Assert.Throws<InvalidOperationException>(() => ProductionConfigurationValidator.Validate(configuration, false));
         Assert.True(exception.Message.Contains("SMTP", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Production_rejects_missing_Data_Protection_key_material()
+    {
+        var values = BaseProductionValues(SecureConnectionString);
+        values.Remove("DataProtection:KeysPath");
+        var configuration = BuildConfiguration(values);
+        var exception = Assert.Throws<InvalidOperationException>(() => ProductionConfigurationValidator.Validate(configuration, false));
+        Assert.True(exception.Message.Contains("Data Protection", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -89,8 +93,7 @@ public sealed class SecurityConfigurationTests
     {
         var configuration = ProductionConfiguration(
             "Server=db.internal;Database=Athar;User Id=athar_app;Password=${ATHAR_DB_PASSWORD};Encrypt=False;TrustServerCertificate=True");
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            ProductionConfigurationValidator.Validate(configuration, isDevelopment: false));
+        var exception = Assert.Throws<InvalidOperationException>(() => ProductionConfigurationValidator.Validate(configuration, false));
         Assert.True(exception.Message.Contains("encryption", StringComparison.OrdinalIgnoreCase));
     }
 
@@ -99,16 +102,14 @@ public sealed class SecurityConfigurationTests
     {
         var configuration = ProductionConfiguration(
             "Server=db.internal;Database=Athar;User Id=sa;Password=${ATHAR_DB_PASSWORD};Encrypt=True;TrustServerCertificate=False");
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            ProductionConfigurationValidator.Validate(configuration, isDevelopment: false));
+        var exception = Assert.Throws<InvalidOperationException>(() => ProductionConfigurationValidator.Validate(configuration, false));
         Assert.True(exception.Message.Contains("sa account", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
     public void Production_accepts_explicit_hosts_encrypted_database_and_no_startup_privilege()
     {
-        var configuration = ProductionConfiguration(SecureConnectionString);
-        ProductionConfigurationValidator.Validate(configuration, isDevelopment: false);
+        ProductionConfigurationValidator.Validate(ProductionConfiguration(SecureConnectionString), false);
     }
 
     [Fact]
@@ -118,12 +119,9 @@ public sealed class SecurityConfigurationTests
         first.Connection.RemoteIpAddress = IPAddress.Parse("192.0.2.10");
         var second = new DefaultHttpContext();
         second.Connection.RemoteIpAddress = IPAddress.Parse("192.0.2.11");
-
         Assert.Equal("ip:192.0.2.10", AtharRateLimitPartitions.Authentication(first));
         Assert.Equal("ip:192.0.2.11", AtharRateLimitPartitions.Authentication(second));
-        Assert.NotEqual(
-            AtharRateLimitPartitions.Authentication(first),
-            AtharRateLimitPartitions.Authentication(second));
+        Assert.NotEqual(AtharRateLimitPartitions.Authentication(first), AtharRateLimitPartitions.Authentication(second));
     }
 
     [Fact]
@@ -144,7 +142,10 @@ public sealed class SecurityConfigurationTests
         "Server=db.internal;Database=Athar;User Id=athar_app;Password=${ATHAR_DB_PASSWORD};Encrypt=True;TrustServerCertificate=False";
 
     private static IConfiguration ProductionConfiguration(string connectionString) =>
-        BuildConfiguration(new Dictionary<string, string?>
+        BuildConfiguration(BaseProductionValues(connectionString));
+
+    private static Dictionary<string, string?> BaseProductionValues(string connectionString) =>
+        new()
         {
             ["AllowedHosts"] = "athar.example.invalid",
             ["AdminSeed:Enabled"] = "false",
@@ -153,10 +154,11 @@ public sealed class SecurityConfigurationTests
             ["AccountSecurity:SmtpHost"] = "smtp.example.invalid",
             ["AccountSecurity:SmtpPort"] = "587",
             ["AccountSecurity:FromAddress"] = "security@example.invalid",
+            ["DataProtection:KeysPath"] = "/var/athar/dpkeys",
+            ["DataProtection:CertificatePath"] = "/run/secrets/athar-dp.pfx",
             ["ConnectionStrings:Athar"] = connectionString
-        });
+        };
 
-    private static IConfiguration BuildConfiguration(
-        IReadOnlyDictionary<string, string?> values) =>
+    private static IConfiguration BuildConfiguration(IReadOnlyDictionary<string, string?> values) =>
         new ConfigurationBuilder().AddInMemoryCollection(values).Build();
 }
