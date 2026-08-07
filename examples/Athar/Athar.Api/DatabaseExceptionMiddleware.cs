@@ -7,6 +7,18 @@ public sealed class DatabaseExceptionMiddleware(
     RequestDelegate next,
     ILogger<DatabaseExceptionMiddleware> logger)
 {
+    private static readonly Action<ILogger, string, Exception?> ConcurrencyConflict =
+        LoggerMessage.Define<string>(
+            LogLevel.Warning,
+            new EventId(2001, nameof(ConcurrencyConflict)),
+            "Optimistic concurrency conflict for {Path}.");
+
+    private static readonly Action<ILogger, string, Exception?> UniqueConstraintConflict =
+        LoggerMessage.Define<string>(
+            LogLevel.Information,
+            new EventId(2002, nameof(UniqueConstraintConflict)),
+            "Unique constraint conflict for {Path}.");
+
     public async Task InvokeAsync(HttpContext context)
     {
         try
@@ -15,10 +27,10 @@ public sealed class DatabaseExceptionMiddleware(
         }
         catch (DbUpdateConcurrencyException exception)
         {
-            logger.LogWarning(
-                exception,
-                "Optimistic concurrency conflict for {Path}.",
-                context.Request.Path);
+            ConcurrencyConflict(
+                logger,
+                context.Request.Path.Value ?? "/",
+                exception);
 
             await Results.Problem(
                 statusCode: StatusCodes.Status409Conflict,
@@ -35,10 +47,10 @@ public sealed class DatabaseExceptionMiddleware(
                 Number: 2601 or 2627
             })
         {
-            logger.LogInformation(
-                exception,
-                "Unique constraint conflict for {Path}.",
-                context.Request.Path);
+            UniqueConstraintConflict(
+                logger,
+                context.Request.Path.Value ?? "/",
+                exception);
 
             await Results.Problem(
                 statusCode: StatusCodes.Status409Conflict,
