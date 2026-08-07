@@ -11,6 +11,7 @@ using FoundationKit.Identity;
 using FoundationKit.Infrastructure;
 using FoundationKit.Infrastructure.Events;
 using FoundationKit.Infrastructure.Persistence;
+using FoundationKit.Notifications;
 using FoundationKit.Security;
 using FoundationKit.WebApi;
 using Microsoft.AspNetCore.DataProtection;
@@ -48,7 +49,8 @@ builder.Services.AddScoped<IAuthorizationEvaluator, RolePermissionAuthorizationE
 builder.Services.AddScoped<IInitiativeManager, InitiativeManager>();
 builder.Services.AddScoped<IInitiativeQueryService, InitiativeQueryService>();
 builder.Services.AddScoped<IAuditWriter, AuditWriter>();
-builder.Services.AddScoped<IAccountNotificationSender, SmtpAccountNotificationSender>();
+builder.Services.AddScoped<INotificationSender, SmtpNotificationSender>();
+builder.Services.AddScoped<IAccountNotificationSender, AccountSecurityNotificationAdapter>();
 builder.Services.AddScoped<IRepository<Initiative, Guid>, EfRepository<Initiative, Guid, AtharDbContext>>();
 builder.Services.AddScoped<IRepository<InitiativeReview, Guid>, EfRepository<InitiativeReview, Guid, AtharDbContext>>();
 builder.Services.AddScoped<FoundationKit.Application.Abstractions.IUnitOfWork, EfUnitOfWork<AtharDbContext>>();
@@ -147,7 +149,7 @@ builder.Services.AddRateLimiter(options =>
 
 builder.Services.AddOptions<DatabaseStartupOptions>()
     .Bind(builder.Configuration.GetSection(DatabaseStartupOptions.SectionName))
-    .Validate(options => options.MigrationAttempts is >= 1 and <= 300 && options.DelaySeconds is >= 1 and <= 30,
+    .Validate(options => options.MigrationAttempts is >= 1 and <= 300 && options.DelaySeconds is >= 1 && options.DelaySeconds <= 30,
         "DatabaseStartup values are outside the supported range.")
     .ValidateOnStart();
 
