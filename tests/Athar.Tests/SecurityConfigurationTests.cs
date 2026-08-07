@@ -93,6 +93,45 @@ public sealed class SecurityConfigurationTests
     }
 
     [Fact]
+    public void Production_rejects_unencrypted_database_transport()
+    {
+        var configuration = ProductionConfiguration(
+            "Server=db.internal;Database=Athar;User Id=athar_app;Password=${ATHAR_DB_PASSWORD};Encrypt=False;TrustServerCertificate=True");
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            ProductionConfigurationValidator.Validate(
+                configuration,
+                isDevelopment: false));
+
+        Assert.Contains("encryption", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Production_rejects_sa_runtime_identity()
+    {
+        var configuration = ProductionConfiguration(
+            "Server=db.internal;Database=Athar;User Id=sa;Password=${ATHAR_DB_PASSWORD};Encrypt=True;TrustServerCertificate=False");
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            ProductionConfigurationValidator.Validate(
+                configuration,
+                isDevelopment: false));
+
+        Assert.Contains("sa account", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Production_accepts_explicit_hosts_encrypted_database_and_no_startup_privilege()
+    {
+        var configuration = ProductionConfiguration(
+            "Server=db.internal;Database=Athar;User Id=athar_app;Password=${ATHAR_DB_PASSWORD};Encrypt=True;TrustServerCertificate=False");
+
+        ProductionConfigurationValidator.Validate(
+            configuration,
+            isDevelopment: false);
+    }
+
+    [Fact]
     public void Authentication_rate_limit_partition_is_per_remote_ip()
     {
         var first = new DefaultHttpContext();
@@ -122,6 +161,16 @@ public sealed class SecurityConfigurationTests
 
         Assert.Equal($"user:{userId}", AtharRateLimitPartitions.Write(context));
     }
+
+    private static IConfiguration ProductionConfiguration(string connectionString) =>
+        BuildConfiguration(new Dictionary<string, string?>
+        {
+            ["AllowedHosts"] = "athar.example.invalid",
+            ["AdminSeed:Enabled"] = "false",
+            ["DatabaseStartup:ApplyMigrationsOnStartup"] = "false",
+            ["DatabaseStartup:SeedRolesOnStartup"] = "false",
+            ["ConnectionStrings:Athar"] = connectionString
+        });
 
     private static IConfiguration BuildConfiguration(
         IReadOnlyDictionary<string, string?> values) =>
