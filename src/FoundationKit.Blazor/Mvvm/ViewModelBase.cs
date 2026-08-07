@@ -39,7 +39,11 @@ public abstract class ViewModelBase : IDisposable
 
     protected void NotifyStateChanged() => StateChanged?.Invoke();
 
-    public virtual void Dispose() => StateChanged = null;
+    public virtual void Dispose()
+    {
+        StateChanged = null;
+        GC.SuppressFinalize(this);
+    }
 }
 
 public abstract class ListViewModel<TItem> : ViewModelBase
