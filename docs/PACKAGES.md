@@ -130,7 +130,7 @@ The package depends on `FoundationKit.Security` but does not provide or select a
 
 `IAccountNotificationSender` is a provider port. It carries confirmation/reset tokens and security notification intent to a consumer-owned adapter; implementations must avoid logging token or destination contents.
 
-`IdentityStepUpPolicy` expresses factor requirements for sensitive account operations without deciding how those factors are verified. Athar remains responsible for the actual ASP.NET Core Identity verification and SMTP adapter.
+`IdentityStepUpPolicy` expresses factor requirements for sensitive account operations without deciding how those factors are verified. Athar remains responsible for the actual ASP.NET Core Identity verification and its account-notification adapter.
 
 See `docs/capabilities/IDENTITY.md` for the full boundary and consumer evidence.
 
@@ -209,9 +209,28 @@ The package is provider-neutral and does not depend on SMTP, ASP.NET Core, EF, I
 
 `INotificationSender` is the transport boundary. Its reusable result communicates only delivered/not-configured/failed state; provider exceptions, credentials, recipient data, and message contents are not part of the result contract.
 
-Athar is the first consumer. `AccountSecurityNotificationAdapter` retains Identity/account semantics, Arabic copy, and one-time tokens, then delegates the generic message to `SmtpNotificationSender`. SMTP transport, TLS configuration, and credentials remain Athar/provider concerns.
+Athar is the first consumer. `AccountSecurityNotificationAdapter` retains Identity/account semantics, Arabic copy, and one-time tokens, then delegates the generic message through `INotificationSender` to the reusable SMTP provider package. Provider selection, credentials, TLS policy, and deployment approval remain consumer-owned concerns.
 
 See `docs/capabilities/NOTIFICATIONS.md` for the full boundary and consumer evidence.
+
+## FoundationKit.Notifications.Smtp
+
+Public building blocks:
+
+- `SmtpNotificationOptions`;
+- `SmtpNotificationOptionsValidator`;
+- `SmtpNotificationSender`;
+- `ISmtpNotificationObserver`.
+
+The package depends only on `FoundationKit.Notifications` and the base `System.Net.Mail` transport APIs. It does not depend on FoundationKit Domain/Application/Infrastructure/WebApi/Blazor/Auditing/Security/Identity/Authorization/Workflow/Approvals, EF Core, ASP.NET Core, or Athar product assemblies.
+
+The provider validates transport identifiers and port range, snapshots validated options at construction, preserves caller cancellation, maps missing host/from configuration to `NotConfigured`, and maps bounded SMTP/format/operation failures to `Failed` without returning provider exceptions through the generic notification contract.
+
+`ISmtpNotificationObserver` is intentionally narrow. It receives only notification purpose and, for failures, the exception type name. It never receives destination, title/body, one-time tokens, SMTP credentials, or the exception object itself.
+
+Athar is the first consumer. It maps its existing `AccountSecurityDeliveryOptions` to `SmtpNotificationOptions`, retains fail-closed production SMTP/TLS validation, and provides a local observer that logs only purpose and error type. The provider does not own organizational TLS/relay policy, secret storage/rotation, queues/retries, bounce processing, routing/fallback, templates, or delivery-history persistence.
+
+See `docs/capabilities/SMTP-PROVIDER.md` for the full boundary and consumer evidence.
 
 ## Capability catalog contract
 
