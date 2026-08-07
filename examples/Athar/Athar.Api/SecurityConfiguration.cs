@@ -1,10 +1,20 @@
 using System.Data.Common;
+using System.Net;
 using System.Security.Claims;
 using Athar.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 
 namespace Athar.Api;
+
+public sealed class ReverseProxySecurityOptions
+{
+    public const string SectionName = "ReverseProxy";
+
+    public bool Enabled { get; set; }
+
+    public string[] KnownProxies { get; set; } = [];
+}
 
 public static class ProductionConfigurationValidator
 {
@@ -18,6 +28,8 @@ public static class ProductionConfigurationValidator
             return;
 
         ValidateAllowedHosts(configuration);
+        ValidateExplicitSecurityDecisions(configuration);
+        ValidateReverseProxy(configuration);
         ValidateNoStartupPrivilege(configuration);
         ValidateAccountRecoveryDelivery(configuration);
         ValidateDataProtection(configuration);
@@ -34,6 +46,54 @@ public static class ProductionConfigurationValidator
 
         if (hasWildcardHost)
             throw new InvalidOperationException("Production requires an explicit AllowedHosts allow-list; wildcard hosts are not permitted.");
+    }
+
+    private static void ValidateExplicitSecurityDecisions(IConfiguration configuration)
+    {
+        RequireExplicitBooleanDecision(
+            configuration,
+            $"{AccountSecurityOptions.SectionName}:RequireConfirmedEmail");
+        RequireExplicitBooleanDecision(
+            configuration,
+            $"{AccountSecurityOptions.SectionName}:RequireAdministratorMfa");
+        RequireExplicitBooleanDecision(
+            configuration,
+            $"{ReverseProxySecurityOptions.SectionName}:Enabled");
+    }
+
+    private static void RequireExplicitBooleanDecision(
+        IConfiguration configuration,
+        string key)
+    {
+        var raw = configuration[key];
+        if (string.IsNullOrWhiteSpace(raw) || !bool.TryParse(raw, out _))
+            throw new InvalidOperationException($"Production requires an explicit true/false decision for '{key}'.");
+    }
+
+    private static void ValidateReverseProxy(IConfiguration configuration)
+    {
+        if (!configuration.GetValue<bool>($"{ReverseProxySecurityOptions.SectionName}:Enabled"))
+            return;
+
+        var proxies = configuration
+            .GetSection($"{ReverseProxySecurityOptions.SectionName}:KnownProxies")
+            .Get<string[]>()
+            ?? [];
+
+        if (proxies.Length == 0)
+        {
+            throw new InvalidOperationException(
+                "ReverseProxy:Enabled=true requires at least one explicit trusted proxy IP in ReverseProxy:KnownProxies. Trust-all forwarded headers are not permitted.");
+        }
+
+        foreach (var proxy in proxies)
+        {
+            if (!IPAddress.TryParse(proxy, out _))
+            {
+                throw new InvalidOperationException(
+                    $"ReverseProxy:KnownProxies contains an invalid IP address: '{proxy}'.");
+            }
+        }
     }
 
     private static void ValidateNoStartupPrivilege(IConfiguration configuration)
@@ -53,9 +113,19 @@ public static class ProductionConfigurationValidator
         var host = configuration[$"{AccountSecurityOptions.SectionName}:SmtpHost"];
         var fromAddress = configuration[$"{AccountSecurityOptions.SectionName}:FromAddress"];
         var port = configuration.GetValue<int?>($"{AccountSecurityOptions.SectionName}:SmtpPort");
+        var tlsEnabled = configuration.GetValue<bool?>($"{AccountSecurityOptions.SectionName}:SmtpEnableSsl");
 
         if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(fromAddress) || port is null or < 1 or > 65535)
-            throw new InvalidOperationException("Production requires operational SMTP account-notification configuration so email confirmation and password recovery tokens are not exposed through logs or API responses.");
+        {
+            throw new InvalidOperationException(
+                "Production requires operational SMTP account-notification configuration so email confirmation and password recovery tokens are not exposed through logs or API responses.");
+        }
+
+        if (tlsEnabled is not true)
+        {
+            throw new InvalidOperationException(
+                "Production account notifications require SMTP transport security. AccountSecurity:SmtpEnableSsl must be explicitly true unless a separately approved secure relay implementation replaces this sender.");
+        }
     }
 
     private static void ValidateDataProtection(IConfiguration configuration)
