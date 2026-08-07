@@ -63,9 +63,9 @@ No capability is promoted merely because a class or empty package exists.
 
 - [x] Settings hierarchy v1: provider-neutral scopes, deterministic fallback/source precedence, bounded values, and Workbench runtime proof.
 - [x] Feature Management v1: settings-backed Boolean decisions with explicit defaults and fail-closed invalid configuration, proven by Workbench.
+- [x] Localization v1: bounded culture metadata, RTL/LTR directionality, deterministic supported-culture fallback, and opaque time-zone identity, proven by Workbench.
 - [ ] Organization/branch/department/team hierarchy.
 - [ ] Multi-tenancy context and isolation contracts.
-- [ ] Localization/culture/time-zone foundation.
 - [ ] Numbering/sequences.
 - [ ] Lifecycle/archive/soft-delete primitives.
 
@@ -162,15 +162,16 @@ The repository currently has extracted reusable/reference packages for:
 - Notifications v1;
 - SMTP notification provider v1 (`FoundationKit.Notifications.Smtp`);
 - Settings v1 (`FoundationKit.Settings`);
-- Feature Management v1 (`FoundationKit.FeatureManagement`).
+- Feature Management v1 (`FoundationKit.FeatureManagement`);
+- Localization v1 (`FoundationKit.Localization`).
 
-Athar provides current consumer evidence for the security, identity, authorization, workflow, narrow approval, notification, and SMTP-provider surfaces. Workbench provides runtime consumer evidence for Settings and Feature Management. The capability maturity values remain conservative and do not imply production certification.
+Athar provides current consumer evidence for the security, identity, authorization, workflow, narrow approval, notification, and SMTP-provider surfaces. Workbench provides runtime consumer evidence for Settings, Feature Management, and Localization. The capability maturity values remain conservative and do not imply production certification.
 
 ## Current continuation boundary
 
-Issue #64 reopens the consumer-driven extraction cycle for general-purpose system capabilities while preserving the same stop rule: no empty package and no invented organizational/product policy.
+Issue #64 continues the consumer-driven extraction cycle for general-purpose system capabilities while preserving the same stop rule: no empty package and no invented organizational/product policy.
 
-The next candidate that can be implemented without owner policy is **Localization/culture/time-zone foundation**, because deterministic culture selection, directionality, and explicitly supported time-zone identifiers can be bounded and demonstrated through Workbench without selecting a deployment provider or legal/business rule.
+The next candidate that can be implemented without owner policy is **Caching v1**. A bounded provider-neutral key/value/TTL contract with an in-memory reference store can be proven against an existing Workbench read path without choosing Redis, distributed-consistency policy, or a production cache provider.
 
 The following items remain **not ready for package extraction** until a concrete consumer proves their semantics:
 
