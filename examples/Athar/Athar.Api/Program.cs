@@ -1,3 +1,4 @@
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.RateLimiting;
 using Athar.Api;
 using Athar.Application;
@@ -9,6 +10,7 @@ using FoundationKit.Infrastructure;
 using FoundationKit.Infrastructure.Events;
 using FoundationKit.Infrastructure.Persistence;
 using FoundationKit.WebApi;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -33,26 +35,20 @@ builder.Services.AddScoped<IInitiativeManager, InitiativeManager>();
 builder.Services.AddScoped<IInitiativeQueryService, InitiativeQueryService>();
 builder.Services.AddScoped<IAuditWriter, AuditWriter>();
 builder.Services.AddScoped<IAccountNotificationSender, SmtpAccountNotificationSender>();
-builder.Services.AddScoped<IRepository<Initiative, Guid>,
-    EfRepository<Initiative, Guid, AtharDbContext>>();
-builder.Services.AddScoped<IRepository<InitiativeReview, Guid>,
-    EfRepository<InitiativeReview, Guid, AtharDbContext>>();
-builder.Services.AddScoped<FoundationKit.Application.Abstractions.IUnitOfWork,
-    EfUnitOfWork<AtharDbContext>>();
+builder.Services.AddScoped<IRepository<Initiative, Guid>, EfRepository<Initiative, Guid, AtharDbContext>>();
+builder.Services.AddScoped<IRepository<InitiativeReview, Guid>, EfRepository<InitiativeReview, Guid, AtharDbContext>>();
+builder.Services.AddScoped<FoundationKit.Application.Abstractions.IUnitOfWork, EfUnitOfWork<AtharDbContext>>();
 builder.Services.AddSingleton<FoundationKit.Application.Abstractions.IClock, SystemClock>();
 
+ConfigureDataProtection(builder);
+
 var connectionString = builder.Configuration.GetConnectionString("Athar")
-    ?? throw new InvalidOperationException(
-        "Connection string 'Athar' is required.");
+    ?? throw new InvalidOperationException("Connection string 'Athar' is required.");
 
 builder.Services.AddDbContext<AtharDbContext>((serviceProvider, options) =>
 {
-    options.UseSqlServer(
-        connectionString,
-        sqlServer => sqlServer.MigrationsAssembly(
-            typeof(AtharDbContext).Assembly.FullName));
-    options.AddInterceptors(
-        serviceProvider.GetRequiredService<DomainEventsSaveChangesInterceptor>());
+    options.UseSqlServer(connectionString, sqlServer => sqlServer.MigrationsAssembly(typeof(AtharDbContext).Assembly.FullName));
+    options.AddInterceptors(serviceProvider.GetRequiredService<DomainEventsSaveChangesInterceptor>());
 });
 
 builder.Services
@@ -77,9 +73,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.Name = "Athar.Auth";
     options.Cookie.HttpOnly = true;
     options.Cookie.SameSite = SameSiteMode.Strict;
-    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
-        ? CookieSecurePolicy.SameAsRequest
-        : CookieSecurePolicy.Always;
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
     options.SlidingExpiration = true;
     options.Events.OnRedirectToLogin = context =>
@@ -96,9 +90,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("AtharUser", policy =>
-        policy.RequireAuthenticatedUser());
-
+    options.AddPolicy("AtharUser", policy => policy.RequireAuthenticatedUser());
     options.AddPolicy("AtharAdministrator", policy =>
     {
         policy.RequireRole(AtharRoles.Administrator);
@@ -113,63 +105,48 @@ builder.Services.AddAntiforgery(options =>
     options.Cookie.Name = "Athar.Antiforgery";
     options.Cookie.HttpOnly = true;
     options.Cookie.SameSite = SameSiteMode.Strict;
-    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
-        ? CookieSecurePolicy.SameAsRequest
-        : CookieSecurePolicy.Always;
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
 });
 
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-
-    options.AddPolicy("auth", context =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: AtharRateLimitPartitions.Authentication(context),
-            factory: static _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 10,
-                Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0,
-                AutoReplenishment = true
-            }));
-
-    options.AddPolicy("write", context =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: AtharRateLimitPartitions.Write(context),
-            factory: static _ => new FixedWindowRateLimiterOptions
-            {
-                PermitLimit = 30,
-                Window = TimeSpan.FromMinutes(1),
-                QueueLimit = 0,
-                AutoReplenishment = true
-            }));
+    options.AddPolicy("auth", context => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: AtharRateLimitPartitions.Authentication(context),
+        factory: static _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+    options.AddPolicy("write", context => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: AtharRateLimitPartitions.Write(context),
+        factory: static _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 30,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
 });
 
-builder.Services
-    .AddOptions<DatabaseStartupOptions>()
+builder.Services.AddOptions<DatabaseStartupOptions>()
     .Bind(builder.Configuration.GetSection(DatabaseStartupOptions.SectionName))
-    .Validate(
-        options => options.MigrationAttempts is >= 1 and <= 300
-            && options.DelaySeconds is >= 1 and <= 30,
+    .Validate(options => options.MigrationAttempts is >= 1 and <= 300 && options.DelaySeconds is >= 1 and <= 30,
         "DatabaseStartup values are outside the supported range.")
     .ValidateOnStart();
 
-builder.Services
-    .AddOptions<AdminSeedOptions>()
+builder.Services.AddOptions<AdminSeedOptions>()
     .Bind(builder.Configuration.GetSection(AdminSeedOptions.SectionName))
-    .Validate(
-        options => !options.Enabled
-            || (!string.IsNullOrWhiteSpace(options.Email)
-                && !string.IsNullOrWhiteSpace(options.Password)
-                && options.Password.Length >= 12),
+    .Validate(options => !options.Enabled || (!string.IsNullOrWhiteSpace(options.Email)
+        && !string.IsNullOrWhiteSpace(options.Password) && options.Password.Length >= 12),
         "When AdminSeed is enabled, Email and a password of at least 12 characters are required.")
     .ValidateOnStart();
 
-builder.Services
-    .AddOptions<AccountSecurityOptions>()
+builder.Services.AddOptions<AccountSecurityOptions>()
     .Bind(builder.Configuration.GetSection(AccountSecurityOptions.SectionName))
-    .Validate(
-        options => options.SmtpPort is >= 1 and <= 65535,
+    .Validate(options => options.SmtpPort is >= 1 and <= 65535,
         "AccountSecurity:SmtpPort must be a valid TCP port.")
     .ValidateOnStart();
 
@@ -211,14 +188,39 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-await DatabaseInitializer.InitializeAsync(
-    app.Services,
-    app.Lifetime.ApplicationStopping);
+await DatabaseInitializer.InitializeAsync(app.Services, app.Lifetime.ApplicationStopping);
 
 app.MapAtharEndpoints();
 app.MapFallbackToFile("index.html");
 
 app.Run();
+
+static void ConfigureDataProtection(WebApplicationBuilder builder)
+{
+    var keysPath = builder.Configuration["DataProtection:KeysPath"];
+    var certificatePath = builder.Configuration["DataProtection:CertificatePath"];
+    var certificatePassword = builder.Configuration["DataProtection:CertificatePassword"];
+
+    var dataProtection = builder.Services
+        .AddDataProtection()
+        .SetApplicationName("Athar");
+
+    if (!string.IsNullOrWhiteSpace(keysPath))
+    {
+        var directory = new DirectoryInfo(keysPath);
+        directory.Create();
+        dataProtection.PersistKeysToFileSystem(directory);
+    }
+
+    if (!string.IsNullOrWhiteSpace(certificatePath))
+    {
+        var certificate = new X509Certificate2(
+            certificatePath,
+            certificatePassword,
+            X509KeyStorageFlags.EphemeralKeySet);
+        dataProtection.ProtectKeysWithCertificate(certificate);
+    }
+}
 
 public partial class Program
 {
