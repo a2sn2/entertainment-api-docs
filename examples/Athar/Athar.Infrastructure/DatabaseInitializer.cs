@@ -9,6 +9,36 @@ namespace Athar.Infrastructure;
 
 public static class DatabaseInitializer
 {
+    private static readonly Action<ILogger, int, Exception?> DatabaseMigrationsCompleted =
+        LoggerMessage.Define<int>(
+            LogLevel.Information,
+            new EventId(1001, nameof(DatabaseMigrationsCompleted)),
+            "Athar database migrations completed on attempt {Attempt}.");
+
+    private static readonly Action<ILogger, int, int, Exception?> DatabaseMigrationRetry =
+        LoggerMessage.Define<int, int>(
+            LogLevel.Warning,
+            new EventId(1002, nameof(DatabaseMigrationRetry)),
+            "Athar database migration attempt {Attempt}/{Maximum} failed. Retrying.");
+
+    private static readonly Action<ILogger, int, Exception?> DatabaseSchemaValidated =
+        LoggerMessage.Define<int>(
+            LogLevel.Information,
+            new EventId(1003, nameof(DatabaseSchemaValidated)),
+            "Athar database schema validation completed on attempt {Attempt}; no pending migrations were found.");
+
+    private static readonly Action<ILogger, int, int, Exception?> DatabaseSchemaValidationRetry =
+        LoggerMessage.Define<int, int>(
+            LogLevel.Warning,
+            new EventId(1004, nameof(DatabaseSchemaValidationRetry)),
+            "Athar database schema validation attempt {Attempt}/{Maximum} failed. Retrying.");
+
+    private static readonly Action<ILogger, Exception?> AdminSeedingDisabled =
+        LoggerMessage.Define(
+            LogLevel.Information,
+            new EventId(1005, nameof(AdminSeedingDisabled)),
+            "Admin seeding is disabled. Create the production administrator through the controlled onboarding process.");
+
     public static async Task InitializeAsync(
         IServiceProvider serviceProvider,
         CancellationToken cancellationToken = default)
@@ -62,20 +92,18 @@ public static class DatabaseInitializer
             try
             {
                 await dbContext.Database.MigrateAsync(cancellationToken);
-                logger.LogInformation(
-                    "Athar database migrations completed on attempt {Attempt}.",
-                    attempt);
+                DatabaseMigrationsCompleted(logger, attempt, null);
                 return;
             }
             catch (Exception exception)
                 when (attempt < options.MigrationAttempts)
             {
                 lastError = exception;
-                logger.LogWarning(
-                    exception,
-                    "Athar database migration attempt {Attempt}/{Maximum} failed. Retrying.",
+                DatabaseMigrationRetry(
+                    logger,
                     attempt,
-                    options.MigrationAttempts);
+                    options.MigrationAttempts,
+                    exception);
 
                 await Task.Delay(
                     TimeSpan.FromSeconds(options.DelaySeconds),
@@ -116,20 +144,18 @@ public static class DatabaseInitializer
                         + string.Join(", ", pending));
                 }
 
-                logger.LogInformation(
-                    "Athar database schema validation completed on attempt {Attempt}; no pending migrations were found.",
-                    attempt);
+                DatabaseSchemaValidated(logger, attempt, null);
                 return;
             }
             catch (Exception exception)
                 when (attempt < options.MigrationAttempts)
             {
                 lastError = exception;
-                logger.LogWarning(
-                    exception,
-                    "Athar database schema validation attempt {Attempt}/{Maximum} failed. Retrying.",
+                DatabaseSchemaValidationRetry(
+                    logger,
                     attempt,
-                    options.MigrationAttempts);
+                    options.MigrationAttempts,
+                    exception);
 
                 await Task.Delay(
                     TimeSpan.FromSeconds(options.DelaySeconds),
@@ -179,8 +205,7 @@ public static class DatabaseInitializer
 
         if (!options.Enabled)
         {
-            logger.LogInformation(
-                "Admin seeding is disabled. Create the production administrator through the controlled onboarding process.");
+            AdminSeedingDisabled(logger, null);
             return;
         }
 
