@@ -272,6 +272,27 @@ Workbench is the first runtime consumer through `GET /api/platform-reference`, w
 
 See `docs/capabilities/FEATURE-MANAGEMENT.md` for the full boundary and consumer evidence.
 
+## FoundationKit.Localization
+
+Public building blocks:
+
+- `CultureDefinition`;
+- `TextDirection`;
+- `SupportedCultureSet`;
+- `CultureResolution` and `CultureResolutionSource`;
+- `TimeZoneId`;
+- `LocalizationContext`.
+
+The package is BCL-only and does not depend on another FoundationKit package. Culture names are canonicalized through `CultureInfo`; directionality comes from `TextInfo.IsRightToLeft`; supported-culture resolution is deterministic across exact, parent, explicit-default, and invalid-request outcomes.
+
+`TimeZoneId` is intentionally an opaque bounded identifier. It does not call OS-specific time-zone lookup APIs, so the reusable boundary remains neutral between IANA, Windows, cloud-provider, and application-owned mapping strategies.
+
+Workbench is the first runtime consumer. It reads `ar-YE` and `UTC` through Settings and proves exact culture resolution, RTL directionality, and the configured time-zone identity through `GET /api/platform-reference` and the SQL integration smoke flow.
+
+Localization v1 does not own resource/translation storage, browser language negotiation, user/tenant preference persistence, date-time conversion, Windows/IANA mapping, or localization administration UI.
+
+See `docs/capabilities/LOCALIZATION.md` for the full boundary and consumer evidence.
+
 ## Capability catalog contract
 
 The human-facing implemented feature list is maintained in `catalog/foundationkit.catalog.json`. Every catalog capability must correspond to existing tested behavior and public surface. The catalog generator rejects unknown idea references and any status other than `implemented`.
