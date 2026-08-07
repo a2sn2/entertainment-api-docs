@@ -189,7 +189,7 @@ public sealed class InitiativeManager(
 
         var normalizedDecision = ApprovalDecisions.ToTrigger(decision);
         if (!ApprovalDecisions.TryResolve(
-                InitiativeWorkflow.Definition,
+                Athar.Domain.InitiativeWorkflow.Definition,
                 initiative.Status,
                 normalizedDecision,
                 out var approval))
