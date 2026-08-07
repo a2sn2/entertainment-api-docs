@@ -1,3 +1,4 @@
+using System.Globalization;
 using FoundationKit.Auditing;
 using FoundationKit.Workflow;
 using Xunit;
@@ -98,7 +99,9 @@ public sealed class WorkflowCapabilityTests
         var auditEvent = AuditEvent.Create(
             request,
             new AuditContext("reviewer-1", "corr-1", null, "tests"),
-            DateTimeOffset.Parse("2026-08-07T18:00:00Z"));
+            DateTimeOffset.Parse(
+                "2026-08-07T18:00:00Z",
+                CultureInfo.InvariantCulture));
 
         Assert.Equal(WorkflowTransitionAudit.TransitionedAction, auditEvent.Action);
         Assert.Equal("sample.review", auditEvent.Attributes["workflow_id"]);
