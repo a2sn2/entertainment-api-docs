@@ -3,7 +3,7 @@
 # - trusted HTTPS ingress / reverse proxy;
 # - SQL Server with a least-privilege runtime principal and a separate migration principal;
 # - validated SQL TLS certificate;
-# - secret manager injection for DB/SMTP credentials;
+# - secret manager injection for DB/SMTP/Data Protection certificate credentials;
 # - durable protected ASP.NET Data Protection key store;
 # - central logs/metrics/traces/alerts;
 # - encrypted/off-site/immutable backup service and tested restore procedure.
@@ -30,8 +30,14 @@ services:
       AccountSecurity__SmtpUsername: "${ATHAR_SMTP_USERNAME:?SMTP username is required}"
       AccountSecurity__SmtpPassword: "${ATHAR_SMTP_PASSWORD:?Inject through the production secret manager}"
       AccountSecurity__FromAddress: "${ATHAR_SMTP_FROM:?Approved sender address is required}"
+      DataProtection__KeysPath: "/var/athar/dpkeys"
+      DataProtection__CertificatePath: "/run/secrets/athar-dp.pfx"
+      DataProtection__CertificatePassword: "${ATHAR_DP_CERT_PASSWORD:?Inject through the production secret manager}"
     expose:
       - "8080"
+    volumes:
+      - "${ATHAR_DP_KEYS_HOST_PATH:?Durable protected Data Protection key directory is required}:/var/athar/dpkeys"
+      - "${ATHAR_DP_CERT_HOST_PATH:?Protected Data Protection certificate file is required}:/run/secrets/athar-dp.pfx:ro"
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -41,6 +47,7 @@ services:
       - /tmp:size=64m,mode=1777
     restart: unless-stopped
 
-# The production database, TLS ingress, secret manager, key store, observability,
-# backup service, network policy, resource limits, and deployment orchestrator are
-# intentionally not invented by this repository. They require approved platform design.
+# The production database, TLS ingress, secret manager, certificate lifecycle,
+# observability, backup service, network policy, resource limits, and deployment
+# orchestrator are intentionally not invented by this repository. They require
+# approved platform design and evidence.
