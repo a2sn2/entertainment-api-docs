@@ -4,7 +4,7 @@ set -euo pipefail
 # PR34 review-closure verification head: this script is part of the final security evidence set.
 base_url="${ATHAR_URL:-http://localhost:8090}"
 admin_email="${ATHAR_ADMIN_EMAIL:?ATHAR_ADMIN_EMAIL is required}"
-admin_password="${ATHAR_ADMIN_PASSWORD:?ATHAR_ADMIN_PASSWORD is required}"
+admin_password="${ATHAR_ADMIN_PASSWORD:?ATHAR_ADMIN_ADMIN_PASSWORD is required}"
 stamp="$(date +%s)-$RANDOM"
 user1_email="negative.user1.$stamp@example.test"
 user2_email="negative.user2.$stamp@example.test"
@@ -26,6 +26,16 @@ csrf() {
 
 http_code() {
   curl --silent --output /dev/null --write-out '%{http_code}' "$@"
+}
+
+expect_code() {
+  local expected="$1"
+  local actual="$2"
+  local label="$3"
+  if [ "$actual" != "$expected" ]; then
+    echo "FAIL: $label expected HTTP $expected but received $actual" >&2
+    exit 1
+  fi
 }
 
 totp() {
@@ -51,14 +61,14 @@ PY
 
 # Anonymous users must not reach administrator data.
 code="$(http_code "$base_url/api/v1/admin/dashboard")"
-test "$code" = "401"
+expect_code "401" "$code" "anonymous admin access"
 
 # A state-changing request without antiforgery evidence must be rejected.
 code="$(http_code \
   -H 'Content-Type: application/json' \
   -d "{\"email\":\"$user1_email\",\"displayName\":\"اختبار سلبي\",\"password\":\"$user_password\"}" \
   "$base_url/api/v1/auth/register")"
-test "$code" = "400"
+expect_code "400" "$code" "registration without CSRF"
 
 # Create first user and one owned initiative.
 token="$(csrf "$cookies1")"
@@ -86,7 +96,7 @@ curl --fail --silent -c "$cookies2" -b "$cookies2" \
   -d "{\"email\":\"$user2_email\",\"displayName\":\"مستخدم ثان\",\"password\":\"$user_password\"}" \
   "$base_url/api/v1/auth/register" >/dev/null
 code="$(http_code -c "$cookies2" -b "$cookies2" "$base_url/api/v1/initiatives/$initiative_id")"
-test "$code" = "404"
+expect_code "404" "$code" "cross-user initiative lookup"
 
 token="$(csrf "$cookies2")"
 curl --fail --silent -c "$cookies2" -b "$cookies2" \
@@ -100,8 +110,14 @@ forgot_existing="$(curl --fail --silent -c "$cookies2" -b "$cookies2" \
 forgot_missing="$(curl --fail --silent -c "$cookies2" -b "$cookies2" \
   -H 'Content-Type: application/json' -H "X-CSRF-TOKEN: $(csrf "$cookies2")" \
   -d '{"email":"missing.account@example.test"}' "$base_url/api/v1/auth/password/forgot")"
-test "$forgot_existing" = "$forgot_missing"
-! grep -qi 'token\|passwordResetToken\|resetToken' <<< "$forgot_existing"
+if [ "$forgot_existing" != "$forgot_missing" ]; then
+  echo "FAIL: account-recovery response differs for existing and missing accounts" >&2
+  exit 1
+fi
+if grep -qi 'token\|passwordResetToken\|resetToken' <<< "$forgot_existing"; then
+  echo "FAIL: account-recovery response exposed token terminology" >&2
+  exit 1
+fi
 
 # Administrator login remains valid in Development, but maker-checker prevents self-review.
 token="$(csrf "$admin_cookies")"
@@ -122,14 +138,14 @@ code="$(http_code -c "$admin_cookies" -b "$admin_cookies" \
   -H 'Content-Type: application/json' -H "X-CSRF-TOKEN: $token" \
   -d '{"decision":"approve","notes":"يجب رفض هذه المراجعة الذاتية."}' \
   "$base_url/api/v1/admin/initiatives/$admin_initiative_id/review")"
-test "$code" = "403"
+expect_code "403" "$code" "maker-checker self-review"
 
 # Invalid antiforgery material must fail without processing the write.
 code="$(http_code -c "$admin_cookies" -b "$admin_cookies" \
   -H 'Content-Type: application/json' -H 'X-CSRF-TOKEN: invalid-token' \
   -d '{"decision":"reject","notes":"رمز حماية غير صالح."}' \
   "$base_url/api/v1/admin/initiatives/$initiative_id/review")"
-test "$code" = "400"
+expect_code "400" "$code" "invalid CSRF review"
 
 # MFA-sensitive changes require full reauthentication: password + fresh MFA proof.
 token="$(csrf "$mfa_cookies")"
@@ -158,7 +174,7 @@ code="$(http_code -c "$mfa_cookies" -b "$mfa_cookies" \
   -H 'Content-Type: application/json' -H "X-CSRF-TOKEN: $token" \
   -d "{\"email\":\"$mfa_email\",\"password\":\"$user_password\",\"rememberMe\":false}" \
   "$base_url/api/v1/auth/login")"
-test "$code" = "401"
+expect_code "401" "$code" "password login requiring MFA"
 
 token="$(csrf "$mfa_cookies")"
 code_now="$(totp "$shared_key")"
@@ -171,16 +187,16 @@ curl --fail --silent -c "$mfa_cookies" -b "$mfa_cookies" \
 token="$(csrf "$mfa_cookies")"
 code="$(http_code -c "$mfa_cookies" -b "$mfa_cookies" \
   -H 'Content-Type: application/json' -H "X-CSRF-TOKEN: $token" \
-  -d "{\"currentPassword\":\"$user_password\",\"code\":\"invalid-recovery-code\"}" \
+  -d "{\"currentPassword\":\"$user_password\",\"code\":\"invalid-recovery\"}" \
   "$base_url/api/v1/auth/mfa/disable")"
-test "$code" = "403"
+expect_code "403" "$code" "MFA disable without valid second factor"
 
 token="$(csrf "$mfa_cookies")"
 code="$(http_code -c "$mfa_cookies" -b "$mfa_cookies" \
   -H 'Content-Type: application/json' -H "X-CSRF-TOKEN: $token" \
-  -d "{\"currentPassword\":\"$user_password\",\"code\":\"invalid-recovery-code\"}" \
+  -d "{\"currentPassword\":\"$user_password\",\"code\":\"invalid-recovery\"}" \
   "$base_url/api/v1/auth/mfa/recovery-codes")"
-test "$code" = "403"
+expect_code "403" "$code" "recovery-code rotation without valid second factor"
 
 # A fresh valid MFA proof permits the sensitive operation and invalidates the active session.
 token="$(csrf "$mfa_cookies")"
@@ -189,9 +205,9 @@ code="$(http_code -c "$mfa_cookies" -b "$mfa_cookies" \
   -H 'Content-Type: application/json' -H "X-CSRF-TOKEN: $token" \
   -d "{\"currentPassword\":\"$user_password\",\"code\":\"$code_now\"}" \
   "$base_url/api/v1/auth/mfa/disable")"
-test "$code" = "200"
+expect_code "200" "$code" "MFA disable with fresh second factor"
 code="$(http_code -c "$mfa_cookies" -b "$mfa_cookies" "$base_url/api/v1/initiatives/mine?page=1&pageSize=1")"
-test "$code" = "401"
+expect_code "401" "$code" "session invalidation after MFA disable"
 
 # Prove runtime fixed-window enforcement. Earlier auth requests consume the same IP bucket;
 # continue until the middleware itself rejects with 429. This test deliberately runs last.
@@ -205,8 +221,11 @@ for _ in $(seq 1 20); do
     rate_limited=true
     break
   fi
-  test "$code" = "400"
+  expect_code "400" "$code" "pre-limit malformed auth request"
 done
-test "$rate_limited" = "true"
+if [ "$rate_limited" != "true" ]; then
+  echo "FAIL: runtime auth rate limiter never returned HTTP 429" >&2
+  exit 1
+fi
 
 echo "Athar negative security integration tests passed (authz, CSRF, BOLA, account enumeration, maker-checker, MFA step-up, runtime 429 rate limiting)."
