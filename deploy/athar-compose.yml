@@ -1,3 +1,4 @@
+# Development/test topology only. Do not use this file as a production deployment template.
 services:
   athar-sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -18,6 +19,8 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: "Development"
       ConnectionStrings__Athar: "Server=athar-sqlserver,1433;Database=AtharDb;User Id=sa;Password=${ATHAR_SQL_PASSWORD};TrustServerCertificate=True;Encrypt=False"
+      DatabaseStartup__ApplyMigrationsOnStartup: "true"
+      DatabaseStartup__SeedRolesOnStartup: "true"
       DatabaseStartup__MigrationAttempts: "90"
       DatabaseStartup__DelaySeconds: "2"
       AdminSeed__Enabled: "true"
