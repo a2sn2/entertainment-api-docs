@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.Security.Claims;
 using Athar.Infrastructure;
 using Microsoft.AspNetCore.Http;
@@ -16,6 +17,14 @@ public static class ProductionConfigurationValidator
         if (isDevelopment)
             return;
 
+        ValidateAllowedHosts(configuration);
+        ValidateNoStartupPrivilege(configuration);
+        ValidateDatabaseTransportAndIdentity(
+            configuration.GetConnectionString("Athar"));
+    }
+
+    private static void ValidateAllowedHosts(IConfiguration configuration)
+    {
         var allowedHosts = configuration["AllowedHosts"];
         var hasWildcardHost = string.IsNullOrWhiteSpace(allowedHosts)
             || allowedHosts
@@ -30,7 +39,10 @@ public static class ProductionConfigurationValidator
             throw new InvalidOperationException(
                 "Production requires an explicit AllowedHosts allow-list; wildcard hosts are not permitted.");
         }
+    }
 
+    private static void ValidateNoStartupPrivilege(IConfiguration configuration)
+    {
         if (configuration.GetValue<bool>(
                 $"{AdminSeedOptions.SectionName}:Enabled"))
         {
@@ -51,6 +63,70 @@ public static class ProductionConfigurationValidator
             throw new InvalidOperationException(
                 "Automatic role seeding is not permitted outside Development. Provision required roles through the controlled deployment process.");
         }
+    }
+
+    private static void ValidateDatabaseTransportAndIdentity(
+        string? connectionString)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                "Production requires the Athar connection string to be supplied by the deployment environment or secret manager.");
+        }
+
+        var parsed = new DbConnectionStringBuilder
+        {
+            ConnectionString = connectionString
+        };
+
+        var encrypt = GetValue(parsed, "Encrypt");
+        if (encrypt is null
+            || (encrypt.Equals("true", StringComparison.OrdinalIgnoreCase) is false
+                && encrypt.Equals("mandatory", StringComparison.OrdinalIgnoreCase) is false
+                && encrypt.Equals("strict", StringComparison.OrdinalIgnoreCase) is false))
+        {
+            throw new InvalidOperationException(
+                "Production SQL Server connections must enable transport encryption (Encrypt=True/Mandatory/Strict)."
+            );
+        }
+
+        var trustServerCertificate = GetValue(
+            parsed,
+            "TrustServerCertificate",
+            "Trust Server Certificate");
+        if (bool.TryParse(trustServerCertificate, out var trustsAnyCertificate)
+            && trustsAnyCertificate)
+        {
+            throw new InvalidOperationException(
+                "Production SQL Server connections must validate the server certificate; TrustServerCertificate=True is not permitted."
+            );
+        }
+
+        var userId = GetValue(parsed, "User Id", "UserID", "UID");
+        if (string.Equals(userId, "sa", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "Production runtime must not use the SQL Server sa account. Provision a least-privilege application principal and a separate migration principal."
+            );
+        }
+    }
+
+    private static string? GetValue(
+        DbConnectionStringBuilder parsed,
+        params string[] keys)
+    {
+        foreach (var key in parsed.Keys.Cast<string>())
+        {
+            if (!keys.Any(candidate =>
+                    candidate.Equals(key, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            return Convert.ToString(parsed[key], System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        return null;
     }
 }
 
