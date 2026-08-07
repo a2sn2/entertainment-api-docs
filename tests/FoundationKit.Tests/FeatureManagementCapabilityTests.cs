@@ -81,14 +81,15 @@ public sealed class FeatureManagementCapabilityTests
     }
 
     [Fact]
-    public void Decision_diagnostics_do_not_include_setting_values()
+    public void Decision_diagnostics_do_not_include_scope_identifiers()
     {
         var decision = new FeatureDecision(
             "catalog.preview",
             true,
             FeatureDecisionSource.Setting,
-            SettingScope.Global);
+            new SettingScope("user", "private-user-id"));
 
-        Assert.DoesNotContain("true", decision.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("catalog.preview", decision.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("private-user-id", decision.ToString(), StringComparison.Ordinal);
     }
 }
