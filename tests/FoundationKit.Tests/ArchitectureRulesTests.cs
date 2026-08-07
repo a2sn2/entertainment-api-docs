@@ -1,7 +1,11 @@
 using FoundationKit.Application.Results;
+using FoundationKit.Auditing;
+using FoundationKit.Authorization;
 using FoundationKit.Blazor.Api;
 using FoundationKit.Domain.Primitives;
+using FoundationKit.Identity;
 using FoundationKit.Infrastructure.Persistence;
+using FoundationKit.Security;
 using FoundationKit.WebApi.Results;
 
 namespace FoundationKit.Tests;
@@ -9,7 +13,7 @@ namespace FoundationKit.Tests;
 public sealed class ArchitectureRulesTests
 {
     [Fact]
-    public void Domain_has_no_outer_layer_or_framework_dependencies()
+    public void Domain_has_no_outer_layer_framework_or_capability_dependencies()
     {
         AssertNoReferences(
             typeof(Entity<>).Assembly,
@@ -17,6 +21,10 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Infrastructure",
             "FoundationKit.WebApi",
             "FoundationKit.Blazor",
+            "FoundationKit.Auditing",
+            "FoundationKit.Security",
+            "FoundationKit.Identity",
+            "FoundationKit.Authorization",
             "Microsoft.EntityFrameworkCore",
             "Microsoft.AspNetCore");
     }
@@ -29,15 +37,25 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Infrastructure",
             "FoundationKit.WebApi",
             "FoundationKit.Blazor",
+            "FoundationKit.Auditing",
+            "FoundationKit.Security",
+            "FoundationKit.Identity",
+            "FoundationKit.Authorization",
             "Microsoft.EntityFrameworkCore",
             "Microsoft.AspNetCore");
     }
 
     [Fact]
-    public void Infrastructure_does_not_select_a_database_provider_or_web_host()
+    public void Infrastructure_does_not_select_a_database_provider_web_host_or_upper_capability()
     {
         AssertNoReferences(
             typeof(EfRepository<,,>).Assembly,
+            "FoundationKit.WebApi",
+            "FoundationKit.Blazor",
+            "FoundationKit.Auditing",
+            "FoundationKit.Security",
+            "FoundationKit.Identity",
+            "FoundationKit.Authorization",
             "Microsoft.EntityFrameworkCore.SqlServer",
             "Npgsql.EntityFrameworkCore.PostgreSQL",
             "Microsoft.EntityFrameworkCore.Sqlite",
@@ -45,17 +63,21 @@ public sealed class ArchitectureRulesTests
     }
 
     [Fact]
-    public void WebApi_does_not_depend_on_infrastructure_or_blazor()
+    public void WebApi_does_not_depend_on_infrastructure_blazor_or_upper_capabilities()
     {
         AssertNoReferences(
             typeof(ResultHttpExtensions).Assembly,
             "FoundationKit.Infrastructure",
             "FoundationKit.Blazor",
+            "FoundationKit.Auditing",
+            "FoundationKit.Security",
+            "FoundationKit.Identity",
+            "FoundationKit.Authorization",
             "Microsoft.EntityFrameworkCore");
     }
 
     [Fact]
-    public void Blazor_does_not_depend_on_server_layers()
+    public void Blazor_does_not_depend_on_server_layers_or_server_capabilities()
     {
         AssertNoReferences(
             typeof(ApiResult).Assembly,
@@ -63,7 +85,63 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Application",
             "FoundationKit.Infrastructure",
             "FoundationKit.WebApi",
+            "FoundationKit.Auditing",
+            "FoundationKit.Security",
+            "FoundationKit.Identity",
+            "FoundationKit.Authorization",
             "Microsoft.EntityFrameworkCore");
+    }
+
+    [Fact]
+    public void Auditing_does_not_depend_on_infrastructure_web_or_upper_capabilities()
+    {
+        AssertNoReferences(
+            typeof(AuditRecorder).Assembly,
+            "FoundationKit.Infrastructure",
+            "FoundationKit.WebApi",
+            "FoundationKit.Blazor",
+            "FoundationKit.Security",
+            "FoundationKit.Identity",
+            "FoundationKit.Authorization",
+            "Microsoft.EntityFrameworkCore",
+            "Microsoft.AspNetCore");
+    }
+
+    [Fact]
+    public void Security_does_not_depend_on_identity_authorization_or_persistence_layers()
+    {
+        AssertNoReferences(
+            typeof(TrustedProxySecurity).Assembly,
+            "FoundationKit.Infrastructure",
+            "FoundationKit.Blazor",
+            "FoundationKit.Identity",
+            "FoundationKit.Authorization",
+            "Microsoft.EntityFrameworkCore");
+    }
+
+    [Fact]
+    public void Identity_does_not_depend_on_authorization_or_persistence_layers()
+    {
+        AssertNoReferences(
+            typeof(AccountSecurityOptions).Assembly,
+            "FoundationKit.Infrastructure",
+            "FoundationKit.Blazor",
+            "FoundationKit.Authorization",
+            "Microsoft.EntityFrameworkCore");
+    }
+
+    [Fact]
+    public void Authorization_does_not_depend_on_persistence_or_product_layers()
+    {
+        AssertNoReferences(
+            typeof(PermissionDefinition).Assembly,
+            "FoundationKit.Infrastructure",
+            "FoundationKit.Blazor",
+            "Microsoft.EntityFrameworkCore",
+            "Athar.Domain",
+            "Athar.Application",
+            "Athar.Infrastructure",
+            "Athar.Api");
     }
 
     private static void AssertNoReferences(
