@@ -152,6 +152,26 @@ Athar is the first consumer: it owns its `athar.*` permission IDs and maps its o
 
 See `docs/capabilities/AUTHORIZATION.md` for the full boundary and consumer evidence.
 
+## FoundationKit.Workflow
+
+Public building blocks:
+
+- `WorkflowTransitionDefinition`;
+- `WorkflowTransition`;
+- `WorkflowDefinition`;
+- `WorkflowId`;
+- `WorkflowTransitionAudit`.
+
+The package depends on `FoundationKit.Auditing` and remains independent of Security, Identity, Authorization, EF, ASP.NET Core, and product assemblies.
+
+`WorkflowDefinition` validates a deterministic state/trigger graph: duplicate transition IDs and ambiguous `fromState + trigger` pairs are rejected, transition collections are read-only, and unknown transitions fail closed.
+
+`WorkflowTransitionAudit` maps a successful transition into the bounded `AuditRequest` contract without selecting an audit sink or persistence strategy.
+
+Athar is the first consumer: `InitiativeWorkflow` defines its own submitted/approve/reject state machine and the aggregate uses the reusable resolver while retaining product-owned validation, mutation, events, concurrency, and persistence.
+
+See `docs/capabilities/WORKFLOW.md` for the full boundary and consumer evidence.
+
 ## Capability catalog contract
 
 The human-facing implemented feature list is maintained in `catalog/foundationkit.catalog.json`. Every catalog capability must correspond to existing tested behavior and public surface. The catalog generator rejects unknown idea references and any status other than `implemented`.
