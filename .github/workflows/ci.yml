@@ -245,6 +245,11 @@ jobs:
       - name: Run Athar end-to-end workflow
         run: bash scripts/smoke-athar.sh
 
+      - name: Verify Athar backup can be restored in isolation
+        env:
+          ATHAR_ALLOW_RESTORE_DRILL: "true"
+        run: bash scripts/verify-athar-restore.sh
+
       - name: Print Athar logs on failure
         if: failure()
         run: docker compose -f deploy/athar-compose.yml logs --no-color --tail=400
