@@ -36,6 +36,11 @@ public sealed class SecurityConfigurationTests
     [Theory]
     [InlineData("AccountSecurity:RequireConfirmedEmail")]
     [InlineData("AccountSecurity:RequireAdministratorMfa")]
+    [InlineData("AccountSecurity:PasswordRequiredLength")]
+    [InlineData("AccountSecurity:PasswordRequireDigit")]
+    [InlineData("AccountSecurity:PasswordRequireLowercase")]
+    [InlineData("AccountSecurity:PasswordRequireUppercase")]
+    [InlineData("AccountSecurity:PasswordRequireNonAlphanumeric")]
     [InlineData("ReverseProxy:Enabled")]
     public void Production_rejects_missing_explicit_security_decision(string key)
     {
@@ -44,6 +49,16 @@ public sealed class SecurityConfigurationTests
         var exception = Assert.Throws<InvalidOperationException>(() =>
             ProductionConfigurationValidator.Validate(BuildConfiguration(values), false));
         Assert.Contains(key, exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Production_rejects_invalid_password_length_decision()
+    {
+        var values = BaseProductionValues(SecureConnectionString);
+        values["AccountSecurity:PasswordRequiredLength"] = "0";
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            ProductionConfigurationValidator.Validate(BuildConfiguration(values), false));
+        Assert.Contains("PasswordRequiredLength", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -237,6 +252,11 @@ public sealed class SecurityConfigurationTests
             ["DatabaseStartup:SeedRolesOnStartup"] = "false",
             ["AccountSecurity:RequireConfirmedEmail"] = "false",
             ["AccountSecurity:RequireAdministratorMfa"] = "false",
+            ["AccountSecurity:PasswordRequiredLength"] = "10",
+            ["AccountSecurity:PasswordRequireDigit"] = "true",
+            ["AccountSecurity:PasswordRequireLowercase"] = "true",
+            ["AccountSecurity:PasswordRequireUppercase"] = "true",
+            ["AccountSecurity:PasswordRequireNonAlphanumeric"] = "true",
             ["AccountSecurity:SmtpHost"] = "smtp.example.invalid",
             ["AccountSecurity:SmtpPort"] = "587",
             ["AccountSecurity:SmtpEnableSsl"] = "true",
