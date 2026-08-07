@@ -103,7 +103,7 @@ public sealed class AuthorizationCapabilityTests
         Assert.False(evaluator.HasPermission("sample.unknown"));
     }
 
-    private static IAuthorizationEvaluator CreateEvaluator(
+    private static RolePermissionAuthorizationEvaluator CreateEvaluator(
         bool authenticated,
         Guid? userId,
         IReadOnlyCollection<string> roles)
