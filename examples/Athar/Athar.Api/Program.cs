@@ -43,7 +43,7 @@ builder.Services.AddScoped<Athar.Application.ICurrentUser, CurrentUserAccessor>(
 builder.Services.AddScoped<IInitiativeManager, InitiativeManager>();
 builder.Services.AddScoped<IInitiativeQueryService, InitiativeQueryService>();
 builder.Services.AddScoped<IAuditWriter, AuditWriter>();
-builder.Services.AddScoped<IIdentityNotificationSender, SmtpAccountNotificationSender>();
+builder.Services.AddScoped<IAccountNotificationSender, SmtpAccountNotificationSender>();
 builder.Services.AddScoped<IRepository<Initiative, Guid>, EfRepository<Initiative, Guid, AtharDbContext>>();
 builder.Services.AddScoped<IRepository<InitiativeReview, Guid>, EfRepository<InitiativeReview, Guid, AtharDbContext>>();
 builder.Services.AddScoped<FoundationKit.Application.Abstractions.IUnitOfWork, EfUnitOfWork<AtharDbContext>>();
