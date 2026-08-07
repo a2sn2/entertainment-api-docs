@@ -6,7 +6,6 @@ on:
       - "foundationkit.ps1"
       - "scripts/athar-product.ps1"
       - "scripts/expose-athar-tunnel.ps1"
-      - "scripts/publish-athar-live-alias.ps1"
       - "START-ATHAR.cmd"
       - "STOP-ATHAR.cmd"
       - "EXPOSE-ATHAR.cmd"
@@ -17,7 +16,6 @@ on:
       - "foundationkit.ps1"
       - "scripts/athar-product.ps1"
       - "scripts/expose-athar-tunnel.ps1"
-      - "scripts/publish-athar-live-alias.ps1"
       - "START-ATHAR.cmd"
       - "STOP-ATHAR.cmd"
       - "EXPOSE-ATHAR.cmd"
@@ -47,8 +45,7 @@ jobs:
           $paths = @(
             "foundationkit.ps1",
             "scripts/athar-product.ps1",
-            "scripts/expose-athar-tunnel.ps1",
-            "scripts/publish-athar-live-alias.ps1"
+            "scripts/expose-athar-tunnel.ps1"
           )
 
           foreach ($path in $paths) {
@@ -65,8 +62,7 @@ jobs:
           $paths = @(
             "foundationkit.ps1",
             "scripts/athar-product.ps1",
-            "scripts/expose-athar-tunnel.ps1",
-            "scripts/publish-athar-live-alias.ps1"
+            "scripts/expose-athar-tunnel.ps1"
           )
 
           foreach ($path in $paths) {
