@@ -17,5 +17,6 @@
     <ProjectReference Include="..\..\examples\Athar\Athar.Api\Athar.Api.csproj" />
     <ProjectReference Include="..\..\examples\Athar\Athar.Domain\Athar.Domain.csproj" />
     <ProjectReference Include="..\..\examples\Athar\Athar.Contracts\Athar.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\FoundationKit.Security\FoundationKit.Security.csproj" />
   </ItemGroup>
 </Project>
