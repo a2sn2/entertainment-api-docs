@@ -108,11 +108,11 @@ public sealed class SmtpNotificationSender(
             new EventId(2101, "NotificationNotConfigured"),
             "Notification delivery is not configured for purpose {Purpose}. No notification destination or body was logged.");
 
-    private static readonly Action<ILogger, string, Exception?> DeliveryFailedLog =
-        LoggerMessage.Define<string>(
+    private static readonly Action<ILogger, string, string, Exception?> DeliveryFailedLog =
+        LoggerMessage.Define<string, string>(
             LogLevel.Error,
             new EventId(2102, "NotificationDeliveryFailed"),
-            "Notification delivery failed for purpose {Purpose}. No notification destination or body was logged.");
+            "Notification delivery failed for purpose {Purpose} with error type {ErrorType}. No notification destination or body was logged.");
 
     private readonly AccountSecurityDeliveryOptions _options = options.Value;
 
@@ -162,7 +162,11 @@ public sealed class SmtpNotificationSender(
         }
         catch (Exception exception) when (exception is SmtpException or InvalidOperationException or FormatException)
         {
-            DeliveryFailedLog(logger, message.Purpose, exception);
+            DeliveryFailedLog(
+                logger,
+                message.Purpose,
+                exception.GetType().Name,
+                null);
             return NotificationDeliveryResult.Failed();
         }
     }
