@@ -20,6 +20,11 @@ ProductionConfigurationValidator.Validate(
     builder.Configuration,
     builder.Environment.IsDevelopment());
 
+var accountSecurity = builder.Configuration
+    .GetSection(AccountSecurityOptions.SectionName)
+    .Get<AccountSecurityOptions>()
+    ?? new AccountSecurityOptions();
+
 builder.Services.AddFoundationInfrastructure();
 builder.Services.AddFoundationWebApi();
 builder.Services.AddHttpContextAccessor();
@@ -27,6 +32,7 @@ builder.Services.AddScoped<Athar.Application.ICurrentUser, CurrentUserAccessor>(
 builder.Services.AddScoped<IInitiativeManager, InitiativeManager>();
 builder.Services.AddScoped<IInitiativeQueryService, InitiativeQueryService>();
 builder.Services.AddScoped<IAuditWriter, AuditWriter>();
+builder.Services.AddScoped<IAccountNotificationSender, SmtpAccountNotificationSender>();
 builder.Services.AddScoped<IRepository<Initiative, Guid>,
     EfRepository<Initiative, Guid, AtharDbContext>>();
 builder.Services.AddScoped<IRepository<InitiativeReview, Guid>,
@@ -53,6 +59,7 @@ builder.Services
     .AddIdentity<AtharUser, IdentityRole<Guid>>(options =>
     {
         options.User.RequireUniqueEmail = true;
+        options.SignIn.RequireConfirmedEmail = accountSecurity.RequireConfirmedEmail;
         options.Password.RequiredLength = 10;
         options.Password.RequireDigit = true;
         options.Password.RequireLowercase = true;
@@ -91,8 +98,13 @@ builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("AtharUser", policy =>
         policy.RequireAuthenticatedUser());
+
     options.AddPolicy("AtharAdministrator", policy =>
-        policy.RequireRole(AtharRoles.Administrator));
+    {
+        policy.RequireRole(AtharRoles.Administrator);
+        if (accountSecurity.RequireAdministratorMfa)
+            policy.RequireClaim("amr", "mfa");
+    });
 });
 
 builder.Services.AddAntiforgery(options =>
@@ -151,6 +163,14 @@ builder.Services
                 && !string.IsNullOrWhiteSpace(options.Password)
                 && options.Password.Length >= 12),
         "When AdminSeed is enabled, Email and a password of at least 12 characters are required.")
+    .ValidateOnStart();
+
+builder.Services
+    .AddOptions<AccountSecurityOptions>()
+    .Bind(builder.Configuration.GetSection(AccountSecurityOptions.SectionName))
+    .Validate(
+        options => options.SmtpPort is >= 1 and <= 65535,
+        "AccountSecurity:SmtpPort must be a valid TCP port.")
     .ValidateOnStart();
 
 builder.Services.AddEndpointsApiExplorer();
