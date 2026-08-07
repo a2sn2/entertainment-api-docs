@@ -2,7 +2,7 @@ namespace FoundationKit.Authorization;
 
 public sealed class RolePermissionMap
 {
-    private readonly Dictionary<string, string[]> _rolesByPermission;
+    private readonly Dictionary<string, IReadOnlyList<string>> _rolesByPermission;
 
     public RolePermissionMap(IEnumerable<RolePermissionGrant> grants)
     {
@@ -29,7 +29,8 @@ public sealed class RolePermissionMap
 
         _rolesByPermission = rolesByPermission.ToDictionary(
             pair => pair.Key,
-            pair => pair.Value.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
+            pair => (IReadOnlyList<string>)Array.AsReadOnly(
+                pair.Value.Order(StringComparer.OrdinalIgnoreCase).ToArray()),
             StringComparer.OrdinalIgnoreCase);
     }
 
@@ -57,21 +58,21 @@ public sealed class RolePermissionAuthorizationEvaluator(
 {
     public bool HasPermission(string permission)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(permission);
+        var normalized = PermissionId.Normalize(permission);
 
         if (!subject.IsAuthenticated)
         {
             return false;
         }
 
-        return permissions.RolesFor(permission).Any(subject.IsInRole);
+        return permissions.RolesFor(normalized).Any(subject.IsInRole);
     }
 
     public bool CanAccessOwnedResource(
         Guid ownerUserId,
         string privilegedPermission)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(privilegedPermission);
+        var normalizedPermission = PermissionId.Normalize(privilegedPermission);
 
         if (!subject.IsAuthenticated || subject.UserId is null)
         {
@@ -79,6 +80,6 @@ public sealed class RolePermissionAuthorizationEvaluator(
         }
 
         return subject.UserId.Value == ownerUserId
-            || HasPermission(privilegedPermission);
+            || HasPermission(normalizedPermission);
     }
 }
