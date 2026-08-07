@@ -12,6 +12,7 @@
     <ProjectReference Include="..\..\..\src\FoundationKit.Infrastructure\FoundationKit.Infrastructure.csproj" />
     <ProjectReference Include="..\..\..\src\FoundationKit.Identity\FoundationKit.Identity.csproj" />
     <ProjectReference Include="..\..\..\src\FoundationKit.Notifications\FoundationKit.Notifications.csproj" />
+    <ProjectReference Include="..\..\..\src\FoundationKit.Notifications.Smtp\FoundationKit.Notifications.Smtp.csproj" />
   </ItemGroup>
 
   <ItemGroup>
