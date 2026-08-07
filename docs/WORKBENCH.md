@@ -15,7 +15,7 @@ They connect through a shared request workflow:
 submitted → approved | rejected
 ```
 
-Workbench also provides a small shared-platform reference endpoint used to prove provider-neutral capabilities such as Settings and Feature Management without moving Workbench product rules into reusable packages.
+Workbench also provides a small shared-platform reference endpoint used to prove provider-neutral capabilities such as Settings, Feature Management, and Localization without moving Workbench product rules into reusable packages.
 
 For the architecture and code map, read [DUAL-FULL-STACK.md](DUAL-FULL-STACK.md).
 
@@ -193,11 +193,11 @@ The review write and request status update are committed through the same `IUnit
 | Method | Route | Contract | Behavior |
 |---|---|---|---|
 | `GET` | `/api/runtime` | `RuntimeResponse` | reports local or static-demo mode |
-| `GET` | `/api/platform-reference` | `PlatformReferenceResponse` | proves Settings resolution and a settings-backed Feature Management decision in the live Workbench host |
+| `GET` | `/api/platform-reference` | `PlatformReferenceResponse` | proves Settings resolution, Feature Management evaluation, and Localization culture/direction/time-zone behavior in the live Workbench host |
 | `GET` | `/api/catalog` | `CatalogResponse` | returns implemented FoundationKit capabilities |
 | `GET` | `/api/health` | `HealthResponse` | verifies API and SQL Server connectivity |
 
-`/api/platform-reference` is intentionally a reference surface, not a product settings administration endpoint. The current Workbench host resolves `workbench.experience.default-culture` and evaluates `workbench.catalog-preview`; Settings persistence, secret management, rollout targeting, and organizational scope policy are not implied.
+`/api/platform-reference` is intentionally a reference surface, not a product settings or localization administration endpoint. The current Workbench host resolves `workbench.experience.default-culture = ar-YE` and `workbench.experience.default-time-zone = UTC`, derives `RightToLeft` through `FoundationKit.Localization`, and evaluates `workbench.catalog-preview`. Settings persistence, secret management, translation resources, OS-specific time-zone conversion, rollout targeting, and organizational scope policy are not implied.
 
 ## Postman
 
@@ -242,7 +242,7 @@ Current workflow tables:
 | `BuildBriefs` | user request data, status, created timestamp, updated timestamp |
 | `AdminReviews` | admin decision, reviewer, notes, reviewed timestamp, request foreign key |
 
-Settings and Feature Management v1 do **not** add Workbench tables or migrations. Their current Workbench consumer uses an in-memory reference source to prove package behavior while storage remains a future provider/product concern.
+Settings, Feature Management, and Localization v1 do **not** add Workbench tables or migrations. Their current Workbench consumer uses an in-memory Settings reference source and a BCL-only Localization package to prove behavior while persistence/provider decisions remain outside the reusable capabilities.
 
 Inspect with SSMS:
 
@@ -290,7 +290,9 @@ The local API-hosted path is authoritative.
 The Docker smoke test executes the shared platform reference checks and the real integration sequence:
 
 ```text
-GET platform reference (Settings + Feature Management)
+GET platform reference (Settings + Feature Management + Localization)
+        ↓
+assert ar-YE + RightToLeft + UTC
         ↓
 POST user request
         ↓
