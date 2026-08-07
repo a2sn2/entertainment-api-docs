@@ -192,9 +192,9 @@
       "id": "notifications",
       "displayName": "Notifications",
       "kind": "optional",
-      "maturity": "planned",
+      "maturity": "referenceOnly",
       "category": "Communication",
-      "description": "Channel-neutral notification contracts for in-app, email, SMS, push and other adapters.",
+      "description": "Bounded channel-neutral notification message and delivery contracts with provider adapters owned by consumers.",
       "dependencies": [
         "kernel"
       ]
