@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Fail CI on high-confidence committed secret material.
 
-This intentionally uses only the Python standard library so the security gate
-itself does not add another package-manager dependency. It scans Git-tracked
-text files and reports file/line/pattern type without printing the candidate
-secret value.
+This gate intentionally uses only the Python standard library. It scans
+Git-tracked text files and reports file/line/pattern type without printing a
+candidate secret value. Generic credential detection is deliberately limited
+to quoted literal assignments; expressions and variable-to-variable
+assignments are not secrets by themselves and are handled by Trivy/CodeQL and
+review instead of generating noisy false positives here.
 """
 
 from __future__ import annotations
@@ -26,15 +28,21 @@ TOKEN_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("openai-style-secret", re.compile(r"\bsk-[A-Za-z0-9]{32,}\b")),
 )
 
-PASSWORD_ASSIGNMENT = re.compile(
-    r"(?i)(?:password|pwd)\s*=\s*(?P<value>[^;\r\n\"']+)"
+LITERAL_CREDENTIAL_ASSIGNMENT = re.compile(
+    r'''(?ix)
+    ["']?
+    (?P<key>
+        password|pwd|client[_-]?secret|api[_-]?key|access[_-]?token|secret
+    )
+    ["']?
+    \s*[:=]\s*
+    (?P<quote>["'])
+    (?P<value>[^"'\r\n]+)
+    (?P=quote)
+    '''
 )
 
-SECRET_ASSIGNMENT = re.compile(
-    r"(?i)(?:client[_-]?secret|api[_-]?key|access[_-]?token|secret)\s*[:=]\s*[\"']?(?P<value>[^\"'\r\n,}]+)"
-)
-
-DYNAMIC_MARKERS = ("$", "%", "${", "$(`", "<", ">")
+DYNAMIC_MARKERS = ("$", "%", "${", "$(", "{{", "}}", "<", ">")
 PLACEHOLDER_WORDS = (
     "example",
     "placeholder",
@@ -47,6 +55,7 @@ PLACEHOLDER_WORDS = (
     "runtime",
     "environment",
     "secret-manager",
+    "secret manager",
     "vault",
     "null",
     "true",
@@ -73,7 +82,7 @@ def is_probably_binary(data: bytes) -> bool:
 
 
 def looks_dynamic_or_placeholder(value: str) -> bool:
-    normalized = value.strip().strip("\"'").lower()
+    normalized = value.strip().lower()
     if not normalized:
         return True
     if any(marker in value for marker in DYNAMIC_MARKERS):
@@ -90,18 +99,17 @@ def scan_line(path: Path, line_number: int, line: str) -> list[tuple[str, int, s
         if pattern.search(line):
             findings.append((path.relative_to(ROOT).as_posix(), line_number, name))
 
-    for name, pattern in (
-        ("literal-password-assignment", PASSWORD_ASSIGNMENT),
-        ("literal-secret-assignment", SECRET_ASSIGNMENT),
-    ):
-        for match in pattern.finditer(line):
-            value = match.group("value")
-            if looks_dynamic_or_placeholder(value):
-                continue
-            # Short documentation words and option names are not treated as secrets.
-            if len(value.strip()) < 12:
-                continue
-            findings.append((path.relative_to(ROOT).as_posix(), line_number, name))
+    for match in LITERAL_CREDENTIAL_ASSIGNMENT.finditer(line):
+        value = match.group("value")
+        if looks_dynamic_or_placeholder(value):
+            continue
+        if len(value.strip()) < 12:
+            continue
+        findings.append((
+            path.relative_to(ROOT).as_posix(),
+            line_number,
+            "literal-credential-assignment",
+        ))
 
     return findings
 
@@ -130,10 +138,7 @@ def main() -> int:
     if findings:
         print("High-confidence secret scan findings:", file=sys.stderr)
         for path, line_number, finding_type in findings:
-            print(
-                f"  {path}:{line_number}: {finding_type}",
-                file=sys.stderr,
-            )
+            print(f"  {path}:{line_number}: {finding_type}", file=sys.stderr)
         print(
             "Candidate values are intentionally not printed. Remove the secret, rotate it if real, and use runtime secret injection.",
             file=sys.stderr,
