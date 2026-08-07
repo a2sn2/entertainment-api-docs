@@ -8,7 +8,11 @@ public sealed record RuntimeResponse(
 
 public sealed record PlatformReferenceResponse(
     string DefaultCulture,
+    string TextDirection,
+    string CultureResolutionSource,
     string CultureSettingScope,
+    string DefaultTimeZone,
+    string TimeZoneSettingScope,
     bool CatalogPreviewEnabled,
     string FeatureDecisionSource,
     string? FeatureSettingScope);
