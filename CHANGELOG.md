@@ -24,6 +24,12 @@ All notable repository and package changes are documented here.
 - `FoundationKit Atlas`, a creative Arabic GitHub Pages portal that documents every Workbench and Athar Blazor route, core package, API surface, document, and operational proof.
 - Pages manifest validation that compares documented UI routes with the actual Razor `@page` declarations.
 - Detailed Arabic Visual Studio 2026 guide for SQL Server, User Secrets, startup projects, user/admin workflows, and troubleshooting.
+- Capability Model v1 with dependency resolution, reusable profiles, project manifests, and a machine-readable capability graph protected by drift checks.
+- `FoundationKit.Auditing` as the first extracted opt-in capability package with bounded provider-neutral audit contracts and sensitive-field rejection.
+- FoundationKit Composer CLI v1 with strict manifest parsing, capability/profile discovery, dependency explanation, and fail-closed maturity validation.
+- Capability Roadmap v1 and a shared Definition of Done for future reusable capabilities.
+- `FoundationKit.Security` preview package with explicit trusted-proxy forwarding, reusable rate-limit partition keys, and shared `amr=mfa` authentication-assurance conventions.
+- Athar adoption of `FoundationKit.Security` for trusted proxy handling, authentication/write partitioning, and administrator MFA authorization policy.
 
 ### Changed
 
@@ -31,6 +37,7 @@ All notable repository and package changes are documented here.
 - `FoundationKit.sln`, repository verification, CI, documentation, and package versions now include Athar.
 - CI publishes and tests both the Workbench and Athar against real SQL Server containers.
 - GitHub Pages now deploys the standalone Arabic repository atlas instead of presenting one product client as the entire repository.
+- Reusable package output increases to seven NuGet packages plus seven symbol packages after extracting Auditing and Security from product-specific concerns.
 
 ## [0.1.0] - 2026-08-06
 
