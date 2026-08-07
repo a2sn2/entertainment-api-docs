@@ -1,6 +1,6 @@
 namespace FoundationKit.Identity;
 
-public sealed class IdentityPolicyOptions
+public sealed class AccountSecurityOptions
 {
     public const string SectionName = "AccountSecurity";
 
@@ -19,9 +19,9 @@ public sealed class IdentityPolicyOptions
     public bool PasswordRequireNonAlphanumeric { get; set; } = true;
 }
 
-public static class IdentityPolicyValidator
+public static class AccountSecurityOptionsValidator
 {
-    public static void Validate(IdentityPolicyOptions options)
+    public static void Validate(AccountSecurityOptions options)
     {
         ArgumentNullException.ThrowIfNull(options);
 
