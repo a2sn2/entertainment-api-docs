@@ -71,3 +71,44 @@ jobs:
         with:
           sarif_file: trivy-athar.sarif
           category: trivy-athar-container
+
+  athar-negative-security:
+    name: Athar black-box negative security tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Generate isolated test credentials
+        shell: bash
+        run: |
+          echo "ATHAR_SQL_PASSWORD=AtharSecuritySql!$(openssl rand -hex 12)Aa1" >> "$GITHUB_ENV"
+          echo "ATHAR_ADMIN_EMAIL=security.admin@athar.test" >> "$GITHUB_ENV"
+          echo "ATHAR_ADMIN_PASSWORD=AtharSecurityAdmin!$(openssl rand -hex 12)Aa1" >> "$GITHUB_ENV"
+
+      - name: Start isolated Athar security stack
+        run: docker compose -f deploy/athar-compose.yml up --build -d
+
+      - name: Wait for readiness
+        run: |
+          for attempt in {1..150}; do
+            if curl --fail --silent http://localhost:8090/health/ready >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose -f deploy/athar-compose.yml ps
+          docker compose -f deploy/athar-compose.yml logs --no-color --tail=300
+          exit 1
+
+      - name: Run black-box abuse cases
+        run: bash scripts/security/negative-athar.sh
+
+      - name: Print Athar logs on failure
+        if: failure()
+        run: docker compose -f deploy/athar-compose.yml logs --no-color --tail=400
+
+      - name: Destroy isolated security stack
+        if: always()
+        run: docker compose -f deploy/athar-compose.yml down --volumes --remove-orphans
