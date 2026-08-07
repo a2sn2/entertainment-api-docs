@@ -1,3 +1,4 @@
+using Athar.Contracts;
 using FoundationKit.Authorization;
 
 namespace Athar.Application;
@@ -16,4 +17,12 @@ public static class AtharPermissions
         new(ReviewInitiatives, "Review initiatives"),
         new(ReadDashboard, "Read administration dashboard")
     ];
+
+    public static RolePermissionMap CreateRolePermissionMap() =>
+        new(
+        [
+            new RolePermissionGrant(
+                AtharRoles.Administrator,
+                All.Select(permission => permission.Id))
+        ]);
 }
