@@ -67,7 +67,7 @@ Public building blocks:
 - correlation-ID middleware;
 - baseline security-header middleware.
 
-A consuming API still chooses authentication, authorization, CORS, rate limiting, OpenAPI, forwarded headers, and operational policy.
+A consuming API still chooses authentication, authorization, CORS, OpenAPI, and operational policy. Reusable trusted-proxy and authentication-assurance conventions live in the opt-in `FoundationKit.Security` package rather than being forced by WebApi.
 
 ## FoundationKit.Blazor
 
@@ -80,6 +80,38 @@ Public building blocks:
 - `AsyncState<T>`.
 
 Successful responses with invalid JSON become `Response.InvalidJson` failures rather than escaping as deserialization exceptions.
+
+## FoundationKit.Auditing
+
+Public building blocks:
+
+- immutable audit request/event/context contracts;
+- `IAuditSink`;
+- `IAuditRecorder` / `AuditRecorder`;
+- bounded metadata validation and defensive copying;
+- rejection of common secret/credential attribute names.
+
+The package does not select a database, SIEM, logging framework, retention policy, or failure policy. Consumers provide the sink and data-classification rules.
+
+## FoundationKit.Security
+
+Public building blocks:
+
+- `TrustedProxyOptions`;
+- `TrustedProxySecurity`;
+- `AddFoundationTrustedProxyForwarding`;
+- `UseFoundationTrustedProxyForwarding`;
+- `FoundationRateLimitPartitions`;
+- `FoundationAuthenticationAssurance`;
+- `RequireFoundationMultiFactor`.
+
+The package is opt-in and depends on `FoundationKit.WebApi`; the kernel and application layers do not depend on it.
+
+Trusted forwarded headers are fail-closed: when enabled, at least one explicit trusted proxy IP is required, trust-all defaults are cleared, and forwarded `for`/`proto` values are processed only through ASP.NET Core forwarded-header middleware. Consumers must place the forwarding middleware before any security decision that uses scheme or remote address.
+
+Rate-limit helpers define partition keys only; they do not force permit counts, windows, queuing, storage, or distributed rate-limit providers. The consuming product still owns those policy values.
+
+The shared MFA convention uses the standard authentication-method reference claim shape `amr=mfa`. The future Identity capability may issue this assurance, but Security does not own user storage, authentication flows, MFA enrollment, recovery, or session persistence.
 
 ## Capability catalog contract
 
