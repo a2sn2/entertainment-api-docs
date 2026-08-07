@@ -4,6 +4,7 @@ using FoundationKit.Application.Abstractions;
 using FoundationKit.Application.Persistence;
 using FoundationKit.Application.Pagination;
 using FoundationKit.Application.Results;
+using FoundationKit.Approvals;
 using FoundationKit.Authorization;
 
 namespace Athar.Application;
@@ -148,8 +149,10 @@ public sealed class InitiativeManager(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (!authorization.HasPermission(AtharPermissions.ReviewInitiatives)
-            || currentUser.UserId is null)
+        if (currentUser.UserId is null
+            || !ApprovalPolicy.HasDecisionPermission(
+                authorization,
+                AtharPermissions.ReviewInitiatives))
         {
             return Result<InitiativeDetailsDto>.Failure(
                 InitiativeErrors.AdministratorRequired);
@@ -160,8 +163,43 @@ public sealed class InitiativeManager(
             return Result<InitiativeDetailsDto>.Failure(
                 InitiativeErrors.InitiativeNotFound);
 
+        var eligibility = ApprovalPolicy.Evaluate(
+            authorization,
+            AtharPermissions.ReviewInitiatives,
+            initiative.OwnerUserId.ToString("D"),
+            currentUser.UserId.Value.ToString("D"));
+
+        if (eligibility == ApprovalEligibility.PermissionDenied)
+        {
+            return Result<InitiativeDetailsDto>.Failure(
+                InitiativeErrors.AdministratorRequired);
+        }
+
+        if (eligibility == ApprovalEligibility.MakerCheckerViolation)
+        {
+            return Result<InitiativeDetailsDto>.Failure(
+                InitiativeErrors.SelfReviewNotAllowed);
+        }
+
+        if (!ApprovalDecisions.TryParse(request.Decision, out var decision))
+        {
+            return Result<InitiativeDetailsDto>.Failure(
+                InitiativeErrors.InvalidDecision);
+        }
+
+        var normalizedDecision = ApprovalDecisions.ToTrigger(decision);
+        if (!ApprovalDecisions.TryResolve(
+                InitiativeWorkflow.Definition,
+                initiative.Status,
+                normalizedDecision,
+                out var approval))
+        {
+            return Result<InitiativeDetailsDto>.Failure(
+                InitiativeErrors.AlreadyReviewed);
+        }
+
         var reviewResult = initiative.Review(
-            request.Decision,
+            approval.DecisionToken,
             currentUser.UserId.Value,
             request.Notes,
             clock.UtcNow);
@@ -172,7 +210,7 @@ public sealed class InitiativeManager(
         var review = InitiativeReview.Create(
             initiative.Id,
             currentUser.UserId.Value,
-            request.Decision.Trim().ToLowerInvariant(),
+            approval.DecisionToken,
             request.Notes,
             clock.UtcNow);
 
