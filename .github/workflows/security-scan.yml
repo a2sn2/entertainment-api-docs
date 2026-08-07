@@ -1,0 +1,73 @@
+name: FoundationKit Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: foundationkit-security-scan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repository-and-container:
+    name: Trivy repository and Athar container
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Repository vulnerability, secret, and misconfiguration gate
+        uses: aquasecurity/trivy-action@2736533278103862a861f4a35ebac3e97854d956
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "1"
+          format: table
+
+      - name: Build Athar image for scanning
+        run: >-
+          docker build
+          --file examples/Athar/Athar.Api/Dockerfile
+          --tag foundationkit-athar:${{ github.sha }}
+          .
+
+      - name: Athar image vulnerability gate
+        uses: aquasecurity/trivy-action@2736533278103862a861f4a35ebac3e97854d956
+        with:
+          scan-type: image
+          image-ref: foundationkit-athar:${{ github.sha }}
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "1"
+          format: table
+
+      - name: Produce Athar image SARIF evidence
+        if: always()
+        uses: aquasecurity/trivy-action@2736533278103862a861f4a35ebac3e97854d956
+        with:
+          scan-type: image
+          image-ref: foundationkit-athar:${{ github.sha }}
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "0"
+          format: sarif
+          output: trivy-athar.sarif
+
+      - name: Upload Trivy SARIF to code scanning
+        if: always() && hashFiles('trivy-athar.sarif') != ''
+        uses: github/codeql-action/upload-sarif@7d9249f5a57288b8a472ddd9cc3ece1921f7dc38
+        with:
+          sarif_file: trivy-athar.sarif
+          category: trivy-athar-container
