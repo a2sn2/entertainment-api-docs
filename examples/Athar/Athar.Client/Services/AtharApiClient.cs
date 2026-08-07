@@ -27,7 +27,6 @@ public sealed class AtharApiClient(HttpClient httpClient)
             AtharRoutes.Register,
             request,
             cancellationToken);
-
         ResetAntiforgeryAfterIdentityChange(result.IsSuccess);
         return result;
     }
@@ -41,10 +40,121 @@ public sealed class AtharApiClient(HttpClient httpClient)
             AtharRoutes.Login,
             request,
             cancellationToken);
-
         ResetAntiforgeryAfterIdentityChange(result.IsSuccess);
         return result;
     }
+
+    public async Task<ApiResult<CurrentUserResponse>> TwoFactorLoginAsync(
+        TwoFactorLoginRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await SendProtectedAsync<CurrentUserResponse>(
+            HttpMethod.Post,
+            AtharRoutes.LoginTwoFactor,
+            request,
+            cancellationToken);
+        ResetAntiforgeryAfterIdentityChange(result.IsSuccess);
+        return result;
+    }
+
+    public Task<ApiResult<ApiMessageResponse>> RequestEmailConfirmationAsync(
+        EmailAddressRequest request,
+        CancellationToken cancellationToken = default) =>
+        SendProtectedAsync<ApiMessageResponse>(
+            HttpMethod.Post,
+            AtharRoutes.RequestEmailConfirmation,
+            request,
+            cancellationToken);
+
+    public Task<ApiResult<ApiMessageResponse>> ConfirmEmailAsync(
+        ConfirmEmailRequest request,
+        CancellationToken cancellationToken = default) =>
+        SendProtectedAsync<ApiMessageResponse>(
+            HttpMethod.Post,
+            AtharRoutes.ConfirmEmail,
+            request,
+            cancellationToken);
+
+    public Task<ApiResult<ApiMessageResponse>> ForgotPasswordAsync(
+        EmailAddressRequest request,
+        CancellationToken cancellationToken = default) =>
+        SendProtectedAsync<ApiMessageResponse>(
+            HttpMethod.Post,
+            AtharRoutes.ForgotPassword,
+            request,
+            cancellationToken);
+
+    public Task<ApiResult<ApiMessageResponse>> ResetPasswordAsync(
+        ResetPasswordRequest request,
+        CancellationToken cancellationToken = default) =>
+        SendProtectedAsync<ApiMessageResponse>(
+            HttpMethod.Post,
+            AtharRoutes.ResetPassword,
+            request,
+            cancellationToken);
+
+    public async Task<ApiResult<ApiMessageResponse>> ChangePasswordAsync(
+        ChangePasswordRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await SendProtectedAsync<ApiMessageResponse>(
+            HttpMethod.Post,
+            AtharRoutes.ChangePassword,
+            request,
+            cancellationToken);
+        ResetAntiforgeryAfterIdentityChange(result.IsSuccess);
+        return result;
+    }
+
+    public Task<ApiResult<MfaStatusResponse>> GetMfaStatusAsync(
+        CancellationToken cancellationToken = default) =>
+        SendAsync<MfaStatusResponse>(
+            new HttpRequestMessage(HttpMethod.Get, AtharRoutes.MfaStatus),
+            cancellationToken);
+
+    public Task<ApiResult<MfaSetupResponse>> SetupMfaAsync(
+        MfaSetupRequest request,
+        CancellationToken cancellationToken = default) =>
+        SendProtectedAsync<MfaSetupResponse>(
+            HttpMethod.Post,
+            AtharRoutes.MfaSetup,
+            request,
+            cancellationToken);
+
+    public async Task<ApiResult<MfaEnableResponse>> EnableMfaAsync(
+        MfaCodeRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await SendProtectedAsync<MfaEnableResponse>(
+            HttpMethod.Post,
+            AtharRoutes.MfaEnable,
+            request,
+            cancellationToken);
+        ResetAntiforgeryAfterIdentityChange(result.IsSuccess);
+        return result;
+    }
+
+    public async Task<ApiResult<ApiMessageResponse>> DisableMfaAsync(
+        MfaDisableRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await SendProtectedAsync<ApiMessageResponse>(
+            HttpMethod.Post,
+            AtharRoutes.MfaDisable,
+            request,
+            cancellationToken);
+        ResetAntiforgeryAfterIdentityChange(result.IsSuccess);
+        return result;
+    }
+
+    public Task<ApiResult<MfaEnableResponse>> RegenerateRecoveryCodesAsync(
+        MfaSetupRequest request,
+        CancellationToken cancellationToken = default) =>
+        SendProtectedAsync<MfaEnableResponse>(
+            HttpMethod.Post,
+            AtharRoutes.MfaRecoveryCodes,
+            request,
+            cancellationToken);
 
     public async Task<ApiResult<ApiMessageResponse>> LogoutAsync(
         CancellationToken cancellationToken = default)
@@ -54,7 +164,6 @@ public sealed class AtharApiClient(HttpClient httpClient)
             AtharRoutes.Logout,
             new { },
             cancellationToken);
-
         ResetAntiforgeryAfterIdentityChange(result.IsSuccess);
         return result;
     }
@@ -77,12 +186,7 @@ public sealed class AtharApiClient(HttpClient httpClient)
         SendAsync<PagedResult<InitiativeSummaryDto>>(
             new HttpRequestMessage(
                 HttpMethod.Get,
-                BuildQuery(
-                    AtharRoutes.MyInitiatives,
-                    page,
-                    pageSize,
-                    search,
-                    status)),
+                BuildQuery(AtharRoutes.MyInitiatives, page, pageSize, search, status)),
             cancellationToken);
 
     public Task<ApiResult<PagedResult<InitiativeSummaryDto>>> GetAdminInitiativesAsync(
@@ -94,29 +198,20 @@ public sealed class AtharApiClient(HttpClient httpClient)
         SendAsync<PagedResult<InitiativeSummaryDto>>(
             new HttpRequestMessage(
                 HttpMethod.Get,
-                BuildQuery(
-                    AtharRoutes.AdminQueue,
-                    page,
-                    pageSize,
-                    search,
-                    status)),
+                BuildQuery(AtharRoutes.AdminQueue, page, pageSize, search, status)),
             cancellationToken);
 
     public Task<ApiResult<AdminDashboardResponse>> GetAdminDashboardAsync(
         CancellationToken cancellationToken = default) =>
         SendAsync<AdminDashboardResponse>(
-            new HttpRequestMessage(
-                HttpMethod.Get,
-                AtharRoutes.AdminDashboard),
+            new HttpRequestMessage(HttpMethod.Get, AtharRoutes.AdminDashboard),
             cancellationToken);
 
     public Task<ApiResult<InitiativeDetailsDto>> GetInitiativeAsync(
         Guid id,
         CancellationToken cancellationToken = default) =>
         SendAsync<InitiativeDetailsDto>(
-            new HttpRequestMessage(
-                HttpMethod.Get,
-                AtharRoutes.Initiative(id)),
+            new HttpRequestMessage(HttpMethod.Get, AtharRoutes.Initiative(id)),
             cancellationToken);
 
     public Task<ApiResult<InitiativeDetailsDto>> ReviewInitiativeAsync(
@@ -150,15 +245,11 @@ public sealed class AtharApiClient(HttpClient httpClient)
         {
             Content = JsonContent.Create(body)
         };
-        request.Headers.TryAddWithoutValidation(
-            "X-CSRF-TOKEN",
-            tokenResult.Value);
+        request.Headers.TryAddWithoutValidation("X-CSRF-TOKEN", tokenResult.Value);
 
         var response = await SendAsync<TResponse>(request, cancellationToken);
-
         if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
             _antiforgeryToken = null;
-
         return response;
     }
 
@@ -169,9 +260,7 @@ public sealed class AtharApiClient(HttpClient httpClient)
             return ApiResult<string>.Success(_antiforgeryToken);
 
         var result = await SendAsync<AntiforgeryTokenResponse>(
-            new HttpRequestMessage(
-                HttpMethod.Get,
-                AtharRoutes.SecurityToken),
+            new HttpRequestMessage(HttpMethod.Get, AtharRoutes.SecurityToken),
             cancellationToken);
 
         if (result.IsFailure || result.Value is null)
@@ -206,13 +295,10 @@ public sealed class AtharApiClient(HttpClient httpClient)
             $"page={Math.Max(1, page)}",
             $"pageSize={Math.Clamp(pageSize, 1, 200)}"
         };
-
         if (!string.IsNullOrWhiteSpace(search))
             values.Add($"search={Uri.EscapeDataString(search.Trim())}");
-
         if (!string.IsNullOrWhiteSpace(status))
             values.Add($"status={Uri.EscapeDataString(status.Trim())}");
-
         return $"{route}?{string.Join("&", values)}";
     }
 }
@@ -220,18 +306,13 @@ public sealed class AtharApiClient(HttpClient httpClient)
 public sealed class AtharAuthenticationStateProvider(
     AtharApiClient apiClient) : AuthenticationStateProvider
 {
-    private static readonly ClaimsPrincipal Anonymous =
-        new(new ClaimsIdentity());
+    private static readonly ClaimsPrincipal Anonymous = new(new ClaimsIdentity());
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
         var result = await apiClient.GetCurrentUserAsync();
-        if (result.IsFailure
-            || result.Value is null
-            || !result.Value.IsAuthenticated)
-        {
+        if (result.IsFailure || result.Value is null || !result.Value.IsAuthenticated)
             return new AuthenticationState(Anonymous);
-        }
 
         var user = result.Value;
         var claims = new List<Claim>
@@ -240,13 +321,10 @@ public sealed class AtharAuthenticationStateProvider(
             new(ClaimTypes.Name, user.DisplayName ?? user.Email ?? "مستخدم"),
             new(ClaimTypes.Email, user.Email ?? string.Empty)
         };
-
-        claims.AddRange(user.Roles.Select(role =>
-            new Claim(ClaimTypes.Role, role)));
+        claims.AddRange(user.Roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
         return new AuthenticationState(
-            new ClaimsPrincipal(
-                new ClaimsIdentity(claims, "AtharCookie")));
+            new ClaimsPrincipal(new ClaimsIdentity(claims, "AtharCookie")));
     }
 
     public void Refresh() =>
