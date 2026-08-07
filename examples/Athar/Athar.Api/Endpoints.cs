@@ -35,13 +35,12 @@ public static class AtharEndpoints
                 return connected
                     ? Results.Ok(new
                     {
-                        status = "ready",
-                        database = "sql-server"
+                        status = "ready"
                     })
                     : Results.Problem(
                         statusCode: StatusCodes.Status503ServiceUnavailable,
-                        title: "DatabaseUnavailable",
-                        detail: "تعذر الاتصال بقاعدة البيانات.");
+                        title: "DependencyUnavailable",
+                        detail: "تعذر إكمال فحص الجاهزية.");
             })
             .WithTags("الصحة")
             .WithName("AtharReady");
@@ -202,6 +201,7 @@ public static class AtharEndpoints
             .RequireRateLimiting("write")
             .WithName("ReviewAtharInitiative")
             .Produces<InitiativeDetailsDto>()
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status409Conflict);
     }
 
