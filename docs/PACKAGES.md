@@ -111,7 +111,28 @@ Trusted forwarded headers are fail-closed: when enabled, at least one explicit t
 
 Rate-limit helpers define partition keys only; they do not force permit counts, windows, queuing, storage, or distributed rate-limit providers. The consuming product still owns those policy values.
 
-The shared MFA convention uses the standard authentication-method reference claim shape `amr=mfa`. The future Identity capability may issue this assurance, but Security does not own user storage, authentication flows, MFA enrollment, recovery, or session persistence.
+The shared MFA convention uses the standard authentication-method reference claim shape `amr=mfa`. Security does not own user storage, authentication flows, MFA enrollment, recovery, or session persistence.
+
+## FoundationKit.Identity
+
+Public building blocks:
+
+- `AccountSecurityOptions` and `AccountSecurityOptionsValidator`;
+- `IAccountNotificationSender`;
+- `AccountSecurityNotification`;
+- `IdentitySensitiveOperation`;
+- `IdentityStepUpFactor`;
+- `IdentityStepUpPolicy`.
+
+The package depends on `FoundationKit.Security` but does not provide or select a user store, ASP.NET Core Identity implementation, EF schema, token provider, SMTP provider, OAuth/OIDC server, or external IdP.
+
+`AccountSecurityOptions` centralizes the reusable account policy that consumers bind to their configuration. The supported structural range is validated, while the consuming organization remains responsible for selecting approved policy values.
+
+`IAccountNotificationSender` is a provider port. It carries confirmation/reset tokens and security notification intent to a consumer-owned adapter; implementations must avoid logging token or destination contents.
+
+`IdentityStepUpPolicy` expresses factor requirements for sensitive account operations without deciding how those factors are verified. Athar remains responsible for the actual ASP.NET Core Identity verification and SMTP adapter.
+
+See `docs/capabilities/IDENTITY.md` for the full boundary and consumer evidence.
 
 ## Capability catalog contract
 
