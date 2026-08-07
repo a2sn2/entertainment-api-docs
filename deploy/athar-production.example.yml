@@ -1,6 +1,6 @@
 # Production security contract example — NOT a turnkey hosting definition.
 # External prerequisites:
-# - trusted HTTPS ingress / reverse proxy;
+# - trusted HTTPS ingress / reverse proxy with a stable IP trusted explicitly below;
 # - SQL Server with a least-privilege runtime principal and a separate migration principal;
 # - validated SQL TLS certificate;
 # - secret manager injection for DB/SMTP/Data Protection certificate credentials;
@@ -18,6 +18,8 @@ services:
       ASPNETCORE_ENVIRONMENT: "Production"
       ASPNETCORE_URLS: "http://+:8080"
       AllowedHosts: "${ATHAR_ALLOWED_HOSTS:?Explicit production host allow-list is required}"
+      ReverseProxy__Enabled: "true"
+      ReverseProxy__KnownProxies__0: "${ATHAR_TRUSTED_PROXY_IP:?Exact trusted ingress proxy IP is required}"
       ConnectionStrings__Athar: "${ATHAR_PRODUCTION_CONNECTION_STRING:?Encrypted least-privilege SQL connection is required}"
       DatabaseStartup__ApplyMigrationsOnStartup: "false"
       DatabaseStartup__SeedRolesOnStartup: "false"
@@ -27,8 +29,8 @@ services:
       AccountSecurity__SmtpHost: "${ATHAR_SMTP_HOST:?SMTP host is required for account confirmation/recovery}"
       AccountSecurity__SmtpPort: "${ATHAR_SMTP_PORT:-587}"
       AccountSecurity__SmtpEnableSsl: "true"
-      AccountSecurity__SmtpUsername: "${ATHAR_SMTP_USERNAME:?SMTP username is required}"
-      AccountSecurity__SmtpPassword: "${ATHAR_SMTP_PASSWORD:?Inject through the production secret manager}"
+      AccountSecurity__SmtpUsername: "${ATHAR_SMTP_USERNAME:-}"
+      AccountSecurity__SmtpPassword: "${ATHAR_SMTP_PASSWORD:-}"
       AccountSecurity__FromAddress: "${ATHAR_SMTP_FROM:?Approved sender address is required}"
       DataProtection__KeysPath: "/var/athar/dpkeys"
       DataProtection__CertificatePath: "/run/secrets/athar-dp.pfx"
