@@ -24,8 +24,8 @@ try {
     $projects = Get-ChildItem "src/FoundationKit.*" -Filter "FoundationKit.*.csproj" |
         Sort-Object FullName
 
-    if ($projects.Count -ne 6) {
-        throw "Expected exactly six FoundationKit package projects, found $($projects.Count)."
+    if ($projects.Count -ne 7) {
+        throw "Expected exactly seven FoundationKit package projects, found $($projects.Count)."
     }
 
     foreach ($project in $projects) {
@@ -43,11 +43,11 @@ try {
         Where-Object { $_.Name -notlike "*.symbols.nupkg" })
     $symbols = @(Get-ChildItem $Output -Filter "*.snupkg")
 
-    if ($packages.Count -ne 6 -or $symbols.Count -ne 6) {
-        throw "Expected six packages and six symbol packages."
+    if ($packages.Count -ne 7 -or $symbols.Count -ne 7) {
+        throw "Expected seven packages and seven symbol packages."
     }
 
-    Write-Host "Created 6 packages and 6 symbol packages in $Output"
+    Write-Host "Created 7 packages and 7 symbol packages in $Output"
 }
 finally {
     Pop-Location

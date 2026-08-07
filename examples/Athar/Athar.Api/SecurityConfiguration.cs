@@ -1,20 +1,9 @@
 using System.Data.Common;
-using System.Net;
-using System.Security.Claims;
 using Athar.Infrastructure;
-using Microsoft.AspNetCore.Http;
+using FoundationKit.Security;
 using Microsoft.Extensions.Configuration;
 
 namespace Athar.Api;
-
-public sealed class ReverseProxySecurityOptions
-{
-    public const string SectionName = "ReverseProxy";
-
-    public bool Enabled { get; set; }
-
-    public string[] KnownProxies { get; set; } = [];
-}
 
 public static class ProductionConfigurationValidator
 {
@@ -75,7 +64,7 @@ public static class ProductionConfigurationValidator
             $"{AccountSecurityOptions.SectionName}:PasswordRequireNonAlphanumeric");
         RequireExplicitBooleanDecision(
             configuration,
-            $"{ReverseProxySecurityOptions.SectionName}:Enabled");
+            $"{TrustedProxyOptions.SectionName}:Enabled");
     }
 
     private static void RequireExplicitBooleanDecision(
@@ -105,28 +94,12 @@ public static class ProductionConfigurationValidator
 
     private static void ValidateReverseProxy(IConfiguration configuration)
     {
-        if (!configuration.GetValue<bool>($"{ReverseProxySecurityOptions.SectionName}:Enabled"))
-            return;
+        var options = configuration
+            .GetSection(TrustedProxyOptions.SectionName)
+            .Get<TrustedProxyOptions>()
+            ?? new TrustedProxyOptions();
 
-        var proxies = configuration
-            .GetSection($"{ReverseProxySecurityOptions.SectionName}:KnownProxies")
-            .Get<string[]>()
-            ?? [];
-
-        if (proxies.Length == 0)
-        {
-            throw new InvalidOperationException(
-                "ReverseProxy:Enabled=true requires at least one explicit trusted proxy IP in ReverseProxy:KnownProxies. Trust-all forwarded headers are not permitted.");
-        }
-
-        foreach (var proxy in proxies)
-        {
-            if (!IPAddress.TryParse(proxy, out _))
-            {
-                throw new InvalidOperationException(
-                    $"ReverseProxy:KnownProxies contains an invalid IP address: '{proxy}'.");
-            }
-        }
+        TrustedProxySecurity.Validate(options);
     }
 
     private static void ValidateNoStartupPrivilege(IConfiguration configuration)
@@ -204,23 +177,4 @@ public static class ProductionConfigurationValidator
         }
         return null;
     }
-}
-
-public static class AtharRateLimitPartitions
-{
-    public static string Authentication(HttpContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        return RemoteAddress(context);
-    }
-
-    public static string Write(HttpContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        return string.IsNullOrWhiteSpace(userId) ? RemoteAddress(context) : $"user:{userId}";
-    }
-
-    private static string RemoteAddress(HttpContext context) =>
-        $"ip:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}";
 }

@@ -1,4 +1,3 @@
-using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.RateLimiting;
 using Athar.Api;
@@ -10,9 +9,9 @@ using FoundationKit.Application.Persistence;
 using FoundationKit.Infrastructure;
 using FoundationKit.Infrastructure.Events;
 using FoundationKit.Infrastructure.Persistence;
+using FoundationKit.Security;
 using FoundationKit.WebApi;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -30,12 +29,13 @@ var accountSecurity = builder.Configuration
     ?? new AccountSecurityOptions();
 
 var reverseProxySecurity = builder.Configuration
-    .GetSection(ReverseProxySecurityOptions.SectionName)
-    .Get<ReverseProxySecurityOptions>()
-    ?? new ReverseProxySecurityOptions();
+    .GetSection(TrustedProxyOptions.SectionName)
+    .Get<TrustedProxyOptions>()
+    ?? new TrustedProxyOptions();
 
 builder.Services.AddFoundationInfrastructure();
 builder.Services.AddFoundationWebApi();
+builder.Services.AddFoundationTrustedProxyForwarding(reverseProxySecurity);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<Athar.Application.ICurrentUser, CurrentUserAccessor>();
 builder.Services.AddScoped<IInitiativeManager, InitiativeManager>();
@@ -46,20 +46,6 @@ builder.Services.AddScoped<IRepository<Initiative, Guid>, EfRepository<Initiativ
 builder.Services.AddScoped<IRepository<InitiativeReview, Guid>, EfRepository<InitiativeReview, Guid, AtharDbContext>>();
 builder.Services.AddScoped<FoundationKit.Application.Abstractions.IUnitOfWork, EfUnitOfWork<AtharDbContext>>();
 builder.Services.AddSingleton<FoundationKit.Application.Abstractions.IClock, SystemClock>();
-
-if (reverseProxySecurity.Enabled)
-{
-    builder.Services.Configure<ForwardedHeadersOptions>(options =>
-    {
-        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-        options.ForwardLimit = 1;
-        options.KnownNetworks.Clear();
-        options.KnownProxies.Clear();
-
-        foreach (var proxy in reverseProxySecurity.KnownProxies)
-            options.KnownProxies.Add(IPAddress.Parse(proxy));
-    });
-}
 
 ConfigureDataProtection(builder);
 
@@ -116,7 +102,7 @@ builder.Services.AddAuthorization(options =>
     {
         policy.RequireRole(AtharRoles.Administrator);
         if (accountSecurity.RequireAdministratorMfa)
-            policy.RequireClaim("amr", "mfa");
+            policy.RequireFoundationMultiFactor();
     });
 });
 
@@ -133,7 +119,7 @@ builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddPolicy("auth", context => RateLimitPartition.GetFixedWindowLimiter(
-        partitionKey: AtharRateLimitPartitions.Authentication(context),
+        partitionKey: FoundationRateLimitPartitions.Authentication(context),
         factory: static _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = 10,
@@ -142,7 +128,7 @@ builder.Services.AddRateLimiter(options =>
             AutoReplenishment = true
         }));
     options.AddPolicy("write", context => RateLimitPartition.GetFixedWindowLimiter(
-        partitionKey: AtharRateLimitPartitions.Write(context),
+        partitionKey: FoundationRateLimitPartitions.Write(context),
         factory: static _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = 30,
@@ -186,8 +172,7 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-if (reverseProxySecurity.Enabled)
-    app.UseForwardedHeaders();
+app.UseFoundationTrustedProxyForwarding(reverseProxySecurity);
 
 if (!app.Environment.IsDevelopment())
 {
