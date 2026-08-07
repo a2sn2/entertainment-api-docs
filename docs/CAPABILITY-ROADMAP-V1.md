@@ -48,10 +48,11 @@ No capability is promoted merely because a class or empty package exists.
 
 ## Phase D — Communication and content
 
-- [x] Notifications v1: bounded channel-neutral message/delivery contracts with Athar SMTP consumer evidence.
+- [x] Notifications v1: bounded channel-neutral message/delivery contracts with Athar consumer evidence.
+- [x] SMTP provider v1: reusable `FoundationKit.Notifications.Smtp` transport package consumed by Athar.
 - [ ] Notification templates and localization.
 - [ ] Notification preferences, routing/fallback, queues, retries, and delivery history.
-- [ ] SMTP provider family beyond the existing Athar/reference adapter.
+- [ ] SMTP provider family beyond the narrow reference transport: relay/provider ecosystems, retries, routing/fallback, bounce processing, credential-rotation integration, and delivery history.
 - [ ] File storage abstraction.
 - [ ] Document metadata/versioning/classification.
 - [ ] Local-development file provider.
@@ -74,8 +75,8 @@ No capability is promoted merely because a class or empty package exists.
 - [ ] Messaging/integration events.
 - [ ] Outbox/inbox contracts.
 - [ ] Webhooks with signing/replay/retry contracts.
-- [ ] Idempotency reusable package extraction beyond current reference behavior.
-- [ ] Optimistic concurrency reusable package extraction beyond current reference behavior.
+- [ ] Idempotency reusable package extraction beyond current Athar reference behavior.
+- [ ] Optimistic concurrency reusable package extraction beyond current Athar reference behavior.
 - [ ] Caching abstraction.
 - [ ] External HTTP integration resilience conventions.
 
@@ -96,7 +97,8 @@ Providers remain outside business capabilities and are selected explicitly.
 - [ ] SQL Server provider family where reusable provider code is justified.
 - [ ] PostgreSQL provider family.
 - [ ] Redis provider.
-- [ ] SMTP provider family beyond the existing Athar/reference adapter.
+- [x] SMTP provider v1 reference package extracted and consumed by Athar.
+- [ ] SMTP provider family expansion beyond the current reference transport.
 - [ ] Object storage providers.
 - [ ] Search providers.
 - [ ] Messaging providers.
@@ -145,6 +147,8 @@ A capability is not considered complete until applicable items below are satisfi
 - CI, security scan, and CodeQL green;
 - compatibility and migration impact documented.
 
+A **Planned** or current-reference capability is not extracted into a package merely to reduce unchecked roadmap boxes. A new reusable package should require at least one concrete consumer and a boundary that is useful independently of that consumer.
+
 ## Current baseline
 
 The repository currently has extracted reusable/reference packages for:
@@ -155,8 +159,21 @@ The repository currently has extracted reusable/reference packages for:
 - Authorization;
 - Workflow;
 - Approvals v1;
-- Notifications v1.
+- Notifications v1;
+- SMTP notification provider v1 (`FoundationKit.Notifications.Smtp`).
 
-Athar provides current consumer evidence for the security, identity, authorization, workflow, narrow approval, and notification-transport surfaces. The capability maturity values remain conservative and do not imply production certification.
+Athar provides current consumer evidence for the security, identity, authorization, workflow, narrow approval, notification, and SMTP-provider surfaces. The capability maturity values remain conservative and do not imply production certification.
 
-The next recommended family is **Files + Jobs/Messaging**. Advanced approval models and advanced notification features remain separate future expansions rather than being implied by the current reference packages.
+## Current extraction boundary
+
+The current extraction cycle is intentionally closed after SMTP provider v1.
+
+The following items remain **not ready for package extraction** without broader implementation or a real consumer:
+
+- **Files / Documents** — Athar currently has no reusable upload/storage/document lifecycle consumer.
+- **Background Jobs** — there is no delayed/scheduled/recurring work abstraction or runtime consumer.
+- **Messaging** — the existing in-process domain-event dispatcher is an application infrastructure mechanism, not an integration-event/outbox/inbox implementation.
+- **Idempotency** — Athar has real reference behavior through owner-scoped `ClientRequestId` lookup plus a unique database constraint, but no reusable reservation/store/replay contract has been proven yet.
+- **Concurrency** — Athar has SQL Server `rowversion` plus 409 conflict handling, but no reusable public precondition/token contract has been proven yet.
+
+The next package should therefore be driven by a new concrete product requirement or by a second consumer that proves one of these boundaries. Until then, keeping those capabilities Planned/ReferenceOnly is more accurate than creating empty or product-shaped packages.

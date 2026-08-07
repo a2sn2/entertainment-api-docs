@@ -158,6 +158,14 @@ provider-redis
       -> kernel
 ```
 
+### SMTP provider
+
+```text
+provider-smtp
+  -> notifications
+      -> kernel
+```
+
 The resolver returns dependencies before dependants and rejects unknown IDs or cycles.
 
 ## Project manifest direction
@@ -186,7 +194,7 @@ The same manifest must eventually drive:
 
 ## Implementation sequence
 
-The capability catalog is not permission to create dozens of empty packages. Extraction should be vertical and evidence-driven.
+The capability catalog is not permission to create dozens of empty packages. Extraction should be vertical, consumer-driven, and evidence-driven.
 
 Current sequence status:
 
@@ -194,17 +202,20 @@ Current sequence status:
 2. Composer validation and machine-readable catalog export — **implemented at reference/tooling level**.
 3. Auditing, Security, Identity, and Authorization reusable boundaries — **extracted with conservative maturity levels**.
 4. Workflow and the narrow Approvals v1 decision/maker-checker surface — **extracted as `ReferenceOnly`**.
-5. Notifications bounded message/delivery contracts — **extracted as `ReferenceOnly` with Athar SMTP consumer evidence**.
-6. Files + Jobs/Messaging — **planned next family**.
-7. Settings/Feature Management/Organization/Multi-Tenancy — planned.
-8. Search/Reporting/Privacy/Retention and finance building blocks — planned.
-9. Provider families — planned.
-10. CLI and visual Workbench composer expansion — planned beyond current reference tooling.
-11. AI abstractions only after provider-neutral boundaries and observability rules are established.
+5. Notifications bounded message/delivery contracts — **extracted as `ReferenceOnly` with Athar consumer evidence**.
+6. SMTP notification provider v1 — **extracted as reusable `FoundationKit.Notifications.Smtp` and consumed by Athar; maturity remains `ReferenceOnly`**.
+7. Current extraction cycle — **closed pending a new concrete consumer or a second consumer that proves the next reusable boundary**.
+8. Files/Documents, Jobs/Messaging, Settings/Feature Management/Organization/Multi-Tenancy, Search/Reporting/Privacy/Retention, and finance building blocks — **remain planned until consumer evidence justifies extraction**.
+9. Idempotency and Concurrency — **retain current Athar reference behavior, but no separate reusable package is claimed yet**.
+10. Provider-family expansion — **planned beyond the current SQL Server reference behavior and SMTP provider v1**.
+11. CLI and visual Workbench composer expansion — **planned beyond current reference tooling**.
+12. AI abstractions — **planned only after provider-neutral boundaries and observability rules are established**.
 
-Advanced approvals such as sequential, parallel, quorum, delegation, escalation, and dynamic approver routing remain future work even though the narrow v1 capability is implemented. Notifications templates, preferences, queues, retry orchestration, delivery history, and additional channels likewise remain future work beyond the reference v1 transport boundary.
+Advanced approvals such as sequential, parallel, quorum, delegation, escalation, and dynamic approver routing remain future work even though the narrow v1 capability is implemented. Notification templates, preferences, queues, retry orchestration, delivery history, and additional channels likewise remain future work beyond the reference v1 boundary. The extracted SMTP provider is a narrow transport adapter; it does not imply those higher-level notification capabilities.
 
-Each extraction must preserve the dependency direction and current security baseline.
+Each extraction must preserve the dependency direction and current security baseline. A new package should not be created merely to reduce the number of planned items: it must have a concrete consumer and an independently useful boundary.
+
+See `docs/CAPABILITY-EXTRACTION-STATUS.md` for the current extraction stop condition and the evidence that distinguishes extracted packages from product-specific reference behavior.
 
 ## Non-goals of v1
 
