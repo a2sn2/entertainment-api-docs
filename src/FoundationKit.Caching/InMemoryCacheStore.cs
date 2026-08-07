@@ -38,7 +38,7 @@ public sealed class InMemoryCacheStore : ICacheStore
 {
     private readonly Dictionary<string, CacheItem> _entries =
         new(StringComparer.Ordinal);
-    private readonly Lock _gate = new();
+    private readonly object _gate = new();
     private readonly TimeProvider _timeProvider;
     private readonly InMemoryCacheOptions _options;
 
