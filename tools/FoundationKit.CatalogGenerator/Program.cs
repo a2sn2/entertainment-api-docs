@@ -1,5 +1,7 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using FoundationKit.Application.Capabilities;
 
 namespace FoundationKit.CatalogGenerator;
 
@@ -10,6 +12,13 @@ internal static class Program
         PropertyNameCaseInsensitive = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true
+    };
+
+    private static readonly JsonSerializerOptions ExportJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
 
     public static async Task<int> Main(string[] args)
@@ -24,6 +33,10 @@ internal static class Program
             : FindRepositoryRoot(AppContext.BaseDirectory);
 
         var catalogPath = Path.Combine(repositoryRoot, "catalog", "foundationkit.catalog.json");
+        var capabilityCatalogPath = Path.Combine(
+            repositoryRoot,
+            "catalog",
+            "foundationkit.capabilities.json");
         var outputPath = Path.Combine(repositoryRoot, "docs", "FEATURES.md");
 
         var json = await File.ReadAllTextAsync(catalogPath);
@@ -31,29 +44,45 @@ internal static class Program
             ?? throw new InvalidOperationException("The FoundationKit catalog is empty.");
 
         Validate(catalog);
+        ValidateCapabilityModel();
+
         var generated = GenerateMarkdown(catalog);
+        var generatedCapabilityCatalog = GenerateCapabilityCatalog();
 
         if (checkOnly)
         {
-            if (!File.Exists(outputPath))
-                throw new InvalidOperationException($"Generated documentation is missing: {outputPath}");
+            var generatedDocumentationMatches = CheckGeneratedFile(
+                outputPath,
+                generated,
+                "docs/FEATURES.md",
+                "dotnet run --project tools/FoundationKit.CatalogGenerator");
+            var capabilityCatalogMatches = CheckGeneratedFile(
+                capabilityCatalogPath,
+                generatedCapabilityCatalog,
+                "catalog/foundationkit.capabilities.json",
+                "dotnet run --project tools/FoundationKit.CatalogGenerator");
 
-            var current = await File.ReadAllTextAsync(outputPath);
-            if (!string.Equals(Normalize(current), Normalize(generated), StringComparison.Ordinal))
+            if (!generatedDocumentationMatches || !capabilityCatalogMatches)
             {
-                Console.Error.WriteLine("docs/FEATURES.md is out of date. Run:");
-                Console.Error.WriteLine("  dotnet run --project tools/FoundationKit.CatalogGenerator");
                 return 1;
             }
 
-            Console.WriteLine("Catalog validation and generated documentation check passed.");
+            Console.WriteLine(
+                "Catalog validation, capability graph validation, and generated-file checks passed.");
             return 0;
         }
 
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
         await File.WriteAllTextAsync(outputPath, generated, new UTF8Encoding(false));
+        await File.WriteAllTextAsync(
+            capabilityCatalogPath,
+            generatedCapabilityCatalog,
+            new UTF8Encoding(false));
+
         Console.WriteLine(
             $"Generated {Path.GetRelativePath(repositoryRoot, outputPath)} from the canonical catalog.");
+        Console.WriteLine(
+            $"Generated {Path.GetRelativePath(repositoryRoot, capabilityCatalogPath)} from the compiled capability model.");
         return 0;
     }
 
@@ -63,24 +92,58 @@ internal static class Program
         while (directory is not null)
         {
             if (File.Exists(Path.Combine(directory.FullName, "FoundationKit.sln")))
+            {
                 return directory.FullName;
+            }
+
             directory = directory.Parent;
         }
 
         throw new DirectoryNotFoundException("Could not locate the FoundationKit repository root.");
     }
 
+    private static bool CheckGeneratedFile(
+        string path,
+        string expected,
+        string displayPath,
+        string regenerationCommand)
+    {
+        if (!File.Exists(path))
+        {
+            Console.Error.WriteLine($"Generated file is missing: {displayPath}");
+            Console.Error.WriteLine("Run:");
+            Console.Error.WriteLine($"  {regenerationCommand}");
+            return false;
+        }
+
+        var current = File.ReadAllText(path);
+        if (string.Equals(Normalize(current), Normalize(expected), StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        Console.Error.WriteLine($"{displayPath} is out of date. Run:");
+        Console.Error.WriteLine($"  {regenerationCommand}");
+        return false;
+    }
+
     private static void Validate(CatalogDocument catalog)
     {
         if (catalog.SchemaVersion != 1)
+        {
             throw new InvalidOperationException(
                 $"Unsupported catalog schema version: {catalog.SchemaVersion}.");
+        }
 
         if (string.IsNullOrWhiteSpace(catalog.CoreVersion))
+        {
             throw new InvalidOperationException("coreVersion is required.");
+        }
 
         if (catalog.Packages.Count == 0)
+        {
             throw new InvalidOperationException("At least one package is required.");
+        }
 
         var packageIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var capabilityIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -88,17 +151,23 @@ internal static class Program
         foreach (var package in catalog.Packages)
         {
             if (!packageIds.Add(package.PackageId))
+            {
                 throw new InvalidOperationException($"Duplicate packageId: {package.PackageId}.");
+            }
 
             if (package.Capabilities.Count == 0)
+            {
                 throw new InvalidOperationException(
                     $"Package {package.PackageId} has no capabilities.");
+            }
 
             foreach (var capability in package.Capabilities)
             {
                 if (!capabilityIds.Add(capability.Id))
+                {
                     throw new InvalidOperationException(
                         $"Duplicate capability id: {capability.Id}.");
+                }
 
                 if (!capability.Status.Equals("implemented", StringComparison.OrdinalIgnoreCase))
                 {
@@ -113,7 +182,9 @@ internal static class Program
         foreach (var idea in catalog.Ideas)
         {
             if (!ideaIds.Add(idea.Id))
+            {
                 throw new InvalidOperationException($"Duplicate idea id: {idea.Id}.");
+            }
 
             foreach (var capabilityId in idea.RecommendedCapabilityIds)
             {
@@ -124,6 +195,54 @@ internal static class Program
                 }
             }
         }
+    }
+
+    private static void ValidateCapabilityModel()
+    {
+        var capabilities = FoundationCapabilityCatalog.All;
+        var profiles = FoundationCapabilityProfiles.All;
+        var capabilityIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var capability in capabilities)
+        {
+            if (string.IsNullOrWhiteSpace(capability.Id))
+            {
+                throw new InvalidOperationException("Capability IDs cannot be empty.");
+            }
+
+            if (!capabilityIds.Add(capability.Id))
+            {
+                throw new InvalidOperationException(
+                    $"Duplicate capability-model ID: {capability.Id}.");
+            }
+        }
+
+        var resolver = CapabilityResolver.CreateDefault();
+        foreach (var capability in capabilities)
+        {
+            _ = resolver.Resolve([capability.Id]);
+        }
+
+        var profileIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var profile in profiles)
+        {
+            if (!profileIds.Add(profile.Id))
+            {
+                throw new InvalidOperationException(
+                    $"Duplicate capability profile ID: {profile.Id}.");
+            }
+
+            _ = resolver.Resolve(profile.CapabilityIds);
+        }
+    }
+
+    private static string GenerateCapabilityCatalog()
+    {
+        var document = new CapabilityCatalogExport(
+            1,
+            FoundationCapabilityCatalog.All,
+            FoundationCapabilityProfiles.All);
+        return JsonSerializer.Serialize(document, ExportJsonOptions) + Environment.NewLine;
     }
 
     private static string GenerateMarkdown(CatalogDocument catalog)
@@ -163,7 +282,10 @@ internal static class Program
         builder.AppendLine("## Project ideas");
         builder.AppendLine();
         foreach (var idea in catalog.Ideas)
-            builder.AppendLine(FormattableString.Invariant($"- **{idea.TitleEn}** — {idea.DescriptionEn}"));
+        {
+            builder.AppendLine(FormattableString.Invariant(
+                $"- **{idea.TitleEn}** — {idea.DescriptionEn}"));
+        }
 
         builder.AppendLine();
         builder.AppendLine("## Keeping the catalog current");
@@ -183,6 +305,11 @@ internal static class Program
     private static string Normalize(string value) =>
         value.Replace("\r\n", "\n", StringComparison.Ordinal).TrimEnd() + "\n";
 }
+
+internal sealed record CapabilityCatalogExport(
+    int SchemaVersion,
+    IReadOnlyList<CapabilityDescriptor> Capabilities,
+    IReadOnlyList<CapabilityProfile> Profiles);
 
 internal sealed record CatalogDocument(
     int SchemaVersion,

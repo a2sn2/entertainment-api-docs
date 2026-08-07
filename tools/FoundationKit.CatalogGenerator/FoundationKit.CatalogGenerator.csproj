@@ -4,4 +4,8 @@
     <IsPackable>false</IsPackable>
     <RootNamespace>FoundationKit.CatalogGenerator</RootNamespace>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\FoundationKit.Application\FoundationKit.Application.csproj" />
+  </ItemGroup>
 </Project>
