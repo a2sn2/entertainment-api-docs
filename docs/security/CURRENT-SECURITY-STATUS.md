@@ -1,78 +1,79 @@
 # FoundationKit — Current Security and Policy Status
 
-**Living reference. Update this file after every security-relevant change.**
+**Living executive reference. `POLICY-IMPLEMENTATION-REGISTER.md` is the canonical finding-level source of truth and this file MUST remain consistent with it.**
 
 - Source audit baseline: `b9de00ba29928111637786f921c1c01249ddcada` (2026-08-07).
 - Current hardening change: `FK-HARDEN-2026-08-07`, PR #34.
-- Integrated technical evidence: `evidence/STEP-05-INTEGRATED-VERIFICATION.md`, verified source commit `2e8f78eb98ce02a5fb4f8b02db720391f9c77f98`.
-- Audit conclusion at baseline: `Strong Engineering Baseline — Security, Governance, Recovery and Production Evidence Required`.
-- This file records repository implementation status only. It is not an ISO/IEC 27001 certificate, Statement of Applicability, legal opinion, residual-risk acceptance, or production approval.
+- Prior integrated technical evidence: `evidence/STEP-05-INTEGRATED-VERIFICATION.md`.
+- Independent read-only review of PR #34 produced blocking follow-up findings; repository-side closures are implemented and awaiting the latest affected-head evidence before merge.
+- This file is not an ISO/IEC 27001 certificate, Statement of Applicability, legal opinion, residual-risk acceptance, or Production Approval.
 
 ## Status vocabulary
 
-- `Implemented` — repository control exists in source/configuration.
-- `Automated evidence added` — an automated test/gate exists; a specific successful run must still be cited before marking Verified.
-- `Verified` — a recorded automated/manual evidence run passed against the stated commit and scope.
-- `External configuration required` — repository can express/enforce the contract but production platform evidence is outside the repository.
-- `Organizational decision required` — a value/scope/authority must not be invented by code.
-- `Open` — control remains to be implemented or deliberately designed for a later production topology.
+- `Implemented / verification pending` — repository control exists but latest affected source evidence is not complete.
+- `Verified` — reproducible evidence passed for the explicitly stated repository scope.
+- `Partially Satisfied` — useful controls exist but the finding remains incomplete.
+- `External Configuration Required` — completion depends on GitHub/deployment/platform controls outside repository code.
+- `Organizational Decision Required` — a value/scope/authority must not be invented by code.
+- `Open` — repository/design work remains.
 
-## Baseline findings → current state
+## PR #34 independent-review closure status
 
-| Finding | Current state | Control/evidence |
+| Review finding | Current state | Repository closure |
 |---|---|---|
-| FK-GOV-001 independent review | **External governance required** | CODEOWNERS + PR evidence template added; PR #34 intentionally must not self-satisfy independent approval |
-| FK-GOV-002 protected main | **External configuration required** | protected branch/ruleset and required checks must be evidenced in GitHub settings |
-| FK-RISK-001 risk/threat model | **Implemented** | `RISK-REGISTER.md`, `THREAT-MODEL.md`, `SECURITY-DECISIONS.md`; upstream no-fix image risk tracked as `R-FK-016` |
-| FK-SDLC-001 security gates | **Verified** | CI, CodeQL, Trivy, NuGet audit, secret gate, SBOM, package/integrity evidence and negative suite recorded in STEP-05 |
-| FK-SUP-001 dependency control | **Verified baseline / further hardening available** | NuGet audit, central/transitive security floors, SBOM, Trivy, and weekly Dependabot for NuGet/Actions/Docker; lock files/source mapping remain optional next-hardening items |
-| FK-SUP-002 Actions mutable tags | **Verified for hardening-touched workflows** | checkout/setup/upload/Pages/CodeQL/Trivy references are pinned to immutable commit SHAs and the workflows passed |
-| FK-REL-001 release integrity | **Verified baseline / external signing decision remains** | CycloneDX SBOM + SHA-256 package/publish evidence passed; signing/attestation identity/authority remains external/organizational |
-| FK-TEST-001 security test depth | **Verified for current automated suite** | unit + black-box CSRF/BOLA/account-enumeration/maker-checker abuse tests passed; final ASVS target/coverage threshold remains organizational |
-| FK-AUTH-001 account lifecycle | **Implemented capability / production configuration pending** | confirmation, reset/recovery, password change, TOTP MFA, recovery codes; final MFA scope and production SMTP are external/organizational |
-| FK-AUTH-002 password standard/blocklist | **Organizational decision required** | existing baseline remains; final password/breached-password requirements not invented |
-| FK-AUTH-003 admin seed | **Verified production fail-closed baseline** | production rejects seed; development seed refuses silent promotion; solution/tests/build passed |
-| FK-SEC-001 local password disclosure | **Verified in official CI/launcher scope** | no normal password echo, local credential protection, generated CI credentials are masked; Windows launcher checks passed |
-| FK-APP-001 Swagger all environments | **Verified baseline** | Swagger/UI Development-only; production restriction covered by configuration tests/build |
-| FK-APP-002 rate limiter global | **Verified for current automated abuse scope** | auth partitions by IP; writes by authenticated user/IP fallback; black-box suite passed |
-| FK-APP-003 admin self-review | **Verified** | domain maker-checker rule + unit/black-box tests passed |
-| FK-APP-004 negative security tests | **Verified for current suite** | CSRF/authz/BOLA/account enumeration/maker-checker suite passed; broader ASVS matrix remains a future organizationally-scoped expansion |
-| FK-APP-005 readiness disclosure | **Verified** | integrated smoke verified public readiness reports status and does not expose SQL implementation detail |
-| FK-APP-006 CSP/cache hardening | **Open / app-specific design required** | baseline headers remain; a Blazor-compatible CSP/cache policy needs explicit compatibility testing before enforcement |
-| FK-APP-007 AllowedHosts wildcard | **Verified production fail-closed baseline** | non-development rejects wildcard/blank host list; security configuration tests passed |
-| FK-DATA-001 DB transport | **Implemented production contract / external certificate evidence required** | production rejects disabled encryption/certificate trust bypass; Development remains intentionally local/insecure-for-production |
-| FK-DATA-002 runtime `sa` | **Implemented production contract / external provisioning required** | production validator rejects `sa`; DBA/platform must provision separate runtime/migration principals |
-| FK-DB-001 startup migrations | **Verified production fail-closed baseline** | Development opt-in only; production requires controlled deployment migration step |
-| FK-DB-002 migration rollback/restore | **Verified restore baseline / per-change schema recovery remains** | real CHECKSUM backup, VERIFYONLY, isolated restore, schema-qualified table validation and cleanup passed; destructive schema rollback/rollforward stays change-specific |
-| FK-AUD-001 tamper evidence | **External configuration required** | central append-only/restricted sink still required; DB audit alone is not claimed tamper-evident |
-| FK-AUD-002 structured audit | **Partially implemented/design documented** | structured logging and security event catalog improved; database audit schema enrichment/central correlation remains future work |
-| FK-LOG-001 central observability | **External configuration required** | event/alert catalog + incident runbook; SIEM/log retention/alert routing require platform evidence |
-| FK-PII-001 privacy lifecycle | **Partially implemented** | PII inventory/minimization rules added; retention/deletion/legal/privacy-notice decisions remain organizational/legal |
-| FK-CRY-001 crypto inventory/vault/rotation | **Partially implemented** | crypto/secrets inventory + production fail-closed contracts; Vault/KMS/CA/rotation provider evidence external |
-| FK-CRY-002 Data Protection keys | **Implemented capability / external material required** | durable file persistence + X.509 protection; certificate/key lifecycle external |
-| FK-BACK-001 restore evidence | **Verified** | isolated CHECKSUM backup, VERIFYONLY, real restore, schema-qualified core-table validation and cleanup passed in CI run `31184047139` |
-| FK-BACK-002 encrypted/off-site backup | **External configuration required** | local dev backups owner-restricted; production encryption/off-site/immutability/retention pending platform/organizational decision |
-| FK-DOCK-001 container hardening | **Verified baseline** | Athar non-root runtime assertion passed; Workbench also runs as `app`; Compose hardening and container-policy checks passed |
-| FK-DOCK-002 mutable image tags | **Partially mitigated / production pinning still open** | weekly Docker Dependabot + Trivy gates added; final production digest pin/update promotion process remains to be established |
-| FK-SUP-003 upstream unfixed image CVEs | **Tracked residual technical risk** | fixable HIGH/CRITICAL image findings block CI; complete SARIF retains unfixed findings; `R-FK-016` governs monitoring and reassessment |
-| FK-TUN-001 Development Quick Tunnel | **Accepted demo-only boundary, not production** | random temporary tunnel remains for synthetic demos; no real/sensitive data; production ingress is separate |
-| FK-WB-001 unauthenticated Workbench | **Sample-only boundary** | must remain controlled/local; never a production/public-data service |
-| FK-CHG-001 formal change evidence | **Implemented repository process** | expanded PR template + change/release/evidence model; approval authority remains organizational |
-| FK-INC-001 vulnerability reporting | **Open/organizational** | private reporting channel and SLA still require repository/org configuration |
-| FK-OPS-001 incident/BCP runbooks | **Implemented repository runbook / external ownership pending** | incident/rollback/recovery/PIR runbook; named responders/authorities/RTO/RPO external |
+| PR34-REV-01 independent approval | **External blocker remains** | CODEOWNERS/evidence process exists, but PR #34 still needs an independent GitHub `APPROVE`; the author cannot self-satisfy SoD. |
+| PR34-APP-01 reverse proxy / forwarded headers | **Implemented / verification pending** | Explicit reverse-proxy decision; exact trusted proxy IP allow-list; no trust-all forwarded headers; middleware runs before HTTPS redirection/rate limiting; trusted/untrusted header tests added. |
+| PR34-AUTH-01 MFA full re-authentication | **Implemented / verification pending** | MFA disable and recovery-code rotation require current password + fresh TOTP or recovery factor; black-box negative/positive path added. |
+| PR34-AUTH-02 independent security notifications | **Implemented capability** | Email security notifications added for password reset/change, MFA enable/disable, and recovery-code regeneration; production delivery still depends on approved SMTP/provider configuration. |
+| PR34-CRY-01 SMTP TLS fail-closed | **Implemented / verification pending** | Production startup rejects `SmtpEnableSsl != true`; username/password are not forced because an approved trusted relay may not use Basic Auth. |
+| PR34-EVID-01 evidence-register inconsistency | **Closed in repository** | `POLICY-IMPLEMENTATION-REGISTER.md` is now canonical and synchronized; this file is the derived executive view. |
+| PR34-EVID-02 rate-limit evidence overclaim | **Implemented / verification pending** | Security suite now proves actual middleware rejection with HTTP `429`; proxy/partition unit tests cover trusted/untrusted forwarded headers. |
+| PR34-AUTH-03 silent security defaults | **Implemented / verification pending** | Production requires explicit decisions for confirmed email, administrator MFA, reverse-proxy mode, and password-policy values instead of accepting missing values as false/default. |
+| PR34-PASS-01 hard-coded password standard | **Improved; final standard remains organizational** | Password policy is configurable; production requires explicit values; transport DTO/UI no longer impose an enterprise value. Compromised-password source/final policy remain an organizational decision. |
+| PR34-LOG-01 event catalog vs runtime coverage | **Evidence claim corrected** | Logging catalog explicitly describes a target contract. Current implementation remains partial; central SIEM/retention/alerts remain external. |
+| PR34-SBOM-01 SBOM/provenance terminology | **Evidence claim corrected** | Current artifact is called a CycloneDX dependency inventory/baseline SBOM; complete signing/provenance/attestation is not claimed. |
 
-## Integrated verification evidence
+## Baseline findings — executive view
 
-`docs/security/evidence/STEP-05-INTEGRATED-VERIFICATION.md` records successful evidence against source commit `2e8f78eb98ce02a5fb4f8b02db720391f9c77f98`:
+| Area | Current state | Notes |
+|---|---|---|
+| Independent review / protected `main` | **External Configuration Required** | Independent approval and protected-branch/required-check evidence remain before governance closure. |
+| Risk/threat model | **Verified baseline** | Risk register, threat model, decision register and tracked residual technical risks exist. |
+| Secure SDLC / malware gates | **Verified baseline; post-review re-verification pending** | Secret scan, NuGet audit, CodeQL, Trivy, dependency inventory/SBOM, integrity evidence, build/test/publish/pack. |
+| Dependency/supply-chain baseline | **Verified baseline / partial provenance** | Dependabot + vulnerability gates + SHA-pinned security-sensitive Actions. Full artifact signing/provenance remains external/next-hardening. |
+| Account lifecycle / MFA | **Implemented / verification pending** | Confirmation/reset/change, TOTP/recovery login, full MFA step-up for sensitive factor changes and independent notifications. Final MFA scope/provider remains organizational/external. |
+| Password standard | **Organizational Decision Required** | Values are configurable and explicit in Production; final length/composition/blocklist policy is deliberately not invented. |
+| Admin seed / local credential handling | **Verified baseline** | Production seed rejected; official launcher/CI credential exposure controls exist. |
+| Swagger / readiness / AllowedHosts | **Verified baseline** | Swagger Development-only, minimal readiness, explicit Production host allow-list. |
+| Rate limiting / proxy trust | **Implemented / verification pending** | Trusted proxy handling + effective client IP partitions + runtime 429 test added. Final ingress topology remains deployment evidence. |
+| Maker-checker | **Verified** | Administrator cannot review own initiative; unit/black-box evidence exists. |
+| CSP/cache policy | **Open / design required** | Requires Blazor-compatible design and compatibility/security testing. |
+| SQL transport / identity | **Repository production contract implemented** | Encrypted validated SQL transport and non-`sa` runtime enforced by Production validator; actual cert/principal provisioning is external. |
+| Controlled migrations / restore | **Verified restore baseline** | Startup migration privilege blocked in Production; real CHECKSUM/VERIFYONLY/restore validation exists. Per-change destructive schema strategy remains change-specific. |
+| Audit / structured security logging | **Partially Satisfied** | Product audit and event target catalog exist; append-only central sink/schema enrichment/correlation remain incomplete/external. |
+| Central observability | **External Configuration Required** | SIEM/log retention/alert routing/on-call evidence requires deployment. |
+| PII lifecycle | **Partially Satisfied** | Inventory/minimization exist; retention/deletion/legal notices remain organizational/legal. |
+| Crypto/Data Protection | **Repository capability implemented** | DP persistence + X.509 protection and transport checks exist; Vault/KMS/CA/rotation evidence remains external. |
+| Production backup service | **External Configuration Required** | Restore drill verified; encrypted off-site immutable storage/retention remain deployment decisions. |
+| Container hardening | **Verified baseline** | Non-root and runtime hardening assertions exist; immutable production digest promotion remains partially open. |
+| Quick Tunnel | **Demo-only boundary** | Synthetic demonstrations only; not production ingress and not for sensitive data. |
+| Workbench | **Sample-only boundary** | Controlled/local reference; not a public production service. |
+| Incident/change runbooks | **Repository process implemented** | Organizational owners, approval authorities, SLA, RPO/RTO remain external decisions. |
 
-- FoundationKit CI run `31184047139` — build/test/publish/pack/security evidence and Workbench/Athar SQL integration including real restore drill: success.
-- FoundationKit Security Scan run `31184044933` — Trivy gates/SARIF and black-box negative security tests: success.
-- FoundationKit CodeQL run `31184045528` — C# and JavaScript/TypeScript: success.
-- FoundationKit Windows Launcher Check run `31184044965` — Windows PowerShell 5.1 parser/smoke validation: success.
+## Prior integrated verification evidence
 
-## Policies impacted by this hardening program
+`docs/security/evidence/STEP-05-INTEGRATED-VERIFICATION.md` records the prior successful technical baseline, including:
 
-All twelve approved policies are tracked without renaming:
+- CI build/test/publish/pack + Workbench/Athar SQL integration and real restore drill;
+- Security Scan / Trivy / negative tests;
+- CodeQL C# and JavaScript/TypeScript;
+- Windows PowerShell 5.1 launcher checks.
+
+The independent review changed security-relevant source after that evidence. Therefore the affected findings above correctly remain `Implemented / verification pending` until the new head completes all required workflows and a post-review evidence record is added.
+
+## Mandatory policy set
+
+All twelve approved policies remain in scope without renaming:
 
 1. Segregation of Duties Policy.
 2. Data Transfer Policy.
@@ -87,26 +88,12 @@ All twelve approved policies are tracked without renaming:
 11. Change Management Policy.
 12. Risk Management Policy.
 
-## Decisions that remain deliberately unresolved
+## Decisions deliberately unresolved
 
-No repository change may invent final values for:
+No repository change may invent final values for independent reviewer count/authority, MFA scope/factors, password parameters/compromised-password source, ASVS target, RPO/RTO, retention, vulnerability SLA, exception authority/duration, release/residual-risk acceptance authority, production Vault/KMS/CA/SIEM/backup provider, or hosting/network topology.
 
-- independent reviewer count/approval authority;
-- final MFA scope/factor requirements;
-- final password parameters and compromised-password source;
-- ASVS target level/applicability;
-- RPO/RTO;
-- data/log/backup retention;
-- vulnerability remediation SLA;
-- security-exception duration/authority;
-- release and residual-risk acceptance authority;
-- KMS/Vault/CA/SIEM/backup provider;
-- production hosting/network topology.
+See `SECURITY-DECISIONS.md` and the canonical policy register.
 
-See `SECURITY-DECISIONS.md`.
+## Final classification rule
 
-## Final repository classification
-
-The repository-side technical hardening represented by `FK-HARDEN-2026-08-07` is **Verified for the explicitly automated scope recorded in STEP-05**.
-
-That statement must not be rewritten as `Production Approved`. Production approval still requires independent review/protected-branch evidence and the external platform/organizational controls listed in STEP-05.
+Repository-side technical controls may be called `Verified` only for the scope backed by successful evidence against the affected source head. They must never be rewritten as `ISO Certified` or `Production Approved`. Production approval additionally requires the external platform, organizational decisions, independent approval, and protected-branch evidence recorded in the policy register.
