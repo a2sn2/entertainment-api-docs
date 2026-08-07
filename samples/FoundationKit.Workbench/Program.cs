@@ -7,6 +7,7 @@ using FoundationKit.Infrastructure.Events;
 using FoundationKit.Infrastructure.Persistence;
 using FoundationKit.Settings;
 using FoundationKit.WebApi;
+using FoundationKit.Workbench;
 using FoundationKit.Workbench.Application;
 using FoundationKit.Workbench.Application.Admin;
 using FoundationKit.Workbench.Application.Shared;
