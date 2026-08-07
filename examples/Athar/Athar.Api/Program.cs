@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using System.Threading.RateLimiting;
 using Athar.Api;
 using Athar.Application;
 using Athar.Contracts;
@@ -14,6 +16,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
+ValidateProductionConfiguration(builder);
 
 builder.Services.AddFoundationInfrastructure();
 builder.Services.AddFoundationWebApi();
@@ -105,21 +109,27 @@ builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-    options.AddFixedWindowLimiter("auth", limiter =>
-    {
-        limiter.PermitLimit = 10;
-        limiter.Window = TimeSpan.FromMinutes(1);
-        limiter.QueueLimit = 0;
-        limiter.AutoReplenishment = true;
-    });
+    options.AddPolicy("auth", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: GetRemoteAddressPartition(context),
+            factory: static _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
 
-    options.AddFixedWindowLimiter("write", limiter =>
-    {
-        limiter.PermitLimit = 30;
-        limiter.Window = TimeSpan.FromMinutes(1);
-        limiter.QueueLimit = 0;
-        limiter.AutoReplenishment = true;
-    });
+    options.AddPolicy("write", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: GetAuthenticatedPartition(context),
+            factory: static _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
 });
 
 builder.Services
@@ -170,12 +180,15 @@ app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.UseSwagger();
-app.UseSwaggerUI(options =>
+if (app.Environment.IsDevelopment())
 {
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "منصة أثر API v1");
-    options.DocumentTitle = "منصة أثر — Swagger";
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "منصة أثر API v1");
+        options.DocumentTitle = "منصة أثر — Swagger";
+    });
+}
 
 await DatabaseInitializer.InitializeAsync(
     app.Services,
@@ -185,6 +198,56 @@ app.MapAtharEndpoints();
 app.MapFallbackToFile("index.html");
 
 app.Run();
+
+static string GetRemoteAddressPartition(HttpContext context) =>
+    $"ip:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}";
+
+static string GetAuthenticatedPartition(HttpContext context)
+{
+    var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+    return string.IsNullOrWhiteSpace(userId)
+        ? GetRemoteAddressPartition(context)
+        : $"user:{userId}";
+}
+
+static void ValidateProductionConfiguration(WebApplicationBuilder builder)
+{
+    if (builder.Environment.IsDevelopment())
+        return;
+
+    var allowedHosts = builder.Configuration["AllowedHosts"];
+    var hasWildcardHost = string.IsNullOrWhiteSpace(allowedHosts)
+        || allowedHosts
+            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Any(host => host == "*");
+
+    if (hasWildcardHost)
+    {
+        throw new InvalidOperationException(
+            "Production requires an explicit AllowedHosts allow-list; wildcard hosts are not permitted.");
+    }
+
+    if (builder.Configuration.GetValue<bool>(
+            $"{AdminSeedOptions.SectionName}:Enabled"))
+    {
+        throw new InvalidOperationException(
+            "AdminSeed must be disabled outside Development. Use the controlled administrator onboarding process.");
+    }
+
+    if (builder.Configuration.GetValue<bool>(
+            $"{DatabaseStartupOptions.SectionName}:ApplyMigrationsOnStartup"))
+    {
+        throw new InvalidOperationException(
+            "Automatic database migrations are not permitted outside Development. Apply reviewed migrations as a controlled deployment step.");
+    }
+
+    if (builder.Configuration.GetValue<bool>(
+            $"{DatabaseStartupOptions.SectionName}:SeedRolesOnStartup"))
+    {
+        throw new InvalidOperationException(
+            "Automatic role seeding is not permitted outside Development. Provision required roles through the controlled deployment process.");
+    }
+}
 
 public partial class Program
 {
