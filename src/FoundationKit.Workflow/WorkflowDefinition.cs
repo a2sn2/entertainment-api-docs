@@ -2,7 +2,7 @@ namespace FoundationKit.Workflow;
 
 public sealed class WorkflowDefinition
 {
-    private readonly Dictionary<TransitionKey, WorkflowTransitionDefinition> _transitions;
+    private readonly Dictionary<(string State, string Trigger), WorkflowTransitionDefinition> _transitions;
     private readonly IReadOnlyList<WorkflowTransitionDefinition> _all;
 
     public WorkflowDefinition(
@@ -21,7 +21,7 @@ public sealed class WorkflowDefinition
         }
 
         var transitionIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        _transitions = new Dictionary<TransitionKey, WorkflowTransitionDefinition>();
+        _transitions = new Dictionary<(string State, string Trigger), WorkflowTransitionDefinition>();
 
         foreach (var transition in materialized)
         {
@@ -34,7 +34,7 @@ public sealed class WorkflowDefinition
                     nameof(transitions));
             }
 
-            var key = new TransitionKey(transition.FromState, transition.Trigger);
+            var key = (transition.FromState, transition.Trigger);
             if (!_transitions.TryAdd(key, transition))
             {
                 throw new ArgumentException(
@@ -62,7 +62,7 @@ public sealed class WorkflowDefinition
         var normalizedTrigger = WorkflowId.Normalize(trigger, nameof(trigger));
 
         if (_transitions.TryGetValue(
-                new TransitionKey(normalizedState, normalizedTrigger),
+                (normalizedState, normalizedTrigger),
                 out var definition))
         {
             transition = WorkflowTransition.From(Id, definition);
@@ -71,17 +71,5 @@ public sealed class WorkflowDefinition
 
         transition = null!;
         return false;
-    }
-
-    private readonly record struct TransitionKey(string State, string Trigger)
-    {
-        public bool Equals(TransitionKey other) =>
-            string.Equals(State, other.State, StringComparison.OrdinalIgnoreCase)
-            && string.Equals(Trigger, other.Trigger, StringComparison.OrdinalIgnoreCase);
-
-        public override int GetHashCode() =>
-            HashCode.Combine(
-                StringComparer.OrdinalIgnoreCase.GetHashCode(State),
-                StringComparer.OrdinalIgnoreCase.GetHashCode(Trigger));
     }
 }
