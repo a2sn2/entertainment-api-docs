@@ -4,11 +4,13 @@ using FoundationKit.Application.Abstractions;
 using FoundationKit.Application.Persistence;
 using FoundationKit.Application.Pagination;
 using FoundationKit.Application.Results;
+using FoundationKit.Authorization;
 
 namespace Athar.Application;
 
 public sealed class InitiativeManager(
     ICurrentUser currentUser,
+    IAuthorizationEvaluator authorization,
     IInitiativeQueryService queryService,
     IRepository<Initiative, Guid> initiativeRepository,
     IRepository<InitiativeReview, Guid> reviewRepository,
@@ -81,12 +83,17 @@ public sealed class InitiativeManager(
             return Result<InitiativeDetailsDto>.Failure(
                 InitiativeErrors.InitiativeNotFound);
 
-        if (!currentUser.IsInRole(AtharRoles.Administrator))
+        if (!authorization.HasPermission(AtharPermissions.ReadAllInitiatives))
         {
             var entity = await initiativeRepository.GetByIdAsync(id, cancellationToken);
-            if (entity?.OwnerUserId != currentUser.UserId)
+            if (entity is null
+                || !authorization.CanAccessOwnedResource(
+                    entity.OwnerUserId,
+                    AtharPermissions.ReadAllInitiatives))
+            {
                 return Result<InitiativeDetailsDto>.Failure(
                     InitiativeErrors.InitiativeNotFound);
+            }
         }
 
         return Result<InitiativeDetailsDto>.Success(response);
@@ -112,7 +119,7 @@ public sealed class InitiativeManager(
         InitiativeSearchRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (!currentUser.IsInRole(AtharRoles.Administrator))
+        if (!authorization.HasPermission(AtharPermissions.ReadAllInitiatives))
             return Result<PagedResult<InitiativeSummaryDto>>.Failure(
                 InitiativeErrors.AdministratorRequired);
 
@@ -126,7 +133,7 @@ public sealed class InitiativeManager(
     public async Task<Result<AdminDashboardResponse>> GetDashboardAsync(
         CancellationToken cancellationToken = default)
     {
-        if (!currentUser.IsInRole(AtharRoles.Administrator))
+        if (!authorization.HasPermission(AtharPermissions.ReadDashboard))
             return Result<AdminDashboardResponse>.Failure(
                 InitiativeErrors.AdministratorRequired);
 
@@ -141,7 +148,7 @@ public sealed class InitiativeManager(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (!currentUser.IsInRole(AtharRoles.Administrator)
+        if (!authorization.HasPermission(AtharPermissions.ReviewInitiatives)
             || currentUser.UserId is null)
         {
             return Result<InitiativeDetailsDto>.Failure(

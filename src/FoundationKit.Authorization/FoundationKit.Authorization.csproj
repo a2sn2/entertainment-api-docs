@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Provider-neutral permission, role-grant, and ownership authorization primitives for FoundationKit consumers.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FoundationKit.Identity\FoundationKit.Identity.csproj" />
+  </ItemGroup>
+</Project>

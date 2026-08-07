@@ -18,6 +18,7 @@
     <ProjectReference Include="..\..\..\src\FoundationKit.WebApi\FoundationKit.WebApi.csproj" />
     <ProjectReference Include="..\..\..\src\FoundationKit.Security\FoundationKit.Security.csproj" />
     <ProjectReference Include="..\..\..\src\FoundationKit.Identity\FoundationKit.Identity.csproj" />
+    <ProjectReference Include="..\..\..\src\FoundationKit.Authorization\FoundationKit.Authorization.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,16 +1,12 @@
 using Athar.Contracts;
 using FoundationKit.Application.Pagination;
 using FoundationKit.Application.Results;
+using FoundationKit.Authorization;
 
 namespace Athar.Application;
 
-public interface ICurrentUser
+public interface ICurrentUser : IAuthorizationSubject
 {
-    bool IsAuthenticated { get; }
-
-    Guid? UserId { get; }
-
-    bool IsInRole(string role);
 }
 
 public interface IInitiativeQueryService

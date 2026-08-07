@@ -134,6 +134,24 @@ The package depends on `FoundationKit.Security` but does not provide or select a
 
 See `docs/capabilities/IDENTITY.md` for the full boundary and consumer evidence.
 
+## FoundationKit.Authorization
+
+Public building blocks:
+
+- `IAuthorizationSubject`;
+- `PermissionDefinition` and `PermissionId`;
+- `RolePermissionGrant` and `RolePermissionMap`;
+- `IAuthorizationEvaluator`;
+- `RolePermissionAuthorizationEvaluator`.
+
+The package depends on `FoundationKit.Identity` but does not own product roles, product permission IDs, role/permission persistence, EF migrations, ASP.NET Core policy registration, tenant scope, or external policy engines.
+
+`RolePermissionMap` is an immutable in-memory mapping primitive. Unknown permissions fail closed. `RolePermissionAuthorizationEvaluator` grants only to authenticated subjects with a matching product-owned role, and `CanAccessOwnedResource` allows ownership or an explicitly supplied privileged permission without a universal administrator bypass.
+
+Athar is the first consumer: it owns its `athar.*` permission IDs and maps its own `Administrator` role to them. The business layer asks for semantic permissions instead of hard-coding that role inside `InitiativeManager`, while the existing ASP.NET Core administrator policy remains a coarse outer defense.
+
+See `docs/capabilities/AUTHORIZATION.md` for the full boundary and consumer evidence.
+
 ## Capability catalog contract
 
 The human-facing implemented feature list is maintained in `catalog/foundationkit.catalog.json`. Every catalog capability must correspond to existing tested behavior and public surface. The catalog generator rejects unknown idea references and any status other than `implemented`.
