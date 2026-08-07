@@ -1,3 +1,4 @@
+using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.RateLimiting;
 using Athar.Api;
@@ -11,6 +12,7 @@ using FoundationKit.Infrastructure.Events;
 using FoundationKit.Infrastructure.Persistence;
 using FoundationKit.WebApi;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +29,11 @@ var accountSecurity = builder.Configuration
     .Get<AccountSecurityOptions>()
     ?? new AccountSecurityOptions();
 
+var reverseProxySecurity = builder.Configuration
+    .GetSection(ReverseProxySecurityOptions.SectionName)
+    .Get<ReverseProxySecurityOptions>()
+    ?? new ReverseProxySecurityOptions();
+
 builder.Services.AddFoundationInfrastructure();
 builder.Services.AddFoundationWebApi();
 builder.Services.AddHttpContextAccessor();
@@ -39,6 +46,20 @@ builder.Services.AddScoped<IRepository<Initiative, Guid>, EfRepository<Initiativ
 builder.Services.AddScoped<IRepository<InitiativeReview, Guid>, EfRepository<InitiativeReview, Guid, AtharDbContext>>();
 builder.Services.AddScoped<FoundationKit.Application.Abstractions.IUnitOfWork, EfUnitOfWork<AtharDbContext>>();
 builder.Services.AddSingleton<FoundationKit.Application.Abstractions.IClock, SystemClock>();
+
+if (reverseProxySecurity.Enabled)
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.ForwardLimit = 1;
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+
+        foreach (var proxy in reverseProxySecurity.KnownProxies)
+            options.KnownProxies.Add(IPAddress.Parse(proxy));
+    });
+}
 
 ConfigureDataProtection(builder);
 
@@ -162,6 +183,9 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
+
+if (reverseProxySecurity.Enabled)
+    app.UseForwardedHeaders();
 
 if (!app.Environment.IsDevelopment())
 {
