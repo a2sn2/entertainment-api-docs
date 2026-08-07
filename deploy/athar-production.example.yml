@@ -1,0 +1,46 @@
+# Production security contract example — NOT a turnkey hosting definition.
+# External prerequisites:
+# - trusted HTTPS ingress / reverse proxy;
+# - SQL Server with a least-privilege runtime principal and a separate migration principal;
+# - validated SQL TLS certificate;
+# - secret manager injection for DB/SMTP credentials;
+# - durable protected ASP.NET Data Protection key store;
+# - central logs/metrics/traces/alerts;
+# - encrypted/off-site/immutable backup service and tested restore procedure.
+#
+# Do not copy Development `sa`, Encrypt=False, TrustServerCertificate=True,
+# startup migrations, role seeding, or AdminSeed into production.
+
+services:
+  athar-api:
+    image: "${ATHAR_IMAGE:?Provide an approved immutable Athar image reference, preferably by digest}"
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_URLS: "http://+:8080"
+      AllowedHosts: "${ATHAR_ALLOWED_HOSTS:?Explicit production host allow-list is required}"
+      ConnectionStrings__Athar: "${ATHAR_PRODUCTION_CONNECTION_STRING:?Encrypted least-privilege SQL connection is required}"
+      DatabaseStartup__ApplyMigrationsOnStartup: "false"
+      DatabaseStartup__SeedRolesOnStartup: "false"
+      AdminSeed__Enabled: "false"
+      AccountSecurity__RequireConfirmedEmail: "${ATHAR_REQUIRE_CONFIRMED_EMAIL:?Organizational decision required}"
+      AccountSecurity__RequireAdministratorMfa: "${ATHAR_REQUIRE_ADMIN_MFA:?Organizational decision required}"
+      AccountSecurity__SmtpHost: "${ATHAR_SMTP_HOST:?SMTP host is required for account confirmation/recovery}"
+      AccountSecurity__SmtpPort: "${ATHAR_SMTP_PORT:-587}"
+      AccountSecurity__SmtpEnableSsl: "true"
+      AccountSecurity__SmtpUsername: "${ATHAR_SMTP_USERNAME:?SMTP username is required}"
+      AccountSecurity__SmtpPassword: "${ATHAR_SMTP_PASSWORD:?Inject through the production secret manager}"
+      AccountSecurity__FromAddress: "${ATHAR_SMTP_FROM:?Approved sender address is required}"
+    expose:
+      - "8080"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    restart: unless-stopped
+
+# The production database, TLS ingress, secret manager, key store, observability,
+# backup service, network policy, resource limits, and deployment orchestrator are
+# intentionally not invented by this repository. They require approved platform design.
