@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Claims;
 using Athar.Api;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
