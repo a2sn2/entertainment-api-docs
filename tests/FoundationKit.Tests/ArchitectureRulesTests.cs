@@ -1,4 +1,5 @@
 using FoundationKit.Application.Results;
+using FoundationKit.Approvals;
 using FoundationKit.Auditing;
 using FoundationKit.Authorization;
 using FoundationKit.Blazor.Api;
@@ -27,6 +28,7 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Identity",
             "FoundationKit.Authorization",
             "FoundationKit.Workflow",
+            "FoundationKit.Approvals",
             "Microsoft.EntityFrameworkCore",
             "Microsoft.AspNetCore");
     }
@@ -44,6 +46,7 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Identity",
             "FoundationKit.Authorization",
             "FoundationKit.Workflow",
+            "FoundationKit.Approvals",
             "Microsoft.EntityFrameworkCore",
             "Microsoft.AspNetCore");
     }
@@ -60,6 +63,7 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Identity",
             "FoundationKit.Authorization",
             "FoundationKit.Workflow",
+            "FoundationKit.Approvals",
             "Microsoft.EntityFrameworkCore.SqlServer",
             "Npgsql.EntityFrameworkCore.PostgreSQL",
             "Microsoft.EntityFrameworkCore.Sqlite",
@@ -78,6 +82,7 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Identity",
             "FoundationKit.Authorization",
             "FoundationKit.Workflow",
+            "FoundationKit.Approvals",
             "Microsoft.EntityFrameworkCore");
     }
 
@@ -95,6 +100,7 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Identity",
             "FoundationKit.Authorization",
             "FoundationKit.Workflow",
+            "FoundationKit.Approvals",
             "Microsoft.EntityFrameworkCore");
     }
 
@@ -110,12 +116,13 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Identity",
             "FoundationKit.Authorization",
             "FoundationKit.Workflow",
+            "FoundationKit.Approvals",
             "Microsoft.EntityFrameworkCore",
             "Microsoft.AspNetCore");
     }
 
     [Fact]
-    public void Security_does_not_depend_on_identity_authorization_workflow_or_persistence_layers()
+    public void Security_does_not_depend_on_identity_authorization_workflow_approvals_or_persistence_layers()
     {
         AssertNoReferences(
             typeof(TrustedProxySecurity).Assembly,
@@ -124,11 +131,12 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Identity",
             "FoundationKit.Authorization",
             "FoundationKit.Workflow",
+            "FoundationKit.Approvals",
             "Microsoft.EntityFrameworkCore");
     }
 
     [Fact]
-    public void Identity_does_not_depend_on_authorization_workflow_or_persistence_layers()
+    public void Identity_does_not_depend_on_authorization_workflow_approvals_or_persistence_layers()
     {
         AssertNoReferences(
             typeof(AccountSecurityOptions).Assembly,
@@ -136,17 +144,19 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Blazor",
             "FoundationKit.Authorization",
             "FoundationKit.Workflow",
+            "FoundationKit.Approvals",
             "Microsoft.EntityFrameworkCore");
     }
 
     [Fact]
-    public void Authorization_does_not_depend_on_workflow_persistence_or_product_layers()
+    public void Authorization_does_not_depend_on_workflow_approvals_persistence_or_product_layers()
     {
         AssertNoReferences(
             typeof(PermissionDefinition).Assembly,
             "FoundationKit.Infrastructure",
             "FoundationKit.Blazor",
             "FoundationKit.Workflow",
+            "FoundationKit.Approvals",
             "Microsoft.EntityFrameworkCore",
             "Athar.Domain",
             "Athar.Application",
@@ -155,7 +165,7 @@ public sealed class ArchitectureRulesTests
     }
 
     [Fact]
-    public void Workflow_depends_on_auditing_but_not_identity_authorization_or_product_layers()
+    public void Workflow_depends_on_auditing_but_not_identity_authorization_approvals_or_product_layers()
     {
         AssertNoReferences(
             typeof(WorkflowDefinition).Assembly,
@@ -165,7 +175,26 @@ public sealed class ArchitectureRulesTests
             "FoundationKit.Security",
             "FoundationKit.Identity",
             "FoundationKit.Authorization",
+            "FoundationKit.Approvals",
             "Microsoft.EntityFrameworkCore",
+            "Athar.Domain",
+            "Athar.Application",
+            "Athar.Infrastructure",
+            "Athar.Api");
+    }
+
+    [Fact]
+    public void Approvals_compose_workflow_authorization_and_auditing_without_provider_or_product_dependencies()
+    {
+        AssertNoReferences(
+            typeof(ApprovalPolicy).Assembly,
+            "FoundationKit.Infrastructure",
+            "FoundationKit.WebApi",
+            "FoundationKit.Blazor",
+            "FoundationKit.Security",
+            "FoundationKit.Identity",
+            "Microsoft.EntityFrameworkCore",
+            "Microsoft.AspNetCore",
             "Athar.Domain",
             "Athar.Application",
             "Athar.Infrastructure",
