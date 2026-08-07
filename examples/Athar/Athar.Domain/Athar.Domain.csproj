@@ -8,5 +8,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\FoundationKit.Domain\FoundationKit.Domain.csproj" />
     <ProjectReference Include="..\..\..\src\FoundationKit.Application\FoundationKit.Application.csproj" />
+    <ProjectReference Include="..\..\..\src\FoundationKit.Workflow\FoundationKit.Workflow.csproj" />
   </ItemGroup>
 </Project>
