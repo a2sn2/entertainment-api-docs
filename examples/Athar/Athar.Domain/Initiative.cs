@@ -157,15 +157,18 @@ public sealed class Initiative : AggregateRoot<Guid>
         if (!InitiativeDecisions.IsValid(normalizedDecision))
             return Result.Failure(InitiativeErrors.InvalidDecision);
 
-        if (Status != InitiativeStatuses.Submitted)
+        if (!InitiativeWorkflow.Definition.TryResolve(
+                Status,
+                normalizedDecision!,
+                out var transition))
+        {
             return Result.Failure(InitiativeErrors.AlreadyReviewed);
+        }
 
         if (normalizedNotes.Length > 1200)
             return Result.Failure(InitiativeErrors.InvalidReviewNotes);
 
-        Status = normalizedDecision == InitiativeDecisions.Approve
-            ? InitiativeStatuses.Approved
-            : InitiativeStatuses.Rejected;
+        Status = transition.ToState;
         UpdatedUtc = reviewedUtc;
 
         RaiseDomainEvent(new InitiativeReviewed(
