@@ -165,7 +165,7 @@ public static class FoundationCapabilityProfiles
 
 public sealed class CapabilityResolver
 {
-    private readonly IReadOnlyDictionary<string, CapabilityDescriptor> _descriptors;
+    private readonly Dictionary<string, CapabilityDescriptor> _descriptors;
 
     public CapabilityResolver(IEnumerable<CapabilityDescriptor> descriptors)
     {
