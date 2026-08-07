@@ -58,7 +58,7 @@ sql_exec "IF DB_ID(N'$restore_db') IS NOT NULL BEGIN ALTER DATABASE [$restore_db
 validation_raw="$(${compose[@]} exec -T athar-sqlserver bash -lc '
   if [ -x /opt/mssql-tools18/bin/sqlcmd ]; then SQLCMD=/opt/mssql-tools18/bin/sqlcmd; else SQLCMD=/opt/mssql-tools/bin/sqlcmd; fi
   "$SQLCMD" -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -b -h -1 -W "$@"
-' -- -Q "SET NOCOUNT ON; USE [$restore_db]; SELECT 'users=' + CONVERT(varchar(30), COUNT_BIG(*)) FROM dbo.AspNetUsers; SELECT 'initiatives=' + CONVERT(varchar(30), COUNT_BIG(*)) FROM dbo.Initiatives; SELECT 'reviews=' + CONVERT(varchar(30), COUNT_BIG(*)) FROM dbo.InitiativeReviews; SELECT 'audit=' + CONVERT(varchar(30), COUNT_BIG(*)) FROM dbo.AuditEntries;")"
+' -- -Q "SET NOCOUNT ON; USE [$restore_db]; SELECT 'users=' + CONVERT(varchar(30), COUNT_BIG(*)) FROM [identity].[Users]; SELECT 'initiatives=' + CONVERT(varchar(30), COUNT_BIG(*)) FROM [athar].[Initiatives]; SELECT 'reviews=' + CONVERT(varchar(30), COUNT_BIG(*)) FROM [athar].[InitiativeReviews]; SELECT 'audit=' + CONVERT(varchar(30), COUNT_BIG(*)) FROM [athar].[AuditEntries];")"
 
 # sqlcmd may emit leading whitespace and CRLF depending on the installed tools
 # version. Normalize transport formatting before asserting the restored data.
