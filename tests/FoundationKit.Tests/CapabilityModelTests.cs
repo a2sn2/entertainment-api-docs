@@ -108,6 +108,10 @@ public sealed class CapabilityModelTests
             capability => capability.Id == FoundationCapabilityIds.Approvals);
         var notifications = FoundationCapabilityCatalog.All.Single(
             capability => capability.Id == FoundationCapabilityIds.Notifications);
+        var settings = FoundationCapabilityCatalog.All.Single(
+            capability => capability.Id == FoundationCapabilityIds.Settings);
+        var featureManagement = FoundationCapabilityCatalog.All.Single(
+            capability => capability.Id == FoundationCapabilityIds.FeatureManagement);
         var files = FoundationCapabilityCatalog.All.Single(
             capability => capability.Id == FoundationCapabilityIds.Files);
         var kernel = FoundationCapabilityCatalog.All.Single(
@@ -116,6 +120,8 @@ public sealed class CapabilityModelTests
         Assert.Equal(CapabilityMaturity.ReferenceOnly, workflow.Maturity);
         Assert.Equal(CapabilityMaturity.ReferenceOnly, approvals.Maturity);
         Assert.Equal(CapabilityMaturity.ReferenceOnly, notifications.Maturity);
+        Assert.Equal(CapabilityMaturity.ReferenceOnly, settings.Maturity);
+        Assert.Equal(CapabilityMaturity.ReferenceOnly, featureManagement.Maturity);
         Assert.Equal(CapabilityMaturity.Planned, files.Maturity);
         Assert.Equal(CapabilityMaturity.Stable, kernel.Maturity);
     }
