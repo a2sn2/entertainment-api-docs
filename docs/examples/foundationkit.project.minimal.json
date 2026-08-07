@@ -1,0 +1,7 @@
+{
+  "name": "MinimalApi",
+  "profile": "minimal",
+  "includeCapabilities": [],
+  "excludeCapabilities": [],
+  "providers": []
+}
