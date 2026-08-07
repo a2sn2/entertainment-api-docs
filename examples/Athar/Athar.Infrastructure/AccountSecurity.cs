@@ -1,38 +1,14 @@
 using System.Net;
 using System.Net.Mail;
+using FoundationKit.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Athar.Infrastructure;
 
-public enum AccountSecurityNotification
+public sealed class AccountSecurityDeliveryOptions
 {
-    PasswordChanged,
-    PasswordReset,
-    MfaEnabled,
-    MfaDisabled,
-    RecoveryCodesRegenerated
-}
-
-public sealed class AccountSecurityOptions
-{
-    public const string SectionName = "AccountSecurity";
-
-    public bool RequireConfirmedEmail { get; set; }
-
-    public bool RequireAdministratorMfa { get; set; }
-
-    // Development/reference defaults preserve the original Athar behavior.
-    // Production must explicitly supply the approved organizational password policy.
-    public int PasswordRequiredLength { get; set; } = 10;
-
-    public bool PasswordRequireDigit { get; set; } = true;
-
-    public bool PasswordRequireLowercase { get; set; } = true;
-
-    public bool PasswordRequireUppercase { get; set; } = true;
-
-    public bool PasswordRequireNonAlphanumeric { get; set; } = true;
+    public const string SectionName = IdentityPolicyOptions.SectionName;
 
     public string SmtpHost { get; set; } = string.Empty;
 
@@ -47,28 +23,10 @@ public sealed class AccountSecurityOptions
     public string FromAddress { get; set; } = string.Empty;
 }
 
-public interface IAccountNotificationSender
-{
-    Task<bool> SendEmailConfirmationAsync(
-        string destinationEmail,
-        string confirmationToken,
-        CancellationToken cancellationToken = default);
-
-    Task<bool> SendPasswordResetAsync(
-        string destinationEmail,
-        string resetToken,
-        CancellationToken cancellationToken = default);
-
-    Task<bool> SendSecurityNotificationAsync(
-        string destinationEmail,
-        AccountSecurityNotification notification,
-        CancellationToken cancellationToken = default);
-}
-
 public sealed class SmtpAccountNotificationSender(
-    IOptions<AccountSecurityOptions> options,
+    IOptions<AccountSecurityDeliveryOptions> options,
     ILogger<SmtpAccountNotificationSender> logger)
-    : IAccountNotificationSender
+    : IIdentityNotificationSender
 {
     private static readonly Action<ILogger, Exception?> DeliveryNotConfiguredLog =
         LoggerMessage.Define(
@@ -82,7 +40,7 @@ public sealed class SmtpAccountNotificationSender(
             new EventId(2102, "AccountNotificationDeliveryFailed"),
             "Account notification delivery failed. No account token or destination address was logged.");
 
-    private readonly AccountSecurityOptions _options = options.Value;
+    private readonly AccountSecurityDeliveryOptions _options = options.Value;
 
     public Task<bool> SendEmailConfirmationAsync(
         string destinationEmail,
@@ -108,20 +66,20 @@ public sealed class SmtpAccountNotificationSender(
 
     public Task<bool> SendSecurityNotificationAsync(
         string destinationEmail,
-        AccountSecurityNotification notification,
+        IdentitySecurityNotification notification,
         CancellationToken cancellationToken = default)
     {
         var (subject, action) = notification switch
         {
-            AccountSecurityNotification.PasswordChanged =>
+            IdentitySecurityNotification.PasswordChanged =>
                 ("تنبيه أمني — تم تغيير كلمة المرور", "تم تغيير كلمة مرور حسابك"),
-            AccountSecurityNotification.PasswordReset =>
+            IdentitySecurityNotification.PasswordReset =>
                 ("تنبيه أمني — تمت إعادة تعيين كلمة المرور", "تمت إعادة تعيين كلمة مرور حسابك"),
-            AccountSecurityNotification.MfaEnabled =>
+            IdentitySecurityNotification.MfaEnabled =>
                 ("تنبيه أمني — تم تفعيل المصادقة الثنائية", "تمت إضافة عامل مصادقة ثنائية إلى حسابك"),
-            AccountSecurityNotification.MfaDisabled =>
+            IdentitySecurityNotification.MfaDisabled =>
                 ("تنبيه أمني — تم تعطيل المصادقة الثنائية", "تمت إزالة عامل المصادقة الثنائية من حسابك"),
-            AccountSecurityNotification.RecoveryCodesRegenerated =>
+            IdentitySecurityNotification.RecoveryCodesRegenerated =>
                 ("تنبيه أمني — تم تجديد رموز الاسترداد", "تم إبطال رموز الاسترداد السابقة وإنشاء مجموعة جديدة لحسابك"),
             _ => throw new ArgumentOutOfRangeException(nameof(notification), notification, null)
         };
