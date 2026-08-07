@@ -56,6 +56,23 @@ public static class ProductionConfigurationValidator
         RequireExplicitBooleanDecision(
             configuration,
             $"{AccountSecurityOptions.SectionName}:RequireAdministratorMfa");
+        RequireExplicitIntegerDecision(
+            configuration,
+            $"{AccountSecurityOptions.SectionName}:PasswordRequiredLength",
+            minimum: 1,
+            maximum: 128);
+        RequireExplicitBooleanDecision(
+            configuration,
+            $"{AccountSecurityOptions.SectionName}:PasswordRequireDigit");
+        RequireExplicitBooleanDecision(
+            configuration,
+            $"{AccountSecurityOptions.SectionName}:PasswordRequireLowercase");
+        RequireExplicitBooleanDecision(
+            configuration,
+            $"{AccountSecurityOptions.SectionName}:PasswordRequireUppercase");
+        RequireExplicitBooleanDecision(
+            configuration,
+            $"{AccountSecurityOptions.SectionName}:PasswordRequireNonAlphanumeric");
         RequireExplicitBooleanDecision(
             configuration,
             $"{ReverseProxySecurityOptions.SectionName}:Enabled");
@@ -68,6 +85,22 @@ public static class ProductionConfigurationValidator
         var raw = configuration[key];
         if (string.IsNullOrWhiteSpace(raw) || !bool.TryParse(raw, out _))
             throw new InvalidOperationException($"Production requires an explicit true/false decision for '{key}'.");
+    }
+
+    private static void RequireExplicitIntegerDecision(
+        IConfiguration configuration,
+        string key,
+        int minimum,
+        int maximum)
+    {
+        var raw = configuration[key];
+        if (!int.TryParse(raw, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var value)
+            || value < minimum
+            || value > maximum)
+        {
+            throw new InvalidOperationException(
+                $"Production requires an explicit integer decision for '{key}' in the supported range {minimum}..{maximum}.");
+        }
     }
 
     private static void ValidateReverseProxy(IConfiguration configuration)
