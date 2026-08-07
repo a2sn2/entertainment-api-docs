@@ -7,7 +7,7 @@ This roadmap turns FoundationKit from a reusable core into a composable system-b
 A capability moves through the following lifecycle:
 
 1. **Planned** — vocabulary, boundary, and dependencies are defined.
-2. **ReferenceOnly** — behavior is proven in a reference consumer, or an extraction is still under adoption proof.
+2. **ReferenceOnly** — a real reference-level boundary/package or consumer proof exists, but broader adoption, compatibility, provider, or production evidence is still limited.
 3. **Preview** — reusable package/contracts exist and pass repository quality/security gates, but compatibility or provider/adoption evidence is still evolving.
 4. **Stable** — reusable contract is documented, independently composable, tested, packaged, and supported as part of the FoundationKit public surface.
 
@@ -21,24 +21,25 @@ No capability is promoted merely because a class or empty package exists.
 - [x] Project-manifest model.
 - [x] Machine-readable generated capability graph.
 - [x] CI drift protection between compiled graph and exported JSON.
-- [ ] Manifest JSON schema and strict parser/validator.
-- [ ] Composition diagnostics (`why selected`, dependency path, incompatible choices).
+- [x] Strict manifest parsing/validation through current Composer tooling.
+- [x] Composition dependency diagnostics through current Composer explain/validation flow.
 - [ ] Capability compatibility/version metadata.
 
 ## Phase B — Governance and security foundations
 
 - [x] Auditing reusable package extracted and packaged.
-- [ ] Auditing provider/adoption proof and maturity promotion.
-- [ ] Security reusable capability boundary.
-- [ ] Identity reusable capability boundary.
-- [ ] Authorization: roles, permissions, policies, ownership, scoped access.
-- [ ] Sensitive-action/step-up authorization contracts.
-- [ ] Maker-checker/four-eyes reusable policy primitive.
+- [ ] Auditing provider/adoption proof and maturity promotion beyond `ReferenceOnly`.
+- [x] Security reusable capability boundary.
+- [x] Identity reusable capability boundary.
+- [x] Authorization roles, permissions, ownership, and scoped access primitives.
+- [x] Sensitive-action/step-up requirement contracts.
+- [x] Maker-checker/four-eyes reusable policy primitive in Approvals v1.
 
 ## Phase C — Business process capabilities
 
-- [ ] Workflow/state transition engine.
-- [ ] Approval engine: single, sequential, parallel, quorum, maker-checker.
+- [x] Deterministic Workflow/state-transition kernel.
+- [x] Approvals v1: single approve/reject decision, permission gate, maker-checker, workflow resolution, and audit intent.
+- [ ] Advanced approvals: sequential, parallel, quorum/voting, delegation, escalation, and dynamic routing.
 - [ ] Tasks/work items.
 - [ ] SLA/business-hours/escalation capability.
 - [ ] Timeline/activity stream.
@@ -49,7 +50,7 @@ No capability is promoted merely because a class or empty package exists.
 
 - [ ] Notifications abstraction.
 - [ ] Notification templates and localization.
-- [ ] SMTP provider.
+- [ ] SMTP provider capability integration beyond the existing product/reference adapter.
 - [ ] File storage abstraction.
 - [ ] Document metadata/versioning/classification.
 - [ ] Local-development file provider.
@@ -72,8 +73,8 @@ No capability is promoted merely because a class or empty package exists.
 - [ ] Messaging/integration events.
 - [ ] Outbox/inbox contracts.
 - [ ] Webhooks with signing/replay/retry contracts.
-- [ ] Idempotency reusable package.
-- [ ] Optimistic concurrency reusable package.
+- [ ] Idempotency reusable package extraction beyond current reference behavior.
+- [ ] Optimistic concurrency reusable package extraction beyond current reference behavior.
 - [ ] Caching abstraction.
 - [ ] External HTTP integration resilience conventions.
 
@@ -94,7 +95,7 @@ Providers remain outside business capabilities and are selected explicitly.
 - [ ] SQL Server provider family where reusable provider code is justified.
 - [ ] PostgreSQL provider family.
 - [ ] Redis provider.
-- [ ] SMTP provider.
+- [ ] SMTP provider family beyond the existing product/reference adapter.
 - [ ] Object storage providers.
 - [ ] Search providers.
 - [ ] Messaging providers.
@@ -102,11 +103,10 @@ Providers remain outside business capabilities and are selected explicitly.
 
 ## Phase I — Project Composer
 
-- [ ] `foundationkit` CLI project.
-- [ ] `foundationkit capabilities list`.
-- [ ] `foundationkit profiles list`.
-- [ ] `foundationkit validate <manifest>`.
-- [ ] `foundationkit explain <manifest>`.
+- [x] `FoundationKit.Composer` CLI project/reference tooling.
+- [x] Capability/profile discovery.
+- [x] Strict manifest validation.
+- [x] Dependency explanation/current composition diagnostics.
 - [ ] `foundationkit new` interactive composer.
 - [ ] Deterministic project generation.
 - [ ] Generated architecture/decision report.
@@ -146,10 +146,15 @@ A capability is not considered complete until applicable items below are satisfi
 
 ## Current baseline
 
-After the initial implementation sequence:
+The repository currently has extracted reusable/reference packages for:
 
-- Capability Model v1 is merged.
-- Machine-readable capability graph and drift validation are merged.
-- `FoundationKit.Auditing` is the first extracted opt-in capability package.
+- Auditing;
+- Security;
+- Identity;
+- Authorization;
+- Workflow;
+- Approvals v1.
 
-The next recommended family is **Security → Identity → Authorization**, followed by **Workflow → Approvals**, because many higher-level business capabilities depend on those boundaries.
+Athar provides current consumer evidence for the security, identity, authorization, workflow, and narrow approval surfaces. The capability maturity values remain conservative and do not imply production certification.
+
+The next recommended family after Approvals v1 is **Notifications + Files + Jobs/Messaging**, while advanced approval models remain a separate future expansion rather than being implied by the v1 package.
