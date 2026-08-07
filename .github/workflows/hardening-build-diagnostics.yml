@@ -18,6 +18,12 @@ jobs:
       - name: Restore
         run: dotnet restore FoundationKit.sln --verbosity quiet
       - name: Build with compact diagnostics
-        run: dotnet build FoundationKit.sln --configuration Release --no-restore --verbosity quiet
+        shell: bash
+        run: |
+          set +e
+          dotnet build FoundationKit.sln --configuration Release --no-restore --verbosity quiet > build.log 2>&1
+          status=$?
+          grep -E 'error (CS|CA|SYSLIB|NU)[0-9]+' build.log | sort -u || true
+          exit "$status"
       - name: Athar tests with compact diagnostics
         run: dotnet test tests/Athar.Tests/Athar.Tests.csproj --configuration Release --no-build --verbosity quiet
