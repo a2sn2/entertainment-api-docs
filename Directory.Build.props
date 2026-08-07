@@ -12,5 +12,14 @@
     <AnalysisLevel>8.0-recommended</AnalysisLevel>
     <NuGetAudit>true</NuGetAudit>
     <NuGetAuditLevel>moderate</NuGetAuditLevel>
+
+    <!--
+      Deliberate package-API compatibility exceptions. FoundationKit already exposes
+      these established public names/factory members. Renaming/removing them only to
+      satisfy design-style rules would be a breaking change unrelated to security.
+      Behavioral, reliability, globalization, disposal, and security analyzer rules
+      remain warnings-as-errors.
+    -->
+    <NoWarn>$(NoWarn);CA1000;CA1711;CA1716</NoWarn>
   </PropertyGroup>
 </Project>
