@@ -24,11 +24,11 @@ ProductionConfigurationValidator.Validate(
     builder.Configuration,
     builder.Environment.IsDevelopment());
 
-var identityPolicy = builder.Configuration
-    .GetSection(IdentityPolicyOptions.SectionName)
-    .Get<IdentityPolicyOptions>()
-    ?? new IdentityPolicyOptions();
-IdentityPolicyValidator.Validate(identityPolicy);
+var accountSecurity = builder.Configuration
+    .GetSection(AccountSecurityOptions.SectionName)
+    .Get<AccountSecurityOptions>()
+    ?? new AccountSecurityOptions();
+AccountSecurityOptionsValidator.Validate(accountSecurity);
 
 var reverseProxySecurity = builder.Configuration
     .GetSection(TrustedProxyOptions.SectionName)
@@ -64,12 +64,12 @@ builder.Services
     .AddIdentity<AtharUser, IdentityRole<Guid>>(options =>
     {
         options.User.RequireUniqueEmail = true;
-        options.SignIn.RequireConfirmedEmail = identityPolicy.RequireConfirmedEmail;
-        options.Password.RequiredLength = identityPolicy.PasswordRequiredLength;
-        options.Password.RequireDigit = identityPolicy.PasswordRequireDigit;
-        options.Password.RequireLowercase = identityPolicy.PasswordRequireLowercase;
-        options.Password.RequireUppercase = identityPolicy.PasswordRequireUppercase;
-        options.Password.RequireNonAlphanumeric = identityPolicy.PasswordRequireNonAlphanumeric;
+        options.SignIn.RequireConfirmedEmail = accountSecurity.RequireConfirmedEmail;
+        options.Password.RequiredLength = accountSecurity.PasswordRequiredLength;
+        options.Password.RequireDigit = accountSecurity.PasswordRequireDigit;
+        options.Password.RequireLowercase = accountSecurity.PasswordRequireLowercase;
+        options.Password.RequireUppercase = accountSecurity.PasswordRequireUppercase;
+        options.Password.RequireNonAlphanumeric = accountSecurity.PasswordRequireNonAlphanumeric;
         options.Lockout.AllowedForNewUsers = true;
         options.Lockout.MaxFailedAccessAttempts = 5;
         options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
@@ -103,7 +103,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AtharAdministrator", policy =>
     {
         policy.RequireRole(AtharRoles.Administrator);
-        if (identityPolicy.RequireAdministratorMfa)
+        if (accountSecurity.RequireAdministratorMfa)
             policy.RequireFoundationMultiFactor();
     });
 });
@@ -153,8 +153,8 @@ builder.Services.AddOptions<AdminSeedOptions>()
         "When AdminSeed is enabled, Email and a password of at least 12 characters are required.")
     .ValidateOnStart();
 
-builder.Services.AddOptions<IdentityPolicyOptions>()
-    .Bind(builder.Configuration.GetSection(IdentityPolicyOptions.SectionName))
+builder.Services.AddOptions<AccountSecurityOptions>()
+    .Bind(builder.Configuration.GetSection(AccountSecurityOptions.SectionName))
     .Validate(options => options.PasswordRequiredLength is >= 1 and <= 128,
         "AccountSecurity:PasswordRequiredLength must be between 1 and 128.")
     .ValidateOnStart();
