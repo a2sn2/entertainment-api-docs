@@ -16,6 +16,7 @@
     <ProjectReference Include="..\..\..\src\FoundationKit.Application\FoundationKit.Application.csproj" />
     <ProjectReference Include="..\..\..\src\FoundationKit.Infrastructure\FoundationKit.Infrastructure.csproj" />
     <ProjectReference Include="..\..\..\src\FoundationKit.WebApi\FoundationKit.WebApi.csproj" />
+    <ProjectReference Include="..\..\..\src\FoundationKit.Security\FoundationKit.Security.csproj" />
   </ItemGroup>
 
   <ItemGroup>
