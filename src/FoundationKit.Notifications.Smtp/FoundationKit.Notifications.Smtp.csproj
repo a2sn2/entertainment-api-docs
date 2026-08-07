@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>SMTP provider adapter for FoundationKit.Notifications.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FoundationKit.Notifications\FoundationKit.Notifications.csproj" />
+  </ItemGroup>
+</Project>

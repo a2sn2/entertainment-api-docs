@@ -1,9 +1,7 @@
-using System.Net;
-using System.Net.Mail;
 using FoundationKit.Identity;
 using FoundationKit.Notifications;
+using FoundationKit.Notifications.Smtp;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 
 namespace Athar.Infrastructure;
 
@@ -22,6 +20,16 @@ public sealed class AccountSecurityDeliveryOptions
     public string SmtpPassword { get; set; } = string.Empty;
 
     public string FromAddress { get; set; } = string.Empty;
+
+    public SmtpNotificationOptions ToProviderOptions() => new()
+    {
+        Host = SmtpHost,
+        Port = SmtpPort,
+        EnableSsl = SmtpEnableSsl,
+        Username = SmtpUsername,
+        Password = SmtpPassword,
+        FromAddress = FromAddress
+    };
 }
 
 public sealed class AccountSecurityNotificationAdapter(INotificationSender sender)
@@ -97,10 +105,9 @@ public sealed class AccountSecurityNotificationAdapter(INotificationSender sende
     }
 }
 
-public sealed class SmtpNotificationSender(
-    IOptions<AccountSecurityDeliveryOptions> options,
-    ILogger<SmtpNotificationSender> logger)
-    : INotificationSender
+public sealed class AtharSmtpNotificationObserver(
+    ILogger<AtharSmtpNotificationObserver> logger)
+    : ISmtpNotificationObserver
 {
     private static readonly Action<ILogger, string, Exception?> DeliveryNotConfiguredLog =
         LoggerMessage.Define<string>(
@@ -114,60 +121,9 @@ public sealed class SmtpNotificationSender(
             new EventId(2102, "NotificationDeliveryFailed"),
             "Notification delivery failed for purpose {Purpose} with error type {ErrorType}. No notification destination or body was logged.");
 
-    private readonly AccountSecurityDeliveryOptions _options = options.Value;
+    public void NotConfigured(string purpose) =>
+        DeliveryNotConfiguredLog(logger, purpose, null);
 
-    public async Task<NotificationDeliveryResult> SendAsync(
-        NotificationMessage message,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(message);
-        cancellationToken.ThrowIfCancellationRequested();
-
-        if (string.IsNullOrWhiteSpace(_options.SmtpHost)
-            || string.IsNullOrWhiteSpace(_options.FromAddress))
-        {
-            DeliveryNotConfiguredLog(logger, message.Purpose, null);
-            return NotificationDeliveryResult.NotConfigured();
-        }
-
-        try
-        {
-            using var mailMessage = new MailMessage(
-                _options.FromAddress.Trim(),
-                message.Destination,
-                message.Title,
-                message.Body);
-
-            using var client = new SmtpClient(
-                _options.SmtpHost.Trim(),
-                _options.SmtpPort)
-            {
-                EnableSsl = _options.SmtpEnableSsl,
-                DeliveryMethod = SmtpDeliveryMethod.Network
-            };
-
-            if (!string.IsNullOrWhiteSpace(_options.SmtpUsername))
-            {
-                client.Credentials = new NetworkCredential(
-                    _options.SmtpUsername,
-                    _options.SmtpPassword);
-            }
-
-            await client.SendMailAsync(mailMessage, cancellationToken);
-            return NotificationDeliveryResult.Delivered();
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception exception) when (exception is SmtpException or InvalidOperationException or FormatException)
-        {
-            DeliveryFailedLog(
-                logger,
-                message.Purpose,
-                exception.GetType().Name,
-                null);
-            return NotificationDeliveryResult.Failed();
-        }
-    }
+    public void DeliveryFailed(string purpose, string errorType) =>
+        DeliveryFailedLog(logger, purpose, errorType, null);
 }
