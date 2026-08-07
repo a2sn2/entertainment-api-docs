@@ -5,6 +5,15 @@ using Microsoft.Extensions.Options;
 
 namespace Athar.Infrastructure;
 
+public enum AccountSecurityNotification
+{
+    PasswordChanged,
+    PasswordReset,
+    MfaEnabled,
+    MfaDisabled,
+    RecoveryCodesRegenerated
+}
+
 public sealed class AccountSecurityOptions
 {
     public const string SectionName = "AccountSecurity";
@@ -37,6 +46,11 @@ public interface IAccountNotificationSender
         string destinationEmail,
         string resetToken,
         CancellationToken cancellationToken = default);
+
+    Task<bool> SendSecurityNotificationAsync(
+        string destinationEmail,
+        AccountSecurityNotification notification,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class SmtpAccountNotificationSender(
@@ -48,7 +62,13 @@ public sealed class SmtpAccountNotificationSender(
         LoggerMessage.Define(
             LogLevel.Warning,
             new EventId(2101, "AccountNotificationNotConfigured"),
-            "Account notification delivery is not configured. No account token was logged or returned.");
+            "Account notification delivery is not configured. No account token or destination address was logged.");
+
+    private static readonly Action<ILogger, Exception?> DeliveryFailedLog =
+        LoggerMessage.Define(
+            LogLevel.Error,
+            new EventId(2102, "AccountNotificationDeliveryFailed"),
+            "Account notification delivery failed. No account token or destination address was logged.");
 
     private readonly AccountSecurityOptions _options = options.Value;
 
@@ -74,6 +94,30 @@ public sealed class SmtpAccountNotificationSender(
             + resetToken,
             cancellationToken);
 
+    public Task<bool> SendSecurityNotificationAsync(
+        string destinationEmail,
+        AccountSecurityNotification notification,
+        CancellationToken cancellationToken = default)
+    {
+        var (subject, action) = notification switch
+        {
+            AccountSecurityNotification.PasswordChanged =>
+                ("تنبيه أمني — تم تغيير كلمة المرور", "تم تغيير كلمة مرور حسابك"),
+            AccountSecurityNotification.PasswordReset =>
+                ("تنبيه أمني — تمت إعادة تعيين كلمة المرور", "تمت إعادة تعيين كلمة مرور حسابك"),
+            AccountSecurityNotification.MfaEnabled =>
+                ("تنبيه أمني — تم تفعيل المصادقة الثنائية", "تمت إضافة عامل مصادقة ثنائية إلى حسابك"),
+            AccountSecurityNotification.MfaDisabled =>
+                ("تنبيه أمني — تم تعطيل المصادقة الثنائية", "تمت إزالة عامل المصادقة الثنائية من حسابك"),
+            AccountSecurityNotification.RecoveryCodesRegenerated =>
+                ("تنبيه أمني — تم تجديد رموز الاسترداد", "تم إبطال رموز الاسترداد السابقة وإنشاء مجموعة جديدة لحسابك"),
+            _ => throw new ArgumentOutOfRangeException(nameof(notification), notification, null)
+        };
+
+        var body = $"{action} في منصة أثر. إذا لم تكن أنت من نفذ هذه العملية، تواصل فورًا مع الجهة المسؤولة عن المنصة. لا تحتوي هذه الرسالة على كلمات مرور أو رموز مصادقة أو رموز استرداد.";
+        return SendAsync(destinationEmail, subject, body, cancellationToken);
+    }
+
     private async Task<bool> SendAsync(
         string destinationEmail,
         string subject,
@@ -89,28 +133,40 @@ public sealed class SmtpAccountNotificationSender(
             return false;
         }
 
-        using var message = new MailMessage(
-            _options.FromAddress.Trim(),
-            destinationEmail.Trim(),
-            subject,
-            body);
-
-        using var client = new SmtpClient(
-            _options.SmtpHost.Trim(),
-            _options.SmtpPort)
+        try
         {
-            EnableSsl = _options.SmtpEnableSsl,
-            DeliveryMethod = SmtpDeliveryMethod.Network
-        };
+            using var message = new MailMessage(
+                _options.FromAddress.Trim(),
+                destinationEmail.Trim(),
+                subject,
+                body);
 
-        if (!string.IsNullOrWhiteSpace(_options.SmtpUsername))
-        {
-            client.Credentials = new NetworkCredential(
-                _options.SmtpUsername,
-                _options.SmtpPassword);
+            using var client = new SmtpClient(
+                _options.SmtpHost.Trim(),
+                _options.SmtpPort)
+            {
+                EnableSsl = _options.SmtpEnableSsl,
+                DeliveryMethod = SmtpDeliveryMethod.Network
+            };
+
+            if (!string.IsNullOrWhiteSpace(_options.SmtpUsername))
+            {
+                client.Credentials = new NetworkCredential(
+                    _options.SmtpUsername,
+                    _options.SmtpPassword);
+            }
+
+            await client.SendMailAsync(message, cancellationToken);
+            return true;
         }
-
-        await client.SendMailAsync(message, cancellationToken);
-        return true;
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception) when (exception is SmtpException or InvalidOperationException or FormatException)
+        {
+            DeliveryFailedLog(logger, exception);
+            return false;
+        }
     }
 }
