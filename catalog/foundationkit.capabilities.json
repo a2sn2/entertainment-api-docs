@@ -1,0 +1,600 @@
+{
+  "schemaVersion": 1,
+  "capabilities": [
+    {
+      "id": "kernel",
+      "displayName": "Kernel",
+      "kind": "kernel",
+      "maturity": "stable",
+      "category": "Foundation",
+      "description": "Domain/application primitives that every FoundationKit composition starts from.",
+      "dependencies": []
+    },
+    {
+      "id": "validation",
+      "displayName": "Validation",
+      "kind": "optional",
+      "maturity": "stable",
+      "category": "Foundation",
+      "description": "Reusable validation and business-rule boundaries.",
+      "dependencies": [
+        "kernel"
+      ]
+    },
+    {
+      "id": "web-api",
+      "displayName": "Web API",
+      "kind": "optional",
+      "maturity": "stable",
+      "category": "Experience",
+      "description": "HTTP result mapping, correlation and reusable API conventions.",
+      "dependencies": [
+        "kernel"
+      ]
+    },
+    {
+      "id": "blazor",
+      "displayName": "Blazor",
+      "kind": "optional",
+      "maturity": "stable",
+      "category": "Experience",
+      "description": "Reusable API client, state and MVVM building blocks for Blazor consumers.",
+      "dependencies": [
+        "kernel"
+      ]
+    },
+    {
+      "id": "observability",
+      "displayName": "Observability",
+      "kind": "optional",
+      "maturity": "preview",
+      "category": "Operations",
+      "description": "Logs, traces, metrics, correlation and health abstractions.",
+      "dependencies": [
+        "kernel"
+      ]
+    },
+    {
+      "id": "security",
+      "displayName": "Security",
+      "kind": "optional",
+      "maturity": "preview",
+      "category": "Security",
+      "description": "Secure defaults and hooks for rate limiting, CSRF, step-up authentication and security events.",
+      "dependencies": [
+        "web-api"
+      ]
+    },
+    {
+      "id": "identity",
+      "displayName": "Identity",
+      "kind": "optional",
+      "maturity": "referenceOnly",
+      "category": "Identity",
+      "description": "Authentication lifecycle, sessions, MFA, confirmation and recovery contracts.",
+      "dependencies": [
+        "security"
+      ]
+    },
+    {
+      "id": "authorization",
+      "displayName": "Authorization",
+      "kind": "optional",
+      "maturity": "referenceOnly",
+      "category": "Identity",
+      "description": "Role, permission, policy, ownership and scoped authorization model.",
+      "dependencies": [
+        "identity"
+      ]
+    },
+    {
+      "id": "auditing",
+      "displayName": "Auditing",
+      "kind": "optional",
+      "maturity": "referenceOnly",
+      "category": "Governance",
+      "description": "Business and security audit trails with actor, target and correlation context.",
+      "dependencies": [
+        "kernel"
+      ]
+    },
+    {
+      "id": "settings",
+      "displayName": "Settings",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Platform",
+      "description": "Global, tenant, organization and user-scoped settings.",
+      "dependencies": [
+        "kernel"
+      ]
+    },
+    {
+      "id": "feature-management",
+      "displayName": "Feature Management",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Platform",
+      "description": "Feature flags and staged enablement by context.",
+      "dependencies": [
+        "settings"
+      ]
+    },
+    {
+      "id": "localization",
+      "displayName": "Localization",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Experience",
+      "description": "Language, culture, RTL/LTR, time-zone and formatting conventions.",
+      "dependencies": [
+        "kernel"
+      ]
+    },
+    {
+      "id": "organization",
+      "displayName": "Organization",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Business",
+      "description": "Organizations, branches, departments, teams, positions and reporting hierarchy.",
+      "dependencies": [
+        "kernel"
+      ]
+    },
+    {
+      "id": "multi-tenancy",
+      "displayName": "Multi-Tenancy",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Platform",
+      "description": "Tenant context and isolation patterns without forcing a storage topology.",
+      "dependencies": [
+        "authorization"
+      ]
+    },
+    {
+      "id": "workflow",
+      "displayName": "Workflow",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Process",
+      "description": "Stateful business workflows, transitions, escalation and history.",
+      "dependencies": [
+        "auditing"
+      ]
+    },
+    {
+      "id": "approvals",
+      "displayName": "Approvals",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Process",
+      "description": "Single, sequential, parallel, quorum and maker-checker approvals.",
+      "dependencies": [
+        "workflow",
+        "authorization",
+        "auditing"
+      ]
+    },
+    {
+      "id": "tasks",
+      "displayName": "Tasks",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Process",
+      "description": "Assignable work items, priorities, due dates and lifecycle tracking.",
+      "dependencies": [
+        "kernel"
+      ]
+    },
+    {
+      "id": "notifications",
+      "displayName": "Notifications",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Communication",
+      "description": "Channel-neutral notification contracts for in-app, email, SMS, push and other adapters.",
+      "dependencies": [
+        "kernel"
+      ]
+    },
+    {
+      "id": "files",
+      "displayName": "Files",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Content",
+      "description": "Provider-neutral file storage, metadata, integrity and access contracts.",
+      "dependencies": [
+        "authorization"
+      ]
+    },
+    {
+      "id": "documents",
+      "displayName": "Documents",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Content",
+      "description": "Document metadata, classification, versioning and entity linkage.",
+      "dependencies": [
+        "files",
+        "auditing"
+      ]
+    },
+    {
+      "id": "jobs",
+      "displayName": "Background Jobs",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Operations",
+      "description": "Immediate, delayed, scheduled and recurring background work contracts.",
+      "dependencies": [
+        "kernel"
+      ]
+    },
+    {
+      "id": "messaging",
+      "displayName": "Messaging",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Integration",
+      "description": "Integration events, outbox/inbox boundaries, retries and dead-letter concepts.",
+      "dependencies": [
+        "kernel"
+      ]
+    },
+    {
+      "id": "webhooks",
+      "displayName": "Webhooks",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Integration",
+      "description": "Inbound/outbound webhooks, signatures, replay protection and delivery history.",
+      "dependencies": [
+        "messaging",
+        "security"
+      ]
+    },
+    {
+      "id": "realtime",
+      "displayName": "Realtime",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Communication",
+      "description": "Realtime event delivery abstractions for SignalR/WebSocket-style providers.",
+      "dependencies": [
+        "authorization"
+      ]
+    },
+    {
+      "id": "caching",
+      "displayName": "Caching",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Data",
+      "description": "Memory/distributed cache abstraction with TTL and invalidation semantics.",
+      "dependencies": [
+        "kernel"
+      ]
+    },
+    {
+      "id": "search",
+      "displayName": "Search",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Data",
+      "description": "Provider-neutral search contracts for relational, full-text and external search engines.",
+      "dependencies": [
+        "authorization"
+      ]
+    },
+    {
+      "id": "reporting",
+      "displayName": "Reporting",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Business",
+      "description": "Report definitions, filtering, grouping and export boundaries.",
+      "dependencies": [
+        "authorization"
+      ]
+    },
+    {
+      "id": "idempotency",
+      "displayName": "Idempotency",
+      "kind": "optional",
+      "maturity": "referenceOnly",
+      "category": "Reliability",
+      "description": "Duplicate-write prevention for retried HTTP and integration operations.",
+      "dependencies": [
+        "web-api"
+      ]
+    },
+    {
+      "id": "concurrency",
+      "displayName": "Concurrency",
+      "kind": "optional",
+      "maturity": "referenceOnly",
+      "category": "Reliability",
+      "description": "Optimistic concurrency and conflict-detection conventions.",
+      "dependencies": [
+        "kernel"
+      ]
+    },
+    {
+      "id": "money",
+      "displayName": "Money",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Finance",
+      "description": "Currency-aware money values and explicit conversion boundaries.",
+      "dependencies": [
+        "kernel"
+      ]
+    },
+    {
+      "id": "numbering",
+      "displayName": "Numbering",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Business",
+      "description": "Business-friendly sequences with prefixes, periods and organizational scope.",
+      "dependencies": [
+        "kernel"
+      ]
+    },
+    {
+      "id": "privacy",
+      "displayName": "Privacy",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Governance",
+      "description": "PII classification, masking, redaction, consent and anonymization hooks.",
+      "dependencies": [
+        "auditing",
+        "security"
+      ]
+    },
+    {
+      "id": "retention",
+      "displayName": "Retention",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Governance",
+      "description": "Retention, archive, deletion and anonymization scheduling contracts.",
+      "dependencies": [
+        "jobs",
+        "auditing"
+      ]
+    },
+    {
+      "id": "ai",
+      "displayName": "AI",
+      "kind": "optional",
+      "maturity": "planned",
+      "category": "Intelligence",
+      "description": "Provider-neutral chat, embeddings, retrieval and agent abstractions.",
+      "dependencies": [
+        "observability"
+      ]
+    },
+    {
+      "id": "provider-sqlserver",
+      "displayName": "SQL Server Provider",
+      "kind": "provider",
+      "maturity": "referenceOnly",
+      "category": "Provider",
+      "description": "SQL Server adapter family owned outside the provider-agnostic kernel.",
+      "dependencies": [
+        "kernel"
+      ]
+    },
+    {
+      "id": "provider-redis",
+      "displayName": "Redis Provider",
+      "kind": "provider",
+      "maturity": "planned",
+      "category": "Provider",
+      "description": "Redis adapter for caching and related distributed primitives.",
+      "dependencies": [
+        "caching"
+      ]
+    },
+    {
+      "id": "provider-smtp",
+      "displayName": "SMTP Provider",
+      "kind": "provider",
+      "maturity": "referenceOnly",
+      "category": "Provider",
+      "description": "SMTP delivery adapter for notification and account-security messages.",
+      "dependencies": [
+        "notifications"
+      ]
+    },
+    {
+      "id": "tooling-cli",
+      "displayName": "FoundationKit CLI",
+      "kind": "tooling",
+      "maturity": "planned",
+      "category": "Tooling",
+      "description": "Interactive project composer driven by the capability graph and project manifest.",
+      "dependencies": [
+        "kernel"
+      ]
+    },
+    {
+      "id": "tooling-workbench",
+      "displayName": "FoundationKit Workbench",
+      "kind": "tooling",
+      "maturity": "referenceOnly",
+      "category": "Tooling",
+      "description": "Interactive repository consumer and future visual project composer.",
+      "dependencies": [
+        "kernel"
+      ]
+    }
+  ],
+  "profiles": [
+    {
+      "id": "minimal",
+      "displayName": "Minimal",
+      "description": "Small API/service foundation with validation and operational visibility.",
+      "capabilityIds": [
+        "kernel",
+        "validation",
+        "web-api",
+        "observability"
+      ]
+    },
+    {
+      "id": "standard",
+      "displayName": "Standard",
+      "description": "General business-system baseline with identity, security, audit and common user-facing capabilities.",
+      "capabilityIds": [
+        "kernel",
+        "validation",
+        "web-api",
+        "observability",
+        "security",
+        "identity",
+        "authorization",
+        "auditing",
+        "settings",
+        "notifications",
+        "files",
+        "localization"
+      ]
+    },
+    {
+      "id": "enterprise",
+      "displayName": "Enterprise",
+      "description": "Standard baseline plus organizational process, approvals, automation, messaging and reporting.",
+      "capabilityIds": [
+        "kernel",
+        "validation",
+        "web-api",
+        "observability",
+        "security",
+        "identity",
+        "authorization",
+        "auditing",
+        "settings",
+        "notifications",
+        "files",
+        "localization",
+        "organization",
+        "workflow",
+        "approvals",
+        "tasks",
+        "jobs",
+        "messaging",
+        "feature-management",
+        "reporting",
+        "idempotency",
+        "concurrency"
+      ]
+    },
+    {
+      "id": "fintech",
+      "displayName": "Fintech",
+      "description": "Enterprise baseline plus money, privacy, numbering and retention-oriented controls.",
+      "capabilityIds": [
+        "kernel",
+        "validation",
+        "web-api",
+        "observability",
+        "security",
+        "identity",
+        "authorization",
+        "auditing",
+        "settings",
+        "notifications",
+        "files",
+        "localization",
+        "organization",
+        "workflow",
+        "approvals",
+        "tasks",
+        "jobs",
+        "messaging",
+        "feature-management",
+        "reporting",
+        "idempotency",
+        "concurrency",
+        "money",
+        "privacy",
+        "numbering",
+        "retention"
+      ]
+    },
+    {
+      "id": "saas",
+      "displayName": "SaaS",
+      "description": "Standard baseline with tenant isolation, feature flags, async work, integrations, caching and search.",
+      "capabilityIds": [
+        "kernel",
+        "validation",
+        "web-api",
+        "observability",
+        "security",
+        "identity",
+        "authorization",
+        "auditing",
+        "settings",
+        "notifications",
+        "files",
+        "localization",
+        "multi-tenancy",
+        "feature-management",
+        "jobs",
+        "webhooks",
+        "caching",
+        "search"
+      ]
+    },
+    {
+      "id": "internal-business",
+      "displayName": "Internal Business",
+      "description": "Internal line-of-business systems with organization, workflow, approvals, tasks, reporting and numbering.",
+      "capabilityIds": [
+        "kernel",
+        "validation",
+        "web-api",
+        "observability",
+        "security",
+        "identity",
+        "authorization",
+        "auditing",
+        "settings",
+        "notifications",
+        "files",
+        "localization",
+        "organization",
+        "workflow",
+        "approvals",
+        "tasks",
+        "reporting",
+        "numbering"
+      ]
+    },
+    {
+      "id": "public-portal",
+      "displayName": "Public Portal",
+      "description": "Externally facing portal baseline with identity, files, notifications, search and localization.",
+      "capabilityIds": [
+        "kernel",
+        "validation",
+        "web-api",
+        "observability",
+        "security",
+        "identity",
+        "authorization",
+        "files",
+        "notifications",
+        "search",
+        "localization"
+      ]
+    }
+  ]
+}
