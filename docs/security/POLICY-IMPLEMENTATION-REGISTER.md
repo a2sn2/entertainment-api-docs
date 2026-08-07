@@ -6,7 +6,8 @@
 > Baseline before this hardening program: `b9de00ba29928111637786f921c1c01249ddcada`  
 > Program branch: `hardening/global-grade-baseline`  
 > Source assessment: `FoundationKit_ISO27001_Repository_Audit_AR.md` (2026-08-07)  
-> Independent PR #34 review: blocking findings `PR34-REV-01`, `PR34-APP-01`, `PR34-AUTH-01`, `PR34-AUTH-02`, `PR34-CRY-01`, `PR34-EVID-01`, `PR34-EVID-02`; recommended `PR34-AUTH-03`, `PR34-PASS-01`, `PR34-LOG-01`, `PR34-SBOM-01`.
+> Post-review technical closure source: `c3f7754441a3f39956836aef48377cda5119c7f4`  
+> Post-review evidence: `docs/security/evidence/STEP-06-PR34-REVIEW-CLOSURE.md`.
 
 `CURRENT-SECURITY-STATUS.md` is an executive view and MUST remain consistent with this register. When they conflict, this register controls finding-level status.
 
@@ -16,7 +17,7 @@
 - `Implemented / verification pending` — control exists in source/configuration but the latest affected source head has not yet completed the required evidence run.
 - `Verified` — reproducible evidence demonstrates the control in the explicitly stated repository scope.
 - `Partially Satisfied` — useful control exists but the finding is not fully satisfied in repository/deployment scope.
-- `Pending Organizational Decision` — a value/scope/authority must not be invented in code.
+- `Owner Decision Recorded` — a repository/Foundation governance value has been explicitly approved; deployment proof may still be required.
 - `External Configuration Required` — completion depends on GitHub/hosting/DBA/KMS/SIEM/backup or another external platform.
 - `Residual Risk Tracked` — the risk is recorded and monitored; this does not mean accepted.
 - `Residual Risk Accepted` — requires named authority, date, rationale, and evidence; never inferred.
@@ -42,80 +43,83 @@ A green build is not production approval. `Verified` always names its scope; org
 
 | ID | Sev. | Finding / risk | Policies | Current status | Implemented control / evidence / residual action |
 |---|---:|---|---|---|---|
-| FK-GOV-001 / PR34-REV-01 | High | Independent review / maker-checker for repository changes | SoD, Change, SDLC | **External Configuration Required** | CODEOWNERS + PR evidence model exist. PR #34 still requires a real independent GitHub `APPROVE`; self-approval is not accepted. |
-| FK-GOV-002 | High | Protected `main` / required checks evidence | SoD, Change | **External Configuration Required** | Repository workflows exist; GitHub branch/ruleset configuration must be evidenced externally before governance closure. |
+| FK-GOV-001 / PR34-REV-01 | High | Independent review / maker-checker for repository changes | SoD, Change, SDLC | **External Configuration Required** | Owner baseline requires one independent reviewer. PR #34 still requires a real GitHub `APPROVE` from an account other than `a2sn2`; self-approval is not accepted. |
+| FK-GOV-002 | High | Protected `main` / required checks evidence | SoD, Change | **External Configuration Required** | Repository workflows exist; GitHub branch/ruleset configuration must be evidenced externally where repository plan/settings support it. |
 | FK-RISK-001 | High | Repository risk/threat model absent | Risk, SDLC, AppSec | **Verified baseline** | `RISK-REGISTER.md`, `THREAT-MODEL.md`, `SECURITY-DECISIONS.md`; residual/external risks remain explicitly tracked. |
-| FK-SDLC-001 | High | Security CI gates absent | SDLC, Malware, AppSec | **Verified baseline** | Secret scan, NuGet audit, CodeQL, Trivy, negative suite, SBOM/integrity evidence, build/test/publish/pack; STEP-05 records prior successful runs. Post-review affected code is re-verified before merge. |
+| FK-SDLC-001 | High | Security CI gates absent | SDLC, Malware, AppSec | **Verified** | Secret scan, NuGet audit, CodeQL, Trivy, negative suite, SBOM/integrity evidence, build/test/publish/pack. STEP-06 records successful post-review runs at `c3f7754...`. |
 | FK-SUP-001 | High | Dependency governance weak | Malware, SDLC | **Verified baseline / further hardening available** | Central package floors, NuGet audit, Trivy, baseline CycloneDX inventory, Dependabot. Lock files/source mapping remain optional next-hardening items or registry decisions. |
-| FK-SUP-002 | Medium | Mutable GitHub Action references | SDLC, Malware | **Verified for hardening-touched workflows** | Security-sensitive workflow actions touched by the program are SHA-pinned and have passed. |
-| FK-REL-001 / PR34-SBOM-01 | High | Release integrity/provenance incomplete | SDLC, Malware, Crypto | **Partially Satisfied** | CycloneDX **dependency inventory / baseline SBOM** + SHA-256 package/publish manifests exist. This is not claimed as complete provenance/signing/attestation; signing authority remains external/organizational. |
-| FK-TEST-001 | High | Security-negative coverage weak | SDLC, AppSec | **Implemented / verification pending** | Unit + black-box authz/CSRF/BOLA/enumeration/maker-checker plus new MFA step-up and runtime 429 tests. Latest affected head must pass before status returns to Verified. |
-| FK-AUTH-001 / PR34-AUTH-01 / PR34-AUTH-02 | High | Account lifecycle / MFA lifecycle incomplete | Password, AppSec | **Implemented / verification pending** | Confirmation/reset/change password, TOTP/recovery login, full password+fresh-MFA step-up for disable/recovery rotation, security notifications for password/MFA lifecycle. Production SMTP/config and final MFA scope remain external/organizational. |
-| FK-AUTH-002 / PR34-PASS-01 | Medium–High | Password standard not organization-approved; no compromised-password blocklist | Password, Risk | **Pending Organizational Decision** | Password length/composition values are now configurable and must be explicitly supplied in Production; DTO/UI no longer impose enterprise values. Final standard and compromised-password source/capability remain an explicit organizational decision before Production Approved. |
-| FK-AUTH-003 | High | Admin seed can create/promote administrator | Password, SoD, Change | **Verified production fail-closed baseline** | Production rejects seed; Development seed refuses silent promotion; prior automated evidence passed. |
+| FK-SUP-002 | Medium | Mutable GitHub Action references | SDLC, Malware | **Verified for hardening-touched workflows** | Security-sensitive workflow actions touched by the program are SHA-pinned and passed. |
+| FK-REL-001 / PR34-SBOM-01 | High | Release integrity/provenance incomplete | SDLC, Malware, Crypto | **Partially Satisfied** | CycloneDX **dependency inventory / baseline SBOM** + SHA-256 package/publish manifests exist. Complete provenance/signing/attestation is not claimed; signing authority remains external/organizational. |
+| FK-TEST-001 | High | Security-negative coverage weak | SDLC, AppSec | **Verified for current automated abuse scope** | Unit + black-box authz/CSRF/BOLA/enumeration/maker-checker + MFA step-up + runtime 429 passed at the STEP-06 technical closure source. |
+| FK-AUTH-001 / PR34-AUTH-01 / PR34-AUTH-02 | High | Account lifecycle / MFA lifecycle incomplete | Password, AppSec | **Verified repository capability / external delivery remains** | Confirmation/reset/change password, TOTP/recovery login, full password+fresh-MFA step-up for disable/recovery rotation, security notifications for password/MFA lifecycle. Post-review black-box suite passed; production SMTP/provider remains deployment configuration. |
+| FK-AUTH-002 / PR34-PASS-01 | Medium–High | Password standard not organization-approved; no compromised-password blocklist | Password, Risk | **Owner Decision Recorded / Production screening incomplete** | Foundation baseline is recorded in `SECURITY-DECISIONS.md`: minimum 15 characters, no mandatory composition rules by default, compromised/common-password screening required before Production Approved where passwords are used. Values are configurable/explicit; screening provider remains product/platform work. |
+| FK-AUTH-003 | High | Admin seed can create/promote administrator | Password, SoD, Change | **Verified production fail-closed baseline** | Production rejects seed; Development seed refuses silent promotion; automated evidence passed. |
 | FK-SEC-001 | Medium | Local/admin credential disclosure | Password, Crypto, Logging | **Verified launcher/CI baseline** | Official launchers avoid routine password echo; generated CI credentials are masked; local credential protection exists. |
-| FK-APP-001 | High | Swagger exposed outside Development | AppSec, Data Transfer | **Verified baseline** | Swagger/UI Development-only; configuration/build tests previously passed. |
-| FK-APP-002 / PR34-APP-01 / PR34-EVID-02 | High | Rate limiting/proxy identity can collapse clients or be spoofed; prior evidence overclaim | Password, AppSec, Data Transfer, Risk | **Implemented / verification pending** | Explicit trusted-proxy allow-list; `ForwardedHeaders` before HTTPS/rate limiting; untrusted headers ignored in tests; auth partition per effective client IP; write partition per user/IP; black-box suite now requires real HTTP `429`. Final production ingress IP/topology remains deployment evidence. |
-| FK-APP-003 | High | Administrator can review own initiative | SoD, AppSec | **Verified** | Domain maker-checker rule + unit/black-box test passed in prior evidence. |
-| FK-APP-004 | Medium | Negative application-security coverage weak | AppSec, SDLC | **Implemented / verification pending** | Current suite covers authz, CSRF, BOLA, enumeration, maker-checker, MFA step-up, runtime 429. Broader ASVS target remains an organizational scope decision. |
-| FK-APP-005 | Medium | Readiness leaks implementation detail | AppSec, Logging | **Verified** | Public readiness returns status only; prior integration evidence passed. |
-| FK-APP-006 | Medium | App-specific CSP/cache policy incomplete | AppSec | **Open / design required** | Baseline headers remain. Blazor-compatible CSP/cache policy requires explicit compatibility/security testing; no false claim of completion. |
-| FK-APP-007 / PR34-AUTH-03 | Medium | Production settings can silently fall back to permissive defaults | AppSec, Password, Change | **Implemented / verification pending** | Production requires explicit AllowedHosts plus explicit true/false decisions for confirmed email, admin MFA and reverse-proxy mode; password policy values are also explicit. |
+| FK-APP-001 | High | Swagger exposed outside Development | AppSec, Data Transfer | **Verified baseline** | Swagger/UI Development-only; configuration/build tests passed. |
+| FK-APP-002 / PR34-APP-01 / PR34-EVID-02 | High | Rate limiting/proxy identity can collapse clients or be spoofed; prior evidence overclaim | Password, AppSec, Data Transfer, Risk | **Verified for current repository/runtime test scope** | Explicit trusted-proxy allow-list; `ForwardedHeaders` before HTTPS/rate limiting; untrusted headers ignored; auth partition per effective client IP; write partition per user/IP; black-box suite proved real HTTP `429`. Final production ingress IP/topology remains deployment evidence. |
+| FK-APP-003 | High | Administrator can review own initiative | SoD, AppSec | **Verified** | Domain maker-checker rule + unit/black-box test passed. |
+| FK-APP-004 | Medium | Negative application-security coverage weak | AppSec, SDLC | **Verified for current suite** | Current suite covers authz, CSRF, BOLA, enumeration, maker-checker, MFA step-up and runtime 429. Owner baseline targets ASVS Level 2; broader product-specific ASVS mapping remains future work. |
+| FK-APP-005 | Medium | Readiness leaks implementation detail | AppSec, Logging | **Verified** | Public readiness returns status only; integration evidence passed. |
+| FK-APP-006 | Medium | App-specific CSP/cache policy incomplete | AppSec | **Open / design required** | Blazor-compatible CSP/cache policy requires explicit compatibility/security testing; no false claim of completion. |
+| FK-APP-007 / PR34-AUTH-03 | Medium | Production settings can silently fall back to permissive defaults | AppSec, Password, Change | **Verified production explicit-decision mechanism** | Production requires explicit AllowedHosts plus explicit true/false decisions for confirmed email, admin MFA and reverse-proxy mode; password policy values are explicit. Configuration tests passed. |
 | FK-DATA-001 | High | DB transport encryption/cert validation | Data Transfer, Crypto | **Implemented production contract / external certificate evidence** | Production rejects disabled encryption and `TrustServerCertificate=True`; deployment must prove trusted server certificate/route. |
-| FK-DATA-002 | High | Runtime SQL `sa` / privilege separation | SoD, AppSec, Change | **Implemented production contract / external provisioning** | Production rejects `sa`; platform/DBA must provision separate least-privilege runtime/migration identities. |
+| FK-DATA-002 | High | Runtime SQL `sa` / privilege separation | SoD, AppSec, Change | **Implemented production contract / external provisioning** | Production rejects `sa`; owner baseline requires separate least-privilege runtime/migration identities; platform/DBA provisioning remains external. |
 | FK-DB-001 | High | Startup migrations in Production | Change, SDLC, SoD | **Verified production fail-closed baseline** | Production rejects automatic migration/role seeding; reviewed deployment migration step required. |
 | FK-DB-002 | High | Migration/recovery evidence | Change, Backup | **Verified restore baseline / change-specific schema action remains** | Real CHECKSUM backup, VERIFYONLY, isolated restore and schema-qualified table checks passed. Destructive schema changes still require per-change rollback/rollforward plan. |
 | FK-AUD-001 | High | Audit shares application DB trust boundary | Logging, AppSec | **External Configuration Required** | DB audit is useful but not claimed tamper-evident; central append-only/restricted sink required. |
 | FK-AUD-002 / PR34-LOG-01 | Medium | Structured security audit/event coverage incomplete | Logging, AppSec | **Partially Satisfied** | Event schema/catalog is explicitly a **target contract**, not proof every event is emitted. Runtime emission/DB audit enrichment/central correlation remain work. |
-| FK-LOG-001 | High | Central observability/alerting/retention absent | Logging | **External Configuration Required** | Catalog/runbook exist; SIEM, retention, alert routing and on-call evidence require platform/organizational implementation. |
-| FK-PII-001 | High | PII lifecycle/retention/deletion incomplete | PII | **Partially Satisfied** | PII inventory/minimization exists; legal basis, privacy notice, retention/deletion decisions remain organizational/legal. |
-| FK-CRY-001 / PR34-CRY-01 | High | Secret/crypto transport/lifecycle incomplete | Crypto, Data Transfer | **Implemented repository baseline / external provider evidence** | Crypto inventory, SQL TLS checks, SMTP TLS fail-closed, secret contracts. Vault/KMS/CA/rotation provider and operational evidence remain external. |
+| FK-LOG-001 | High | Central observability/alerting/retention absent | Logging | **External Configuration Required** | Owner baseline sets security log retention to 365 days; SIEM/sink, alert routing and on-call evidence remain deployment implementation. |
+| FK-PII-001 | High | PII lifecycle/retention/deletion incomplete | PII | **Partially Satisfied / product decision required** | PII inventory/minimization exists. Owner deliberately did not invent a universal PII retention period; each real product must approve legal basis, notice, retention and deletion before Production handling of PII. |
+| FK-CRY-001 / PR34-CRY-01 | High | Secret/crypto transport/lifecycle incomplete | Crypto, Data Transfer | **Verified repository transport baseline / external provider evidence** | Crypto inventory, SQL TLS checks, SMTP TLS fail-closed and secret contracts. Configuration tests passed; Vault/KMS/CA/rotation provider and operational evidence remain external. |
 | FK-CRY-002 | High | Data Protection keys not durable/protected | Crypto, Password | **Implemented capability / external material required** | Durable file persistence + X.509 protection capability; certificate/key storage/rotation lifecycle is external. |
 | FK-BACK-001 | Critical | Backup exists without proven restore | Backup, Risk | **Verified** | CHECKSUM backup, VERIFYONLY, real isolated restore, core-table validation and cleanup passed in CI evidence. |
-| FK-BACK-002 | High | Production backup encryption/off-site/retention | Backup, Crypto, PII | **External Configuration Required** | Local dev backups restricted; production encrypted/off-site/immutable storage and retention require deployment/organizational evidence. |
-| FK-DOCK-001 | High | Container hardening weak | Malware, AppSec, SDLC | **Verified baseline** | Non-root app runtime, capability/no-new-privilege controls, health checks; prior integration assertion passed. |
+| FK-BACK-002 | High | Production backup encryption/off-site/retention | Backup, Crypto, PII | **Owner Decision Recorded / External Configuration Required** | Baseline: 35 daily + 12 monthly restore points, encrypted/off-site/immutable in Production. Provider and operational proof remain deployment work. |
+| FK-DOCK-001 | High | Container hardening weak | Malware, AppSec, SDLC | **Verified baseline** | Non-root app runtime, capability/no-new-privilege controls, health checks; integration assertion passed. |
 | FK-DOCK-002 | Medium | Mutable image tags/digests | Malware, SDLC | **Partially Satisfied** | Dependabot + Trivy gates; production digest pin/update/promotion process remains open. |
 | FK-SUP-003 | High where applicable | Upstream unfixed image CVEs | Malware, Risk | **Residual Risk Tracked** | Fixable HIGH/CRITICAL findings block CI; unfixed findings remain visible in SARIF and `R-FK-016`; no implicit acceptance. |
 | FK-TUN-001 | High if public | Development Quick Tunnel exposed publicly | Data Transfer, AppSec, PII | **Accepted demo-only boundary** | Temporary random tunnel is synthetic-demo only; not a production ingress and must not carry real/sensitive data. |
 | FK-WB-001 | High if exposed | Workbench intentionally lacks auth | AppSec, Password | **Sample-only boundary** | Controlled/local reference only; not a production/public-data service. |
-| FK-CHG-001 / PR34-EVID-01 | High | Change/evidence chain inconsistent | Change, Risk, SDLC | **Implemented / verification pending** | This canonical register is synchronized with `CURRENT-SECURITY-STATUS`; PR/evidence/runbooks exist. Post-review evidence is recorded before merge. |
-| FK-INC-001 | Medium | Vulnerability reporting channel/SLA | Risk, Malware, Logging | **Pending Organizational Decision / External Configuration** | Private reporting channel, response ownership and SLA require repository/org decision/configuration. |
-| FK-OPS-001 | High | Incident/rollback/recovery operations incomplete | Logging, Backup, Risk | **Implemented repository runbook / external ownership pending** | Incident/rollback/recovery/PIR runbook exists; named responders, authorities, RPO/RTO remain organizational. |
+| FK-CHG-001 / PR34-EVID-01 | High | Change/evidence chain inconsistent | Change, Risk, SDLC | **Verified repository evidence chain** | Canonical register and executive status are synchronized; STEP-05 preserves prior integrated evidence and STEP-06 records post-review closure evidence. External independent approval remains separately tracked. |
+| FK-INC-001 | Medium | Vulnerability reporting channel/SLA | Risk, Malware, Logging | **Owner Decision Recorded / channel external** | SLA baseline: Critical 24h, High 7d, Medium 30d, Low 90d. Private reporting channel/response ownership still require repository/org configuration. |
+| FK-OPS-001 | High | Incident/rollback/recovery operations incomplete | Logging, Backup, Risk | **Owner Decision Recorded / external ownership pending** | Incident/rollback/recovery/PIR runbook exists. Baseline RPO 4h / RTO 8h and max security exception 30d are approved; named production responders/platform proof remain external. |
 
 ## PR #34 review-closure matrix
 
 | Review ID | Repository action | Current state |
 |---|---|---|
-| PR34-REV-01 | Independent GitHub review + protected branch evidence | **External blocker remains** |
-| PR34-APP-01 | Trusted forwarded headers, explicit proxy IP allow-list, ordering before HTTPS/rate limiting, trusted/untrusted proxy tests | **Implemented; latest CI pending** |
-| PR34-AUTH-01 | Password + fresh TOTP/recovery proof for MFA disable/recovery rotation | **Implemented; black-box verification pending** |
-| PR34-AUTH-02 | Independent email security notifications for password/MFA lifecycle | **Implemented capability; delivery provider remains production configuration** |
-| PR34-CRY-01 | Production SMTP TLS fail-closed | **Implemented; configuration test pending** |
-| PR34-EVID-01 | Canonical register synchronized; executive status derived from it | **Implemented by this update** |
-| PR34-EVID-02 | Real runtime 429 black-box assertion added | **Implemented; security workflow pending** |
-| PR34-AUTH-03 | Explicit Production decisions required instead of silent false fallback | **Implemented; tests pending** |
-| PR34-PASS-01 | Password values configurable + explicit in Production; DTO/UI hard-coded enterprise policy removed | **Implemented capability; final standard/blocklist still organizational** |
-| PR34-LOG-01 | Event catalog explicitly labeled target contract; runtime coverage remains partial | **Corrected evidence claim** |
-| PR34-SBOM-01 | SBOM terminology narrowed to dependency inventory/baseline SBOM; no full-provenance claim | **Corrected evidence claim** |
+| PR34-REV-01 | Independent GitHub review + protected branch evidence | **External governance blocker remains** |
+| PR34-APP-01 | Trusted forwarded headers, explicit proxy IP allow-list, ordering before HTTPS/rate limiting, trusted/untrusted proxy tests | **Verified at STEP-06 technical closure source** |
+| PR34-AUTH-01 | Password + fresh TOTP/recovery proof for MFA disable/recovery rotation | **Verified by black-box security suite** |
+| PR34-AUTH-02 | Independent email security notifications for password/MFA lifecycle | **Repository capability verified; delivery provider external** |
+| PR34-CRY-01 | Production SMTP TLS fail-closed | **Verified by configuration tests** |
+| PR34-EVID-01 | Canonical register synchronized; executive status derived from it | **Closed in repository** |
+| PR34-EVID-02 | Real runtime 429 black-box assertion | **Verified by Security Scan run `31191780614`** |
+| PR34-AUTH-03 | Explicit Production decisions required instead of silent false fallback | **Verified by configuration tests** |
+| PR34-PASS-01 | Password values configurable + explicit in Production; Foundation baseline recorded | **Repository design closed; compromised-password provider remains Production work** |
+| PR34-LOG-01 | Event catalog explicitly labeled target contract; runtime coverage remains partial | **Evidence claim corrected** |
+| PR34-SBOM-01 | SBOM terminology narrowed to dependency inventory/baseline SBOM; no full-provenance claim | **Evidence claim corrected** |
 
-## Organizational decisions intentionally not invented
+## Owner-approved Foundation decisions
 
-The repository MUST NOT silently invent:
+See `SECURITY-DECISIONS.md` for the canonical decision record. Current baseline includes:
 
-- required independent reviewer count or approval authority;
-- final MFA scope/factor requirements;
-- final password parameters and compromised-password source;
-- ASVS target level/applicability;
-- RPO/RTO;
-- log/PII/backup retention periods;
-- vulnerability remediation SLA;
-- exception validity duration/authority;
-- release/residual-risk acceptance authority;
-- production Vault/KMS/CA/SIEM/backup provider;
-- production hosting/network topology.
+- independent reviewers required: `1`;
+- administrator MFA in Production: `required`;
+- normal-user MFA: available, not globally mandatory by Foundation;
+- password baseline: minimum `15`, default no mandatory composition rules; compromised/common-password screening required before Production Approved where passwords are used;
+- ASVS target: `Level 2`;
+- RPO: `4h`;
+- RTO: `8h`;
+- security log retention: `365d`;
+- backup retention: `35 daily + 12 monthly` restore points;
+- vulnerability SLA: Critical `24h`, High `7d`, Medium `30d`, Low `90d`;
+- security exception maximum duration: `30d`;
+- production provider/network infrastructure: deferred until a concrete product deployment.
 
-Production configuration now fails closed where the repository can require **an explicit decision** without choosing the decision itself.
+PII retention remains product/legal-purpose-specific by design; Foundation does not fabricate a universal legal retention period.
 
 ## Verification rule
 
-A finding moves from `Implemented / verification pending` to `Verified` only when this register points to reproducible evidence for the affected source head (test/workflow/commit/manual record). External/organizational status is never converted to Verified merely because CI is green.
+A finding moves to `Verified` only when this register points to reproducible evidence for the affected security-relevant source head. Documentation-only evidence/status commits after `c3f7754...` do not invalidate runtime evidence unless they modify application/security source, workflows, dependencies, deployment behavior or tests.
+
+External/governance status is never converted to Verified merely because CI is green. PR #34 still requires an independent account to approve before merge; the authenticated author account must not self-approve.
