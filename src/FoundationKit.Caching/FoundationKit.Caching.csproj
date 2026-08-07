@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Provider-neutral bounded byte-cache contracts and an in-memory reference provider for FoundationKit consumers.</Description>
+  </PropertyGroup>
+</Project>
