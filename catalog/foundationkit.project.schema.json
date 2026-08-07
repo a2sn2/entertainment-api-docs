@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foundationkit.local/schemas/foundationkit.project.schema.json",
+  "title": "FoundationKit Project Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "name",
+    "profile",
+    "includeCapabilities",
+    "excludeCapabilities",
+    "providers"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "^[A-Za-z][A-Za-z0-9._-]*$"
+    },
+    "profile": {
+      "type": "string",
+      "enum": [
+        "minimal",
+        "standard",
+        "enterprise",
+        "fintech",
+        "saas",
+        "internal-business",
+        "public-portal"
+      ]
+    },
+    "includeCapabilities": {
+      "$ref": "#/$defs/capabilityIds"
+    },
+    "excludeCapabilities": {
+      "$ref": "#/$defs/capabilityIds"
+    },
+    "providers": {
+      "$ref": "#/$defs/capabilityIds"
+    }
+  },
+  "$defs": {
+    "capabilityIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[a-z0-9][a-z0-9-]*$"
+      }
+    }
+  }
+}
