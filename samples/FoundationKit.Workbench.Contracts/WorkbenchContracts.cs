@@ -6,6 +6,13 @@ public sealed record RuntimeResponse(
     string Database,
     string ContactName);
 
+public sealed record PlatformReferenceResponse(
+    string DefaultCulture,
+    string CultureSettingScope,
+    bool CatalogPreviewEnabled,
+    string FeatureDecisionSource,
+    string? FeatureSettingScope);
+
 public sealed record HealthResponse(string Status, string Database);
 
 public sealed class CatalogResponse

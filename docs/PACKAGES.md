@@ -232,6 +232,46 @@ Athar is the first consumer. It maps its existing `AccountSecurityDeliveryOption
 
 See `docs/capabilities/SMTP-PROVIDER.md` for the full boundary and consumer evidence.
 
+## FoundationKit.Settings
+
+Public building blocks:
+
+- `SettingKey`;
+- `SettingScope` and `SettingScopeKind`;
+- `SettingEntry` and `ResolvedSetting`;
+- `SettingResolutionContext`;
+- `ISettingSource` and `ISettingReader`;
+- `SettingReader`;
+- `CompositeSettingSource`;
+- `InMemorySettingSource`.
+
+The package is provider-neutral and has no dependency on another FoundationKit package. It resolves caller-defined scopes in most-specific-first order and appends global fallback automatically. Within one scope, composite sources are evaluated in declared order.
+
+Keys, scope metadata, context depth, and values are bounded. Duplicate in-memory addresses fail rather than overwrite. Diagnostic `ToString()` values omit setting contents and non-global scope identifiers. The package is not a secret store and does not own persistence, encryption, a tenant/organization model, write administration, or refresh policy.
+
+Workbench is the first runtime consumer through `GET /api/platform-reference` and the SQL Server integration smoke flow.
+
+See `docs/capabilities/SETTINGS.md` for the full boundary and consumer evidence.
+
+## FoundationKit.FeatureManagement
+
+Public building blocks:
+
+- `FeatureId`;
+- `FeatureDefinition`;
+- `FeatureEvaluationContext`;
+- `IFeatureEvaluator`;
+- `SettingBackedFeatureEvaluator`;
+- `FeatureDecision` and `FeatureDecisionSource`.
+
+The package depends only on `FoundationKit.Settings`. The reference evaluator reads `features.<feature-id>.enabled`, uses the explicit definition default only when the setting is absent, and fails closed to disabled when an explicit setting is not a valid Boolean.
+
+It does not implement percentage rollout, targeting, experiments, schedules, vendor SDKs, persistence, change approval, realtime refresh, or arbitrary rule/expression execution.
+
+Workbench is the first runtime consumer through `GET /api/platform-reference`, where the integration smoke flow proves a settings-backed feature decision.
+
+See `docs/capabilities/FEATURE-MANAGEMENT.md` for the full boundary and consumer evidence.
+
 ## Capability catalog contract
 
 The human-facing implemented feature list is maintained in `catalog/foundationkit.catalog.json`. Every catalog capability must correspond to existing tested behavior and public surface. The catalog generator rejects unknown idea references and any status other than `implemented`.

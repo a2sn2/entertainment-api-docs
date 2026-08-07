@@ -27,6 +27,8 @@
     <ProjectReference Include="..\..\src\FoundationKit.Approvals\FoundationKit.Approvals.csproj" />
     <ProjectReference Include="..\..\src\FoundationKit.Notifications\FoundationKit.Notifications.csproj" />
     <ProjectReference Include="..\..\src\FoundationKit.Notifications.Smtp\FoundationKit.Notifications.Smtp.csproj" />
+    <ProjectReference Include="..\..\src\FoundationKit.Settings\FoundationKit.Settings.csproj" />
+    <ProjectReference Include="..\..\src\FoundationKit.FeatureManagement\FoundationKit.FeatureManagement.csproj" />
     <ProjectReference Include="..\..\tools\FoundationKit.Composer\FoundationKit.Composer.csproj" />
   </ItemGroup>
 </Project>

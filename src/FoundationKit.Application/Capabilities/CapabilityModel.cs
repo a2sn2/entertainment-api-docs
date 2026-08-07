@@ -89,8 +89,8 @@ public static class FoundationCapabilityCatalog
         new(FoundationCapabilityIds.Identity, "Identity", CapabilityKind.Optional, CapabilityMaturity.ReferenceOnly, "Identity", "Authentication lifecycle, sessions, MFA, confirmation and recovery contracts.", [FoundationCapabilityIds.Security]),
         new(FoundationCapabilityIds.Authorization, "Authorization", CapabilityKind.Optional, CapabilityMaturity.ReferenceOnly, "Identity", "Role, permission, policy, ownership and scoped authorization model.", [FoundationCapabilityIds.Identity]),
         new(FoundationCapabilityIds.Auditing, "Auditing", CapabilityKind.Optional, CapabilityMaturity.ReferenceOnly, "Governance", "Business and security audit trails with actor, target and correlation context.", [FoundationCapabilityIds.Kernel]),
-        new(FoundationCapabilityIds.Settings, "Settings", CapabilityKind.Optional, CapabilityMaturity.Planned, "Platform", "Global, tenant, organization and user-scoped settings.", [FoundationCapabilityIds.Kernel]),
-        new(FoundationCapabilityIds.FeatureManagement, "Feature Management", CapabilityKind.Optional, CapabilityMaturity.Planned, "Platform", "Feature flags and staged enablement by context.", [FoundationCapabilityIds.Settings]),
+        new(FoundationCapabilityIds.Settings, "Settings", CapabilityKind.Optional, CapabilityMaturity.ReferenceOnly, "Platform", "Provider-neutral hierarchical setting resolution across caller-defined scopes with deterministic fallback.", [FoundationCapabilityIds.Kernel]),
+        new(FoundationCapabilityIds.FeatureManagement, "Feature Management", CapabilityKind.Optional, CapabilityMaturity.ReferenceOnly, "Platform", "Deterministic settings-backed feature enablement with fail-closed invalid configuration; advanced rollout targeting remains future work.", [FoundationCapabilityIds.Settings]),
         new(FoundationCapabilityIds.Localization, "Localization", CapabilityKind.Optional, CapabilityMaturity.Planned, "Experience", "Language, culture, RTL/LTR, time-zone and formatting conventions.", [FoundationCapabilityIds.Kernel]),
         new(FoundationCapabilityIds.Organization, "Organization", CapabilityKind.Optional, CapabilityMaturity.Planned, "Business", "Organizations, branches, departments, teams, positions and reporting hierarchy.", [FoundationCapabilityIds.Kernel]),
         new(FoundationCapabilityIds.MultiTenancy, "Multi-Tenancy", CapabilityKind.Optional, CapabilityMaturity.Planned, "Platform", "Tenant context and isolation patterns without forcing a storage topology.", [FoundationCapabilityIds.Authorization]),
@@ -255,22 +255,5 @@ public sealed class CapabilityResolver
     {
         Visiting,
         Visited
-    }
-}
-
-public sealed record FoundationKitProjectManifest(
-    string Name,
-    string Profile,
-    IReadOnlyList<string> IncludeCapabilities,
-    IReadOnlyList<string> ExcludeCapabilities,
-    IReadOnlyList<string> Providers)
-{
-    public IReadOnlyList<CapabilityDescriptor> Resolve(CapabilityResolver resolver)
-    {
-        ArgumentNullException.ThrowIfNull(resolver);
-
-        var selected = resolver.ResolveSelection(Profile, IncludeCapabilities, ExcludeCapabilities);
-        var allRequested = selected.Select(descriptor => descriptor.Id).Concat(Providers);
-        return resolver.Resolve(allRequested);
     }
 }

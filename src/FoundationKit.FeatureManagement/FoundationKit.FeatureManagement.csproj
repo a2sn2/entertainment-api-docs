@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Provider-neutral feature evaluation contracts with deterministic settings-backed enablement for FoundationKit consumers.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FoundationKit.Settings\FoundationKit.Settings.csproj" />
+  </ItemGroup>
+</Project>

@@ -15,6 +15,8 @@ They connect through a shared request workflow:
 submitted → approved | rejected
 ```
 
+Workbench also provides a small shared-platform reference endpoint used to prove provider-neutral capabilities such as Settings and Feature Management without moving Workbench product rules into reusable packages.
+
 For the architecture and code map, read [DUAL-FULL-STACK.md](DUAL-FULL-STACK.md).
 
 ## Projects
@@ -77,6 +79,7 @@ Press `F5`.
 | Swagger UI | `http://localhost:5057/swagger` |
 | Health | `http://localhost:5057/api/health` |
 | Capability catalog | `http://localhost:5057/api/catalog` |
+| Platform capability reference | `http://localhost:5057/api/platform-reference` |
 
 ## Command line
 
@@ -190,8 +193,11 @@ The review write and request status update are committed through the same `IUnit
 | Method | Route | Contract | Behavior |
 |---|---|---|---|
 | `GET` | `/api/runtime` | `RuntimeResponse` | reports local or static-demo mode |
+| `GET` | `/api/platform-reference` | `PlatformReferenceResponse` | proves Settings resolution and a settings-backed Feature Management decision in the live Workbench host |
 | `GET` | `/api/catalog` | `CatalogResponse` | returns implemented FoundationKit capabilities |
 | `GET` | `/api/health` | `HealthResponse` | verifies API and SQL Server connectivity |
+
+`/api/platform-reference` is intentionally a reference surface, not a product settings administration endpoint. The current Workbench host resolves `workbench.experience.default-culture` and evaluates `workbench.catalog-preview`; Settings persistence, secret management, rollout targeting, and organizational scope policy are not implied.
 
 ## Postman
 
@@ -236,6 +242,8 @@ Current workflow tables:
 | `BuildBriefs` | user request data, status, created timestamp, updated timestamp |
 | `AdminReviews` | admin decision, reviewer, notes, reviewed timestamp, request foreign key |
 
+Settings and Feature Management v1 do **not** add Workbench tables or migrations. Their current Workbench consumer uses an in-memory reference source to prove package behavior while storage remains a future provider/product concern.
+
 Inspect with SSMS:
 
 ```sql
@@ -279,9 +287,11 @@ The local API-hosted path is authoritative.
 
 ## CI verification
 
-The Docker smoke test executes the real integration sequence:
+The Docker smoke test executes the shared platform reference checks and the real integration sequence:
 
 ```text
+GET platform reference (Settings + Feature Management)
+        ↓
 POST user request
         ↓
 GET submitted admin queue
@@ -293,7 +303,7 @@ GET user request = approved
 GET approved admin queue
 ```
 
-This verifies both full stacks and their connection against a real SQL Server container.
+This verifies the reusable platform reference plus both full stacks and their connection against a real SQL Server container.
 
 ## Troubleshooting
 
@@ -301,6 +311,12 @@ Health:
 
 ```powershell
 Invoke-RestMethod http://localhost:5057/api/health
+```
+
+Platform capability reference:
+
+```powershell
+Invoke-RestMethod http://localhost:5057/api/platform-reference
 ```
 
 Submitted admin queue:

@@ -102,9 +102,9 @@
       "id": "settings",
       "displayName": "Settings",
       "kind": "optional",
-      "maturity": "planned",
+      "maturity": "referenceOnly",
       "category": "Platform",
-      "description": "Global, tenant, organization and user-scoped settings.",
+      "description": "Provider-neutral hierarchical setting resolution across caller-defined scopes with deterministic fallback.",
       "dependencies": [
         "kernel"
       ]
@@ -113,9 +113,9 @@
       "id": "feature-management",
       "displayName": "Feature Management",
       "kind": "optional",
-      "maturity": "planned",
+      "maturity": "referenceOnly",
       "category": "Platform",
-      "description": "Feature flags and staged enablement by context.",
+      "description": "Deterministic settings-backed feature enablement with fail-closed invalid configuration; advanced rollout targeting remains future work.",
       "dependencies": [
         "settings"
       ]
