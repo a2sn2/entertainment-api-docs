@@ -22,6 +22,18 @@ public sealed class AccountSecurityOptions
 
     public bool RequireAdministratorMfa { get; set; }
 
+    // Development/reference defaults preserve the original Athar behavior.
+    // Production must explicitly supply the approved organizational password policy.
+    public int PasswordRequiredLength { get; set; } = 10;
+
+    public bool PasswordRequireDigit { get; set; } = true;
+
+    public bool PasswordRequireLowercase { get; set; } = true;
+
+    public bool PasswordRequireUppercase { get; set; } = true;
+
+    public bool PasswordRequireNonAlphanumeric { get; set; } = true;
+
     public string SmtpHost { get; set; } = string.Empty;
 
     public int SmtpPort { get; set; } = 587;
