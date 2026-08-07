@@ -13,8 +13,8 @@ dotnet restore FoundationKit.sln
 dotnet build FoundationKit.sln --configuration "$configuration" --no-restore
 
 mapfile -t projects < <(find src -mindepth 2 -maxdepth 2 -name 'FoundationKit.*.csproj' -type f | sort)
-if [[ ${#projects[@]} -ne 15 ]]; then
-  echo "Expected exactly fifteen FoundationKit package projects, found ${#projects[@]}." >&2
+if [[ ${#projects[@]} -ne 16 ]]; then
+  echo "Expected exactly sixteen FoundationKit package projects, found ${#projects[@]}." >&2
   exit 1
 fi
 
@@ -28,8 +28,8 @@ done
 package_count="$(find "$output" -maxdepth 1 -name '*.nupkg' ! -name '*.symbols.nupkg' | wc -l | tr -d ' ')"
 symbol_count="$(find "$output" -maxdepth 1 -name '*.snupkg' | wc -l | tr -d ' ')"
 
-if [[ "$package_count" -ne 15 || "$symbol_count" -ne 15 ]]; then
-  echo "Expected fifteen packages and fifteen symbol packages; got $package_count and $symbol_count." >&2
+if [[ "$package_count" -ne 16 || "$symbol_count" -ne 16 ]]; then
+  echo "Expected sixteen packages and sixteen symbol packages; got $package_count and $symbol_count." >&2
   exit 1
 fi
 
