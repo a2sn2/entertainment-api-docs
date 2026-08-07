@@ -10,16 +10,18 @@ public static class ContactLinkBuilder
 
     public static string Build(BuildBrief brief)
     {
-        var title = $"Build inquiry: {brief.ProjectName}";
+        ArgumentNullException.ThrowIfNull(brief);
+
+        var title = FormattableString.Invariant($"Build inquiry: {brief.ProjectName}");
         var body = new StringBuilder()
             .AppendLine("## FoundationKit build inquiry")
             .AppendLine()
-            .AppendLine($"- **Project:** {brief.ProjectName}")
-            .AppendLine($"- **Type:** {brief.ProjectType}")
-            .AppendLine($"- **Audience:** {brief.Audience}")
-            .AppendLine($"- **Goal:** {brief.Goal}")
-            .AppendLine($"- **Priorities:** {ValueOrDash(brief.Priorities)}")
-            .AppendLine($"- **Capabilities:** {string.Join(", ", brief.SelectedCapabilityIds)}")
+            .AppendLine(FormattableString.Invariant($"- **Project:** {brief.ProjectName}"))
+            .AppendLine(FormattableString.Invariant($"- **Type:** {brief.ProjectType}"))
+            .AppendLine(FormattableString.Invariant($"- **Audience:** {brief.Audience}"))
+            .AppendLine(FormattableString.Invariant($"- **Goal:** {brief.Goal}"))
+            .AppendLine(FormattableString.Invariant($"- **Priorities:** {ValueOrDash(brief.Priorities)}"))
+            .AppendLine(FormattableString.Invariant($"- **Capabilities:** {string.Join(", ", brief.SelectedCapabilityIds)}"))
             .AppendLine()
             .AppendLine("### Notes")
             .AppendLine(ValueOrDash(brief.Notes))
