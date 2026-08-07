@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Fail CI on high-confidence committed secret material.
 
-This gate intentionally uses only the Python standard library. It scans
-Git-tracked text files and reports file/line/pattern type without printing a
-candidate secret value. Generic credential detection is deliberately limited
-to quoted literal assignments; expressions and variable-to-variable
-assignments are not secrets by themselves and are handled by Trivy/CodeQL and
-review instead of generating noisy false positives here.
+This gate intentionally uses only the Python standard library. It scans every
+Git-tracked text file for recognizable secret/token formats and private keys.
+Generic credential assignments are additionally checked only in source,
+script, workflow, and configuration files; documentation examples are not
+classified as credentials merely because they show a quoted example value.
+Trivy supplies the broader entropy/provider-aware secret scan in CI.
 """
 
 from __future__ import annotations
@@ -41,6 +41,12 @@ LITERAL_CREDENTIAL_ASSIGNMENT = re.compile(
     (?P=quote)
     '''
 )
+
+CREDENTIAL_ASSIGNMENT_SUFFIXES = {
+    ".cs", ".cshtml", ".razor", ".js", ".ts", ".json", ".xml", ".config",
+    ".props", ".targets", ".yml", ".yaml", ".toml", ".ini", ".ps1", ".sh",
+    ".cmd", ".bat", ".env",
+}
 
 DYNAMIC_MARKERS = ("$", "%", "${", "$(", "{{", "}}", "<", ">")
 PLACEHOLDER_WORDS = (
@@ -92,12 +98,30 @@ def looks_dynamic_or_placeholder(value: str) -> bool:
     return any(word in normalized for word in PLACEHOLDER_WORDS)
 
 
-def scan_line(path: Path, line_number: int, line: str) -> list[tuple[str, int, str]]:
+def should_scan_literal_assignments(path: Path) -> bool:
+    relative = path.relative_to(ROOT)
+    if relative.parts and relative.parts[0] == "tests":
+        # Synthetic test fixtures are covered by provider-aware Trivy scanning and
+        # high-confidence token patterns, while ordinary test passwords must not
+        # make this deterministic first-line gate noisy.
+        return False
+    return path.suffix.lower() in CREDENTIAL_ASSIGNMENT_SUFFIXES
+
+
+def scan_line(
+    path: Path,
+    line_number: int,
+    line: str,
+    scan_literal_assignments: bool,
+) -> list[tuple[str, int, str]]:
     findings: list[tuple[str, int, str]] = []
 
     for name, pattern in TOKEN_PATTERNS:
         if pattern.search(line):
             findings.append((path.relative_to(ROOT).as_posix(), line_number, name))
+
+    if not scan_literal_assignments:
+        return findings
 
     for match in LITERAL_CREDENTIAL_ASSIGNMENT.finditer(line):
         value = match.group("value")
@@ -132,8 +156,9 @@ def main() -> int:
             continue
 
         scanned += 1
+        scan_literals = should_scan_literal_assignments(path)
         for line_number, line in enumerate(text.splitlines(), start=1):
-            findings.extend(scan_line(path, line_number, line))
+            findings.extend(scan_line(path, line_number, line, scan_literals))
 
     if findings:
         print("High-confidence secret scan findings:", file=sys.stderr)
