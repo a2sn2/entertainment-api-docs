@@ -1,4 +1,11 @@
 <Project>
+  <!--
+    Directory.Build.props discovery stops at the nearest file. Import the repository
+    baseline explicitly so test projects keep the shared TargetFramework, nullable,
+    analyzers, deterministic-build, and NuGet-audit settings.
+  -->
+  <Import Project="$(MSBuildThisFileDirectory)../Directory.Build.props" />
+
   <PropertyGroup>
     <!--
       xUnit tests intentionally use behavior-oriented underscore-separated names
