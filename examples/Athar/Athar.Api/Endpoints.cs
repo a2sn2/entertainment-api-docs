@@ -506,7 +506,9 @@ public static class AtharEndpoints
 
     private static async Task<IResult> ResetPasswordAsync(
         ResetPasswordRequest request,
-        UserManager<AtharUser> userManager)
+        UserManager<AtharUser> userManager,
+        IAccountNotificationSender notificationSender,
+        CancellationToken cancellationToken)
     {
         var validation = Validate(request);
         if (validation is not null)
@@ -521,17 +523,25 @@ public static class AtharEndpoints
             request.Token,
             request.NewPassword);
 
-        return result.Succeeded
-            ? Results.Ok(new ApiMessageResponse(
-                "تم تحديث كلمة المرور. سجّل الدخول من جديد."))
-            : IdentityValidationProblem(result);
+        if (!result.Succeeded)
+            return IdentityValidationProblem(result);
+
+        await notificationSender.SendSecurityNotificationAsync(
+            user.Email!,
+            AccountSecurityNotification.PasswordReset,
+            cancellationToken);
+
+        return Results.Ok(new ApiMessageResponse(
+            "تم تحديث كلمة المرور. سجّل الدخول من جديد."));
     }
 
     private static async Task<IResult> ChangePasswordAsync(
         ChangePasswordRequest request,
         ClaimsPrincipal principal,
         UserManager<AtharUser> userManager,
-        SignInManager<AtharUser> signInManager)
+        SignInManager<AtharUser> signInManager,
+        IAccountNotificationSender notificationSender,
+        CancellationToken cancellationToken)
     {
         var validation = Validate(request);
         if (validation is not null)
@@ -548,6 +558,11 @@ public static class AtharEndpoints
 
         if (!result.Succeeded)
             return IdentityValidationProblem(result);
+
+        await notificationSender.SendSecurityNotificationAsync(
+            user.Email!,
+            AccountSecurityNotification.PasswordChanged,
+            cancellationToken);
 
         await signInManager.RefreshSignInAsync(user);
         return Results.Ok(new ApiMessageResponse(
@@ -617,7 +632,9 @@ public static class AtharEndpoints
         MfaCodeRequest request,
         ClaimsPrincipal principal,
         UserManager<AtharUser> userManager,
-        SignInManager<AtharUser> signInManager)
+        SignInManager<AtharUser> signInManager,
+        IAccountNotificationSender notificationSender,
+        CancellationToken cancellationToken)
     {
         var validation = Validate(request);
         if (validation is not null)
@@ -655,6 +672,10 @@ public static class AtharEndpoints
             ?? [];
 
         await userManager.UpdateSecurityStampAsync(user);
+        await notificationSender.SendSecurityNotificationAsync(
+            user.Email!,
+            AccountSecurityNotification.MfaEnabled,
+            cancellationToken);
         await signInManager.SignOutAsync();
 
         return Results.Ok(new MfaEnableResponse(recoveryCodes));
@@ -664,7 +685,9 @@ public static class AtharEndpoints
         MfaDisableRequest request,
         ClaimsPrincipal principal,
         UserManager<AtharUser> userManager,
-        SignInManager<AtharUser> signInManager)
+        SignInManager<AtharUser> signInManager,
+        IAccountNotificationSender notificationSender,
+        CancellationToken cancellationToken)
     {
         var validation = Validate(request);
         if (validation is not null)
@@ -674,12 +697,21 @@ public static class AtharEndpoints
         if (user is null)
             return Results.Unauthorized();
 
-        if (!await userManager.CheckPasswordAsync(user, request.CurrentPassword))
+        if (!await userManager.GetTwoFactorEnabledAsync(user))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "TwoFactorNotEnabled",
+                detail: "المصادقة الثنائية غير مفعلة على هذا الحساب.");
+        }
+
+        if (!await userManager.CheckPasswordAsync(user, request.CurrentPassword)
+            || !await VerifyFreshMfaAsync(userManager, user, request.Code))
         {
             return Results.Problem(
                 statusCode: StatusCodes.Status403Forbidden,
-                title: "ReauthenticationRequired",
-                detail: "كلمة المرور الحالية غير صحيحة.");
+                title: "FullReauthenticationRequired",
+                detail: "يلزم التحقق بكلمة المرور الحالية وعامل المصادقة الثنائية قبل تعديل إعدادات MFA.");
         }
 
         var disabled = await userManager.SetTwoFactorEnabledAsync(user, false);
@@ -688,6 +720,10 @@ public static class AtharEndpoints
 
         await userManager.ResetAuthenticatorKeyAsync(user);
         await userManager.UpdateSecurityStampAsync(user);
+        await notificationSender.SendSecurityNotificationAsync(
+            user.Email!,
+            AccountSecurityNotification.MfaDisabled,
+            cancellationToken);
         await signInManager.SignOutAsync();
 
         return Results.Ok(new ApiMessageResponse(
@@ -695,9 +731,11 @@ public static class AtharEndpoints
     }
 
     private static async Task<IResult> RegenerateRecoveryCodesAsync(
-        MfaSetupRequest request,
+        MfaRecoveryCodesRequest request,
         ClaimsPrincipal principal,
-        UserManager<AtharUser> userManager)
+        UserManager<AtharUser> userManager,
+        IAccountNotificationSender notificationSender,
+        CancellationToken cancellationToken)
     {
         var validation = Validate(request);
         if (validation is not null)
@@ -715,12 +753,13 @@ public static class AtharEndpoints
                 detail: "فعّل المصادقة الثنائية قبل إنشاء رموز استرداد جديدة.");
         }
 
-        if (!await userManager.CheckPasswordAsync(user, request.CurrentPassword))
+        if (!await userManager.CheckPasswordAsync(user, request.CurrentPassword)
+            || !await VerifyFreshMfaAsync(userManager, user, request.Code))
         {
             return Results.Problem(
                 statusCode: StatusCodes.Status403Forbidden,
-                title: "ReauthenticationRequired",
-                detail: "كلمة المرور الحالية غير صحيحة.");
+                title: "FullReauthenticationRequired",
+                detail: "يلزم التحقق بكلمة المرور الحالية وعامل المصادقة الثنائية قبل تجديد رموز الاسترداد.");
         }
 
         var recoveryCodes = (await userManager.GenerateNewTwoFactorRecoveryCodesAsync(
@@ -729,7 +768,36 @@ public static class AtharEndpoints
             ?.ToArray()
             ?? [];
 
+        await notificationSender.SendSecurityNotificationAsync(
+            user.Email!,
+            AccountSecurityNotification.RecoveryCodesRegenerated,
+            cancellationToken);
+
         return Results.Ok(new MfaEnableResponse(recoveryCodes));
+    }
+
+    private static async Task<bool> VerifyFreshMfaAsync(
+        UserManager<AtharUser> userManager,
+        AtharUser user,
+        string suppliedCode)
+    {
+        var normalized = suppliedCode
+            .Replace(" ", string.Empty, StringComparison.Ordinal)
+            .Trim();
+        var authenticatorCode = normalized.Replace("-", string.Empty, StringComparison.Ordinal);
+
+        if (authenticatorCode.Length == 6 && authenticatorCode.All(char.IsDigit))
+        {
+            return await userManager.VerifyTwoFactorTokenAsync(
+                user,
+                TokenOptions.DefaultAuthenticatorProvider,
+                authenticatorCode);
+        }
+
+        var recoveryResult = await userManager.RedeemTwoFactorRecoveryCodeAsync(
+            user,
+            normalized);
+        return recoveryResult.Succeeded;
     }
 
     private static async Task<IResult> GetCurrentUserAsync(
