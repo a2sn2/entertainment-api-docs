@@ -8,7 +8,7 @@ namespace Athar.Infrastructure;
 
 public sealed class AccountSecurityDeliveryOptions
 {
-    public const string SectionName = IdentityPolicyOptions.SectionName;
+    public const string SectionName = AccountSecurityOptions.SectionName;
 
     public string SmtpHost { get; set; } = string.Empty;
 
