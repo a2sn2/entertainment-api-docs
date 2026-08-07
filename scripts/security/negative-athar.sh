@@ -4,7 +4,7 @@ set -euo pipefail
 # PR34 review-closure verification head: this script is part of the final security evidence set.
 base_url="${ATHAR_URL:-http://localhost:8090}"
 admin_email="${ATHAR_ADMIN_EMAIL:?ATHAR_ADMIN_EMAIL is required}"
-admin_password="${ATHAR_ADMIN_PASSWORD:?ATHAR_ADMIN_ADMIN_PASSWORD is required}"
+admin_password="${ATHAR_ADMIN_PASSWORD:?ATHAR_ADMIN_PASSWORD is required}"
 stamp="$(date +%s)-$RANDOM"
 user1_email="negative.user1.$stamp@example.test"
 user2_email="negative.user2.$stamp@example.test"
