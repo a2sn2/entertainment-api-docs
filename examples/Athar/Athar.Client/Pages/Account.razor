@@ -146,16 +146,29 @@
                         <MudText Class="muted-copy mt-2">
                             المصادقة الثنائية مفعلة. رموز الاسترداد المتبقية: @ViewModel.MfaStatus.RecoveryCodesLeft
                         </MudText>
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-3">
+                            العمليات الحساسة التالية تتطلب إعادة تحقق كاملة: كلمة المرور الحالية + رمز جديد من تطبيق المصادقة أو رمز استرداد.
+                        </MudAlert>
+
+                        <MudText Typo="Typo.subtitle1" Class="mt-5">تجديد رموز الاسترداد</MudText>
                         <MudTextField T="string" Label="كلمة المرور الحالية"
-                                      @bind-Value="ViewModel.MfaSetupRequest.CurrentPassword"
+                                      @bind-Value="ViewModel.MfaRecoveryCodes.CurrentPassword"
                                       InputType="InputType.Password" Variant="Variant.Outlined" Class="mt-3" />
+                        <MudTextField T="string" Label="رمز MFA الحالي أو رمز استرداد"
+                                      @bind-Value="ViewModel.MfaRecoveryCodes.Code"
+                                      Variant="Variant.Outlined" Class="mt-3" />
                         <MudButton Color="Color.Secondary" Variant="Variant.Outlined"
                                    Disabled="ViewModel.IsBusy" OnClick="RegenerateRecoveryCodesAsync" Class="mt-3">
                             إنشاء رموز استرداد جديدة
                         </MudButton>
-                        <MudTextField T="string" Label="كلمة المرور الحالية لتعطيل MFA"
+
+                        <MudText Typo="Typo.subtitle1" Class="mt-6">تعطيل المصادقة الثنائية</MudText>
+                        <MudTextField T="string" Label="كلمة المرور الحالية"
                                       @bind-Value="ViewModel.MfaDisable.CurrentPassword"
-                                      InputType="InputType.Password" Variant="Variant.Outlined" Class="mt-5" />
+                                      InputType="InputType.Password" Variant="Variant.Outlined" Class="mt-3" />
+                        <MudTextField T="string" Label="رمز MFA الحالي أو رمز استرداد"
+                                      @bind-Value="ViewModel.MfaDisable.Code"
+                                      Variant="Variant.Outlined" Class="mt-3" />
                         <MudButton Color="Color.Error" Variant="Variant.Outlined"
                                    Disabled="ViewModel.IsBusy" OnClick="DisableMfaAsync" Class="mt-3">
                             تعطيل المصادقة الثنائية
