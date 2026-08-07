@@ -34,6 +34,8 @@ All notable repository and package changes are documented here.
 - Athar adoption of `FoundationKit.Identity` account policy and notification contracts while keeping ASP.NET Core Identity, SMTP delivery, Arabic product copy, and EF persistence in the product/adapters.
 - `FoundationKit.Authorization` reference capability package with immutable permission descriptors, role-to-permission grants, authorization subjects, permission evaluation, and owner-or-privileged resource access.
 - Athar adoption of semantic product permissions in `InitiativeManager`, replacing embedded administrator-role checks in business logic while retaining the existing coarse ASP.NET Core administrator policy.
+- `FoundationKit.Workflow` first extraction with deterministic state/trigger transition definitions, fail-closed resolution, immutable transition records, and bounded Auditing integration.
+- Athar adoption of a product-owned initiative review workflow for `submitted + approve/reject -> approved/rejected` while retaining aggregate validation, domain events, persistence, and concurrency.
 
 ### Changed
 
@@ -41,7 +43,7 @@ All notable repository and package changes are documented here.
 - `FoundationKit.sln`, repository verification, CI, documentation, and package versions now include Athar.
 - CI publishes and tests both the Workbench and Athar against real SQL Server containers.
 - GitHub Pages now deploys the standalone Arabic repository atlas instead of presenting one product client as the entire repository.
-- Reusable package output increases to nine NuGet packages plus nine symbol packages after extracting Auditing, Security, Identity, and Authorization from product-specific concerns.
+- Reusable package output increases to ten NuGet packages plus ten symbol packages after extracting Auditing, Security, Identity, Authorization, and Workflow from product-specific concerns.
 
 ## [0.1.0] - 2026-08-06
 
