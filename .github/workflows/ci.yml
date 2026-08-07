@@ -50,8 +50,12 @@ jobs:
           grep -q "DEMO · بدون خادم" site/athar-demo/index.html
 
       - name: Validate container hardening policy
+        shell: bash
         run: |
           python3 scripts/security/check-container-hardening.py
+          export ATHAR_SQL_PASSWORD="ConfigOnly!$(openssl rand -hex 16)Aa1"
+          export ATHAR_ADMIN_EMAIL="config-only@athar.test"
+          export ATHAR_ADMIN_PASSWORD="ConfigOnlyAdmin!$(openssl rand -hex 16)Aa1"
           docker compose -f deploy/athar-compose.yml config >/dev/null
 
       - name: Validate experimental product PowerShell
