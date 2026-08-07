@@ -194,6 +194,25 @@ Advanced sequential, parallel, quorum, delegation, escalation, dynamic routing, 
 
 See `docs/capabilities/APPROVALS.md` for the full boundary and consumer evidence.
 
+## FoundationKit.Notifications
+
+Public building blocks:
+
+- `NotificationMessage`;
+- `INotificationSender`;
+- `NotificationDeliveryStatus`;
+- `NotificationDeliveryResult`.
+
+The package is provider-neutral and does not depend on SMTP, ASP.NET Core, EF, Identity, Authorization, Workflow, Approvals, or any Athar product assembly.
+
+`NotificationMessage` bounds destination, title, body, and purpose. It rejects unsupported control characters in destination/title, accepts line breaks only in body content, validates a restricted purpose-code shape, and has a diagnostic `ToString()` that omits destination/body.
+
+`INotificationSender` is the transport boundary. Its reusable result communicates only delivered/not-configured/failed state; provider exceptions, credentials, recipient data, and message contents are not part of the result contract.
+
+Athar is the first consumer. `AccountSecurityNotificationAdapter` retains Identity/account semantics, Arabic copy, and one-time tokens, then delegates the generic message to `SmtpNotificationSender`. SMTP transport, TLS configuration, and credentials remain Athar/provider concerns.
+
+See `docs/capabilities/NOTIFICATIONS.md` for the full boundary and consumer evidence.
+
 ## Capability catalog contract
 
 The human-facing implemented feature list is maintained in `catalog/foundationkit.catalog.json`. Every catalog capability must correspond to existing tested behavior and public surface. The catalog generator rejects unknown idea references and any status other than `implemented`.

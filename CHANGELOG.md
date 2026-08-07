@@ -38,6 +38,8 @@ All notable repository and package changes are documented here.
 - Athar adoption of a product-owned initiative review workflow for `submitted + approve/reject -> approved/rejected` while retaining aggregate validation, domain events, persistence, and concurrency.
 - `FoundationKit.Approvals` reference capability with strict approve/reject decisions, permission-first maker-checker eligibility, Workflow resolution, and bounded approval audit intent.
 - Athar adoption of `FoundationKit.Approvals` in the initiative review orchestration while retaining the aggregate self-review invariant, existing product persistence, audit entries, domain events, routes, DTOs, and concurrency behavior.
+- `FoundationKit.Notifications` reference capability with bounded channel-neutral message/delivery contracts and sensitive-safe diagnostics.
+- Athar account-security delivery split into an Identity/account formatting adapter and a generic SMTP notification transport, keeping one-time tokens, Arabic copy, SMTP credentials, and TLS configuration outside the reusable Notifications package.
 
 ### Changed
 
@@ -45,7 +47,7 @@ All notable repository and package changes are documented here.
 - `FoundationKit.sln`, repository verification, CI, documentation, and package versions now include Athar.
 - CI publishes and tests both the Workbench and Athar against real SQL Server containers.
 - GitHub Pages now deploys the standalone Arabic repository atlas instead of presenting one product client as the entire repository.
-- Reusable package output increases to eleven NuGet packages plus eleven symbol packages after extracting Auditing, Security, Identity, Authorization, Workflow, and Approvals from product-specific concerns.
+- Reusable package output increases to twelve NuGet packages plus twelve symbol packages after extracting Auditing, Security, Identity, Authorization, Workflow, Approvals, and Notifications from product-specific concerns.
 
 ## [0.1.0] - 2026-08-06
 

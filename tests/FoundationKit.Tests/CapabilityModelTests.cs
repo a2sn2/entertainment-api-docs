@@ -106,14 +106,17 @@ public sealed class CapabilityModelTests
             capability => capability.Id == FoundationCapabilityIds.Workflow);
         var approvals = FoundationCapabilityCatalog.All.Single(
             capability => capability.Id == FoundationCapabilityIds.Approvals);
-        var tasks = FoundationCapabilityCatalog.All.Single(
-            capability => capability.Id == FoundationCapabilityIds.Tasks);
+        var notifications = FoundationCapabilityCatalog.All.Single(
+            capability => capability.Id == FoundationCapabilityIds.Notifications);
+        var files = FoundationCapabilityCatalog.All.Single(
+            capability => capability.Id == FoundationCapabilityIds.Files);
         var kernel = FoundationCapabilityCatalog.All.Single(
             capability => capability.Id == FoundationCapabilityIds.Kernel);
 
         Assert.Equal(CapabilityMaturity.ReferenceOnly, workflow.Maturity);
         Assert.Equal(CapabilityMaturity.ReferenceOnly, approvals.Maturity);
-        Assert.Equal(CapabilityMaturity.Planned, tasks.Maturity);
+        Assert.Equal(CapabilityMaturity.ReferenceOnly, notifications.Maturity);
+        Assert.Equal(CapabilityMaturity.Planned, files.Maturity);
         Assert.Equal(CapabilityMaturity.Stable, kernel.Maturity);
     }
 }

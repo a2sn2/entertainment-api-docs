@@ -48,9 +48,10 @@ No capability is promoted merely because a class or empty package exists.
 
 ## Phase D — Communication and content
 
-- [ ] Notifications abstraction.
+- [x] Notifications v1: bounded channel-neutral message/delivery contracts with Athar SMTP consumer evidence.
 - [ ] Notification templates and localization.
-- [ ] SMTP provider capability integration beyond the existing product/reference adapter.
+- [ ] Notification preferences, routing/fallback, queues, retries, and delivery history.
+- [ ] SMTP provider family beyond the existing Athar/reference adapter.
 - [ ] File storage abstraction.
 - [ ] Document metadata/versioning/classification.
 - [ ] Local-development file provider.
@@ -95,7 +96,7 @@ Providers remain outside business capabilities and are selected explicitly.
 - [ ] SQL Server provider family where reusable provider code is justified.
 - [ ] PostgreSQL provider family.
 - [ ] Redis provider.
-- [ ] SMTP provider family beyond the existing product/reference adapter.
+- [ ] SMTP provider family beyond the existing Athar/reference adapter.
 - [ ] Object storage providers.
 - [ ] Search providers.
 - [ ] Messaging providers.
@@ -153,8 +154,9 @@ The repository currently has extracted reusable/reference packages for:
 - Identity;
 - Authorization;
 - Workflow;
-- Approvals v1.
+- Approvals v1;
+- Notifications v1.
 
-Athar provides current consumer evidence for the security, identity, authorization, workflow, and narrow approval surfaces. The capability maturity values remain conservative and do not imply production certification.
+Athar provides current consumer evidence for the security, identity, authorization, workflow, narrow approval, and notification-transport surfaces. The capability maturity values remain conservative and do not imply production certification.
 
-The next recommended family after Approvals v1 is **Notifications + Files + Jobs/Messaging**, while advanced approval models remain a separate future expansion rather than being implied by the v1 package.
+The next recommended family is **Files + Jobs/Messaging**. Advanced approval models and advanced notification features remain separate future expansions rather than being implied by the current reference packages.

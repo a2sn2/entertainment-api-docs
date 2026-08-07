@@ -194,14 +194,15 @@ Current sequence status:
 2. Composer validation and machine-readable catalog export — **implemented at reference/tooling level**.
 3. Auditing, Security, Identity, and Authorization reusable boundaries — **extracted with conservative maturity levels**.
 4. Workflow and the narrow Approvals v1 decision/maker-checker surface — **extracted as `ReferenceOnly`**.
-5. Notifications + Files + Jobs/Messaging — **planned next family**.
-6. Settings/Feature Management/Organization/Multi-Tenancy — planned.
-7. Search/Reporting/Privacy/Retention and finance building blocks — planned.
-8. Provider families — planned.
-9. CLI and visual Workbench composer expansion — planned beyond current reference tooling.
-10. AI abstractions only after provider-neutral boundaries and observability rules are established.
+5. Notifications bounded message/delivery contracts — **extracted as `ReferenceOnly` with Athar SMTP consumer evidence**.
+6. Files + Jobs/Messaging — **planned next family**.
+7. Settings/Feature Management/Organization/Multi-Tenancy — planned.
+8. Search/Reporting/Privacy/Retention and finance building blocks — planned.
+9. Provider families — planned.
+10. CLI and visual Workbench composer expansion — planned beyond current reference tooling.
+11. AI abstractions only after provider-neutral boundaries and observability rules are established.
 
-Advanced approvals such as sequential, parallel, quorum, delegation, escalation, and dynamic approver routing remain future work even though the narrow v1 capability is implemented.
+Advanced approvals such as sequential, parallel, quorum, delegation, escalation, and dynamic approver routing remain future work even though the narrow v1 capability is implemented. Notifications templates, preferences, queues, retry orchestration, delivery history, and additional channels likewise remain future work beyond the reference v1 transport boundary.
 
 Each extraction must preserve the dependency direction and current security baseline.
 
