@@ -1,3 +1,5 @@
+using FoundationKit.FeatureManagement;
+using FoundationKit.Settings;
 using FoundationKit.Workbench.Contracts;
 using FoundationKit.Workbench.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +21,42 @@ public static class SystemEndpoints
             .WithName("GetWorkbenchRuntime")
             .WithSummary("Returns the shared runtime used by both full-stack portals.")
             .Produces<RuntimeResponse>();
+
+        api.MapGet("/platform-reference", async (
+                ISettingReader settings,
+                IFeatureEvaluator features,
+                CancellationToken cancellationToken) =>
+            {
+                var culture = await settings.ResolveAsync(
+                    WorkbenchPlatformReference.DefaultCultureSetting,
+                    SettingResolutionContext.Global,
+                    cancellationToken);
+
+                if (culture is null)
+                {
+                    return Results.Problem(
+                        title: "Workbench platform reference is not configured.",
+                        statusCode: StatusCodes.Status503ServiceUnavailable);
+                }
+
+                var feature = await features.EvaluateAsync(
+                    new FeatureDefinition(
+                        WorkbenchPlatformReference.CatalogPreviewFeature,
+                        defaultEnabled: false),
+                    FeatureEvaluationContext.Global,
+                    cancellationToken);
+
+                return Results.Ok(new PlatformReferenceResponse(
+                    culture.Value,
+                    culture.Scope.ToString(),
+                    feature.IsEnabled,
+                    feature.Source.ToString(),
+                    feature.MatchedScope?.ToString()));
+            })
+            .WithName("GetWorkbenchPlatformReference")
+            .WithSummary("Proves the reusable Settings and Feature Management capabilities through a live Workbench consumer.")
+            .Produces<PlatformReferenceResponse>()
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         api.MapGet("/catalog", async (
                 CatalogService catalog,
