@@ -12,12 +12,14 @@ using FoundationKit.Infrastructure;
 using FoundationKit.Infrastructure.Events;
 using FoundationKit.Infrastructure.Persistence;
 using FoundationKit.Notifications;
+using FoundationKit.Notifications.Smtp;
 using FoundationKit.Security;
 using FoundationKit.WebApi;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -49,7 +51,16 @@ builder.Services.AddScoped<IAuthorizationEvaluator, RolePermissionAuthorizationE
 builder.Services.AddScoped<IInitiativeManager, InitiativeManager>();
 builder.Services.AddScoped<IInitiativeQueryService, InitiativeQueryService>();
 builder.Services.AddScoped<IAuditWriter, AuditWriter>();
-builder.Services.AddScoped<INotificationSender, SmtpNotificationSender>();
+builder.Services.AddScoped<ISmtpNotificationObserver, AtharSmtpNotificationObserver>();
+builder.Services.AddScoped<INotificationSender>(serviceProvider =>
+{
+    var deliveryOptions = serviceProvider
+        .GetRequiredService<IOptions<AccountSecurityDeliveryOptions>>()
+        .Value;
+    return new SmtpNotificationSender(
+        deliveryOptions.ToProviderOptions(),
+        serviceProvider.GetRequiredService<ISmtpNotificationObserver>());
+});
 builder.Services.AddScoped<IAccountNotificationSender, AccountSecurityNotificationAdapter>();
 builder.Services.AddScoped<IRepository<Initiative, Guid>, EfRepository<Initiative, Guid, AtharDbContext>>();
 builder.Services.AddScoped<IRepository<InitiativeReview, Guid>, EfRepository<InitiativeReview, Guid, AtharDbContext>>();
