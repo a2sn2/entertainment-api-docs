@@ -46,6 +46,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoundationKit.Security", "s
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoundationKit.Identity", "src\FoundationKit.Identity\FoundationKit.Identity.csproj", "{A8B2F5D3-6E11-4D8A-9A71-100000000022}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoundationKit.Authorization", "src\FoundationKit.Authorization\FoundationKit.Authorization.csproj", "{A8B2F5D3-6E11-4D8A-9A71-100000000023}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -140,6 +142,10 @@ Global
 		{A8B2F5D3-6E11-4D8A-9A71-100000000022}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A8B2F5D3-6E11-4D8A-9A71-100000000022}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A8B2F5D3-6E11-4D8A-9A71-100000000022}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000023}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000023}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000023}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000023}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
