@@ -10,10 +10,20 @@ public enum CultureResolutionSource
     InvalidRequested
 }
 
-public sealed record CultureResolution(
-    CultureDefinition Culture,
-    CultureResolutionSource Source)
+public sealed record CultureResolution
 {
+    public CultureResolution(
+        CultureDefinition culture,
+        CultureResolutionSource source)
+    {
+        Culture = culture ?? throw new ArgumentNullException(nameof(culture));
+        Source = source;
+    }
+
+    public CultureDefinition Culture { get; }
+
+    public CultureResolutionSource Source { get; }
+
     public override string ToString() => $"{Culture.Name}:{Source}";
 }
 
@@ -81,10 +91,16 @@ public sealed class SupportedCultureSet
             return new CultureResolution(DefaultCulture, CultureResolutionSource.Default);
         }
 
+        var normalizedRequest = requestedCultureName.Trim();
+        if (normalizedRequest.Length > CultureDefinition.MaximumNameLength)
+        {
+            return new CultureResolution(DefaultCulture, CultureResolutionSource.InvalidRequested);
+        }
+
         CultureInfo requested;
         try
         {
-            requested = CultureInfo.GetCultureInfo(requestedCultureName.Trim());
+            requested = CultureInfo.GetCultureInfo(normalizedRequest);
         }
         catch (CultureNotFoundException)
         {
