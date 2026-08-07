@@ -1,5 +1,6 @@
 using System.Data.Common;
 using Athar.Infrastructure;
+using FoundationKit.Identity;
 using FoundationKit.Security;
 using Microsoft.Extensions.Configuration;
 
@@ -18,6 +19,7 @@ public static class ProductionConfigurationValidator
 
         ValidateAllowedHosts(configuration);
         ValidateExplicitSecurityDecisions(configuration);
+        ValidateAccountSecurityPolicy(configuration);
         ValidateReverseProxy(configuration);
         ValidateNoStartupPrivilege(configuration);
         ValidateAccountRecoveryDelivery(configuration);
@@ -65,6 +67,16 @@ public static class ProductionConfigurationValidator
         RequireExplicitBooleanDecision(
             configuration,
             $"{TrustedProxyOptions.SectionName}:Enabled");
+    }
+
+    private static void ValidateAccountSecurityPolicy(IConfiguration configuration)
+    {
+        var policy = configuration
+            .GetSection(AccountSecurityOptions.SectionName)
+            .Get<AccountSecurityOptions>()
+            ?? new AccountSecurityOptions();
+
+        AccountSecurityOptionsValidator.Validate(policy);
     }
 
     private static void RequireExplicitBooleanDecision(
@@ -116,10 +128,10 @@ public static class ProductionConfigurationValidator
 
     private static void ValidateAccountRecoveryDelivery(IConfiguration configuration)
     {
-        var host = configuration[$"{AccountSecurityOptions.SectionName}:SmtpHost"];
-        var fromAddress = configuration[$"{AccountSecurityOptions.SectionName}:FromAddress"];
-        var port = configuration.GetValue<int?>($"{AccountSecurityOptions.SectionName}:SmtpPort");
-        var tlsEnabled = configuration.GetValue<bool?>($"{AccountSecurityOptions.SectionName}:SmtpEnableSsl");
+        var host = configuration[$"{AccountSecurityDeliveryOptions.SectionName}:SmtpHost"];
+        var fromAddress = configuration[$"{AccountSecurityDeliveryOptions.SectionName}:FromAddress"];
+        var port = configuration.GetValue<int?>($"{AccountSecurityDeliveryOptions.SectionName}:SmtpPort");
+        var tlsEnabled = configuration.GetValue<bool?>($"{AccountSecurityDeliveryOptions.SectionName}:SmtpEnableSsl");
 
         if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(fromAddress) || port is null or < 1 or > 65535)
         {

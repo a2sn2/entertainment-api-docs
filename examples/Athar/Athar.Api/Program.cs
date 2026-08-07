@@ -6,6 +6,7 @@ using Athar.Contracts;
 using Athar.Domain;
 using Athar.Infrastructure;
 using FoundationKit.Application.Persistence;
+using FoundationKit.Identity;
 using FoundationKit.Infrastructure;
 using FoundationKit.Infrastructure.Events;
 using FoundationKit.Infrastructure.Persistence;
@@ -27,6 +28,7 @@ var accountSecurity = builder.Configuration
     .GetSection(AccountSecurityOptions.SectionName)
     .Get<AccountSecurityOptions>()
     ?? new AccountSecurityOptions();
+AccountSecurityOptionsValidator.Validate(accountSecurity);
 
 var reverseProxySecurity = builder.Configuration
     .GetSection(TrustedProxyOptions.SectionName)
@@ -155,6 +157,10 @@ builder.Services.AddOptions<AccountSecurityOptions>()
     .Bind(builder.Configuration.GetSection(AccountSecurityOptions.SectionName))
     .Validate(options => options.PasswordRequiredLength is >= 1 and <= 128,
         "AccountSecurity:PasswordRequiredLength must be between 1 and 128.")
+    .ValidateOnStart();
+
+builder.Services.AddOptions<AccountSecurityDeliveryOptions>()
+    .Bind(builder.Configuration.GetSection(AccountSecurityDeliveryOptions.SectionName))
     .Validate(options => options.SmtpPort is >= 1 and <= 65535,
         "AccountSecurity:SmtpPort must be a valid TCP port.")
     .ValidateOnStart();

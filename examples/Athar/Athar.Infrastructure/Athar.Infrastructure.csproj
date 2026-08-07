@@ -10,6 +10,7 @@
     <ProjectReference Include="..\Athar.Application\Athar.Application.csproj" />
     <ProjectReference Include="..\Athar.Contracts\Athar.Contracts.csproj" />
     <ProjectReference Include="..\..\..\src\FoundationKit.Infrastructure\FoundationKit.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\src\FoundationKit.Identity\FoundationKit.Identity.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -30,6 +30,8 @@ All notable repository and package changes are documented here.
 - Capability Roadmap v1 and a shared Definition of Done for future reusable capabilities.
 - `FoundationKit.Security` preview package with explicit trusted-proxy forwarding, reusable rate-limit partition keys, and shared `amr=mfa` authentication-assurance conventions.
 - Athar adoption of `FoundationKit.Security` for trusted proxy handling, authentication/write partitioning, and administrator MFA authorization policy.
+- `FoundationKit.Identity` reference capability package with reusable account policy, notification ports, security-event vocabulary, and explicit step-up requirements for sensitive account operations.
+- Athar adoption of `FoundationKit.Identity` account policy and notification contracts while keeping ASP.NET Core Identity, SMTP delivery, Arabic product copy, and EF persistence in the product/adapters.
 
 ### Changed
 
@@ -37,7 +39,7 @@ All notable repository and package changes are documented here.
 - `FoundationKit.sln`, repository verification, CI, documentation, and package versions now include Athar.
 - CI publishes and tests both the Workbench and Athar against real SQL Server containers.
 - GitHub Pages now deploys the standalone Arabic repository atlas instead of presenting one product client as the entire repository.
-- Reusable package output increases to seven NuGet packages plus seven symbol packages after extracting Auditing and Security from product-specific concerns.
+- Reusable package output increases to eight NuGet packages plus eight symbol packages after extracting Auditing, Security, and Identity from product-specific concerns.
 
 ## [0.1.0] - 2026-08-06
 
