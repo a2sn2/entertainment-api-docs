@@ -168,9 +168,9 @@
       "id": "approvals",
       "displayName": "Approvals",
       "kind": "optional",
-      "maturity": "planned",
+      "maturity": "referenceOnly",
       "category": "Process",
-      "description": "Single, sequential, parallel, quorum and maker-checker approvals.",
+      "description": "Single approve/reject decisions, maker-checker enforcement, authorization gates, workflow resolution, and audit intent; advanced sequencing and quorum models remain product/future work.",
       "dependencies": [
         "workflow",
         "authorization",
