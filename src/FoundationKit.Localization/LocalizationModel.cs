@@ -49,7 +49,7 @@ public sealed record CultureDefinition
     public override string ToString() => Name;
 }
 
-public readonly record struct TimeZoneId
+public sealed record TimeZoneId
 {
     public const int MaximumLength = 128;
 
@@ -80,19 +80,15 @@ public readonly record struct TimeZoneId
     public override string ToString() => Value;
 }
 
-public sealed record LocalizationContext(
-    CultureDefinition Culture,
-    TimeZoneId TimeZone)
+public sealed record LocalizationContext
 {
     public LocalizationContext(CultureDefinition culture, TimeZoneId timeZone)
-        : this()
     {
         Culture = culture ?? throw new ArgumentNullException(nameof(culture));
-        TimeZone = timeZone;
+        TimeZone = timeZone ?? throw new ArgumentNullException(nameof(timeZone));
     }
 
-    private LocalizationContext()
-        : this(null!, default)
-    {
-    }
+    public CultureDefinition Culture { get; }
+
+    public TimeZoneId TimeZone { get; }
 }
