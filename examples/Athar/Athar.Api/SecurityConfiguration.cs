@@ -19,6 +19,7 @@ public static class ProductionConfigurationValidator
 
         ValidateAllowedHosts(configuration);
         ValidateNoStartupPrivilege(configuration);
+        ValidateAccountRecoveryDelivery(configuration);
         ValidateDatabaseTransportAndIdentity(
             configuration.GetConnectionString("Athar"));
     }
@@ -62,6 +63,23 @@ public static class ProductionConfigurationValidator
         {
             throw new InvalidOperationException(
                 "Automatic role seeding is not permitted outside Development. Provision required roles through the controlled deployment process.");
+        }
+    }
+
+    private static void ValidateAccountRecoveryDelivery(
+        IConfiguration configuration)
+    {
+        var host = configuration[$"{AccountSecurityOptions.SectionName}:SmtpHost"];
+        var fromAddress = configuration[$"{AccountSecurityOptions.SectionName}:FromAddress"];
+        var port = configuration.GetValue<int?>(
+            $"{AccountSecurityOptions.SectionName}:SmtpPort");
+
+        if (string.IsNullOrWhiteSpace(host)
+            || string.IsNullOrWhiteSpace(fromAddress)
+            || port is null or < 1 or > 65535)
+        {
+            throw new InvalidOperationException(
+                "Production requires operational SMTP account-notification configuration so email confirmation and password recovery tokens are not exposed through logs or API responses.");
         }
     }
 
