@@ -59,7 +59,7 @@ public sealed class RegisterRequest
     [Required, StringLength(120, MinimumLength = 2)]
     public string DisplayName { get; set; } = string.Empty;
 
-    [Required, StringLength(128, MinimumLength = 10)]
+    [Required, StringLength(128, MinimumLength = 1)]
     public string Password { get; set; } = string.Empty;
 }
 
@@ -68,7 +68,7 @@ public sealed class LoginRequest
     [Required, EmailAddress, StringLength(256)]
     public string Email { get; set; } = string.Empty;
 
-    [Required, StringLength(128, MinimumLength = 10)]
+    [Required, StringLength(128, MinimumLength = 1)]
     public string Password { get; set; } = string.Empty;
 
     public bool RememberMe { get; set; }
@@ -111,7 +111,7 @@ public sealed class ResetPasswordRequest
     [Required, StringLength(4096)]
     public string Token { get; set; } = string.Empty;
 
-    [Required, StringLength(128, MinimumLength = 10)]
+    [Required, StringLength(128, MinimumLength = 1)]
     public string NewPassword { get; set; } = string.Empty;
 }
 
@@ -120,7 +120,7 @@ public sealed class ChangePasswordRequest
     [Required, StringLength(128, MinimumLength = 1)]
     public string CurrentPassword { get; set; } = string.Empty;
 
-    [Required, StringLength(128, MinimumLength = 10)]
+    [Required, StringLength(128, MinimumLength = 1)]
     public string NewPassword { get; set; } = string.Empty;
 }
 
@@ -144,6 +144,18 @@ public sealed class MfaDisableRequest
 {
     [Required, StringLength(128, MinimumLength = 1)]
     public string CurrentPassword { get; set; } = string.Empty;
+
+    [Required, StringLength(20, MinimumLength = 6)]
+    public string Code { get; set; } = string.Empty;
+}
+
+public sealed class MfaRecoveryCodesRequest
+{
+    [Required, StringLength(128, MinimumLength = 1)]
+    public string CurrentPassword { get; set; } = string.Empty;
+
+    [Required, StringLength(20, MinimumLength = 6)]
+    public string Code { get; set; } = string.Empty;
 }
 
 public sealed record MfaStatusResponse(
