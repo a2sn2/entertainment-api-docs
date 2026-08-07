@@ -1,5 +1,6 @@
 using System.Data.Common;
 using Athar.Infrastructure;
+using FoundationKit.Identity;
 using FoundationKit.Security;
 using Microsoft.Extensions.Configuration;
 
@@ -18,6 +19,7 @@ public static class ProductionConfigurationValidator
 
         ValidateAllowedHosts(configuration);
         ValidateExplicitSecurityDecisions(configuration);
+        ValidateIdentityPolicy(configuration);
         ValidateReverseProxy(configuration);
         ValidateNoStartupPrivilege(configuration);
         ValidateAccountRecoveryDelivery(configuration);
@@ -41,30 +43,40 @@ public static class ProductionConfigurationValidator
     {
         RequireExplicitBooleanDecision(
             configuration,
-            $"{AccountSecurityOptions.SectionName}:RequireConfirmedEmail");
+            $"{IdentityPolicyOptions.SectionName}:RequireConfirmedEmail");
         RequireExplicitBooleanDecision(
             configuration,
-            $"{AccountSecurityOptions.SectionName}:RequireAdministratorMfa");
+            $"{IdentityPolicyOptions.SectionName}:RequireAdministratorMfa");
         RequireExplicitIntegerDecision(
             configuration,
-            $"{AccountSecurityOptions.SectionName}:PasswordRequiredLength",
+            $"{IdentityPolicyOptions.SectionName}:PasswordRequiredLength",
             minimum: 1,
             maximum: 128);
         RequireExplicitBooleanDecision(
             configuration,
-            $"{AccountSecurityOptions.SectionName}:PasswordRequireDigit");
+            $"{IdentityPolicyOptions.SectionName}:PasswordRequireDigit");
         RequireExplicitBooleanDecision(
             configuration,
-            $"{AccountSecurityOptions.SectionName}:PasswordRequireLowercase");
+            $"{IdentityPolicyOptions.SectionName}:PasswordRequireLowercase");
         RequireExplicitBooleanDecision(
             configuration,
-            $"{AccountSecurityOptions.SectionName}:PasswordRequireUppercase");
+            $"{IdentityPolicyOptions.SectionName}:PasswordRequireUppercase");
         RequireExplicitBooleanDecision(
             configuration,
-            $"{AccountSecurityOptions.SectionName}:PasswordRequireNonAlphanumeric");
+            $"{IdentityPolicyOptions.SectionName}:PasswordRequireNonAlphanumeric");
         RequireExplicitBooleanDecision(
             configuration,
             $"{TrustedProxyOptions.SectionName}:Enabled");
+    }
+
+    private static void ValidateIdentityPolicy(IConfiguration configuration)
+    {
+        var policy = configuration
+            .GetSection(IdentityPolicyOptions.SectionName)
+            .Get<IdentityPolicyOptions>()
+            ?? new IdentityPolicyOptions();
+
+        IdentityPolicyValidator.Validate(policy);
     }
 
     private static void RequireExplicitBooleanDecision(
@@ -116,10 +128,10 @@ public static class ProductionConfigurationValidator
 
     private static void ValidateAccountRecoveryDelivery(IConfiguration configuration)
     {
-        var host = configuration[$"{AccountSecurityOptions.SectionName}:SmtpHost"];
-        var fromAddress = configuration[$"{AccountSecurityOptions.SectionName}:FromAddress"];
-        var port = configuration.GetValue<int?>($"{AccountSecurityOptions.SectionName}:SmtpPort");
-        var tlsEnabled = configuration.GetValue<bool?>($"{AccountSecurityOptions.SectionName}:SmtpEnableSsl");
+        var host = configuration[$"{AccountSecurityDeliveryOptions.SectionName}:SmtpHost"];
+        var fromAddress = configuration[$"{AccountSecurityDeliveryOptions.SectionName}:FromAddress"];
+        var port = configuration.GetValue<int?>($"{AccountSecurityDeliveryOptions.SectionName}:SmtpPort");
+        var tlsEnabled = configuration.GetValue<bool?>($"{AccountSecurityDeliveryOptions.SectionName}:SmtpEnableSsl");
 
         if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(fromAddress) || port is null or < 1 or > 65535)
         {
