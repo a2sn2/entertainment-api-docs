@@ -31,7 +31,7 @@ All notable repository and package changes are documented here.
 - `FoundationKit.Security` preview package with explicit trusted-proxy forwarding, reusable rate-limit partition keys, and shared `amr=mfa` authentication-assurance conventions.
 - Athar adoption of `FoundationKit.Security` for trusted proxy handling, authentication/write partitioning, and administrator MFA authorization policy.
 - `FoundationKit.Identity` reference capability package with reusable account policy, notification ports, security-event vocabulary, and explicit step-up requirements for sensitive account operations.
-- Athar adoption of `FoundationKit.Identity` account policy and notification contracts while keeping ASP.NET Core Identity, SMTP delivery, Arabic product copy, and EF persistence in the product/adapters.
+- Athar adoption of `FoundationKit.Identity` account policy and notification contracts while keeping ASP.NET Core Identity, Arabic product copy, token handling, and EF persistence in the product/adapters.
 - `FoundationKit.Authorization` reference capability package with immutable permission descriptors, role-to-permission grants, authorization subjects, permission evaluation, and owner-or-privileged resource access.
 - Athar adoption of semantic product permissions in `InitiativeManager`, replacing embedded administrator-role checks in business logic while retaining the existing coarse ASP.NET Core administrator policy.
 - `FoundationKit.Workflow` first extraction with deterministic state/trigger transition definitions, fail-closed resolution, immutable transition records, and bounded Auditing integration.
@@ -39,7 +39,9 @@ All notable repository and package changes are documented here.
 - `FoundationKit.Approvals` reference capability with strict approve/reject decisions, permission-first maker-checker eligibility, Workflow resolution, and bounded approval audit intent.
 - Athar adoption of `FoundationKit.Approvals` in the initiative review orchestration while retaining the aggregate self-review invariant, existing product persistence, audit entries, domain events, routes, DTOs, and concurrency behavior.
 - `FoundationKit.Notifications` reference capability with bounded channel-neutral message/delivery contracts and sensitive-safe diagnostics.
-- Athar account-security delivery split into an Identity/account formatting adapter and a generic SMTP notification transport, keeping one-time tokens, Arabic copy, SMTP credentials, and TLS configuration outside the reusable Notifications package.
+- Athar account-security delivery split into an Identity/account formatting adapter and a provider-neutral notification boundary, keeping one-time tokens and Arabic product copy in Athar.
+- `FoundationKit.Notifications.Smtp` reference provider package with validated SMTP transport options, provider-neutral delivery result mapping, caller-cancellation preservation, and a bounded observer that never receives recipient/body/token/credential/exception-object data.
+- Athar adoption of the reusable SMTP provider while retaining product configuration keys, fail-closed production SMTP/TLS validation, secret ownership, and logging policy.
 
 ### Changed
 
@@ -47,7 +49,8 @@ All notable repository and package changes are documented here.
 - `FoundationKit.sln`, repository verification, CI, documentation, and package versions now include Athar.
 - CI publishes and tests both the Workbench and Athar against real SQL Server containers.
 - GitHub Pages now deploys the standalone Arabic repository atlas instead of presenting one product client as the entire repository.
-- Reusable package output increases to twelve NuGet packages plus twelve symbol packages after extracting Auditing, Security, Identity, Authorization, Workflow, Approvals, and Notifications from product-specific concerns.
+- Reusable package output increases to thirteen NuGet packages plus thirteen symbol packages after extracting Auditing, Security, Identity, Authorization, Workflow, Approvals, Notifications, and the SMTP notification provider from product-specific concerns.
+- Capability extraction guidance now requires a concrete consumer and a reusable independent boundary before creating a new package; Files/Documents, Jobs, Messaging, Idempotency, and Concurrency remain Planned/ReferenceOnly where current evidence is product-specific or incomplete.
 
 ## [0.1.0] - 2026-08-06
 
