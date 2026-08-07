@@ -8,7 +8,11 @@ curl --fail --silent "$base_url/api/catalog" | grep -q 'FoundationKit.Domain'
 
 platform_reference="$(curl --fail --silent "$base_url/api/platform-reference")"
 echo "$platform_reference" | grep -q '"defaultCulture":"ar-YE"'
+echo "$platform_reference" | grep -q '"textDirection":"RightToLeft"'
+echo "$platform_reference" | grep -q '"cultureResolutionSource":"Exact"'
 echo "$platform_reference" | grep -q '"cultureSettingScope":"global"'
+echo "$platform_reference" | grep -q '"defaultTimeZone":"UTC"'
+echo "$platform_reference" | grep -q '"timeZoneSettingScope":"global"'
 echo "$platform_reference" | grep -q '"catalogPreviewEnabled":true'
 echo "$platform_reference" | grep -q '"featureDecisionSource":"Setting"'
 echo "$platform_reference" | grep -q '"featureSettingScope":"global"'
@@ -44,4 +48,4 @@ echo "$review_response" | grep -q '"status":"approved"'
 curl --fail --silent "$base_url/api/user/requests/$request_id" | grep -q '"status":"approved"'
 curl --fail --silent "$base_url/api/admin/requests?status=approved" | grep -q 'CI Dual Portal'
 
-echo "Dual full-stack SQL Server workflow and platform capability reference passed for request $request_id."
+echo "Dual full-stack SQL Server workflow and Settings/Feature/Localization platform reference passed for request $request_id."
