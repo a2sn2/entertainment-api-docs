@@ -52,7 +52,7 @@ public static class CompositionAnalyzer
 
     private static void ValidateManifestKinds(
         ComposerManifest manifest,
-        IReadOnlyDictionary<string, CapabilityDescriptor> catalog)
+        Dictionary<string, CapabilityDescriptor> catalog)
     {
         foreach (var id in manifest.IncludeCapabilities.Concat(manifest.ExcludeCapabilities))
         {
@@ -93,7 +93,7 @@ public static class CompositionAnalyzer
         ComposerManifest manifest,
         CapabilityProfile profile,
         IReadOnlyList<CapabilityDescriptor> resolved,
-        IReadOnlyDictionary<string, CapabilityDescriptor> catalog)
+        Dictionary<string, CapabilityDescriptor> catalog)
     {
         var reasons = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
         var selectedIds = resolved.Select(capability => capability.Id)
@@ -132,7 +132,7 @@ public static class CompositionAnalyzer
     }
 
     private static void AddReason(
-        IDictionary<string, HashSet<string>> reasons,
+        Dictionary<string, HashSet<string>> reasons,
         string id,
         string reason)
     {
