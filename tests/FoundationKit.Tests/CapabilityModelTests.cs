@@ -100,14 +100,17 @@ public sealed class CapabilityModelTests
     }
 
     [Fact]
-    public void Catalog_marks_future_features_without_claiming_implementation()
+    public void Catalog_distinguishes_extracted_reference_capabilities_from_future_features()
     {
         var workflow = FoundationCapabilityCatalog.All.Single(
             capability => capability.Id == FoundationCapabilityIds.Workflow);
+        var approvals = FoundationCapabilityCatalog.All.Single(
+            capability => capability.Id == FoundationCapabilityIds.Approvals);
         var kernel = FoundationCapabilityCatalog.All.Single(
             capability => capability.Id == FoundationCapabilityIds.Kernel);
 
-        Assert.Equal(CapabilityMaturity.Planned, workflow.Maturity);
+        Assert.Equal(CapabilityMaturity.ReferenceOnly, workflow.Maturity);
+        Assert.Equal(CapabilityMaturity.Planned, approvals.Maturity);
         Assert.Equal(CapabilityMaturity.Stable, kernel.Maturity);
     }
 }

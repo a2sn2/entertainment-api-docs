@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Deterministic provider-neutral state-transition workflows and audit contracts for FoundationKit consumers.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FoundationKit.Auditing\FoundationKit.Auditing.csproj" />
+  </ItemGroup>
+</Project>

@@ -157,7 +157,7 @@
       "id": "workflow",
       "displayName": "Workflow",
       "kind": "optional",
-      "maturity": "planned",
+      "maturity": "referenceOnly",
       "category": "Process",
       "description": "Stateful business workflows, transitions, escalation and history.",
       "dependencies": [
