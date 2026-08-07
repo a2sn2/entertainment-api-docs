@@ -18,12 +18,26 @@ jobs:
       - name: Restore
         run: dotnet restore FoundationKit.sln --verbosity quiet
       - name: Build with compact diagnostics
+        id: build
+        continue-on-error: true
         shell: bash
         run: |
           set +e
           dotnet build FoundationKit.sln --configuration Release --no-restore --verbosity quiet > build.log 2>&1
           status=$?
-          grep -E 'error (CS|CA|SYSLIB|NU)[0-9]+' build.log | sort -u || true
-          exit "$status"
+          grep -E 'error (CS|CA|SYSLIB|NU)[0-9]+' build.log | sort -u > build-errors.txt || true
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+      - name: Upload compact compiler errors
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: hardening-build-errors
+          path: build-errors.txt
+          if-no-files-found: error
+      - name: Fail when build failed
+        if: steps.build.outputs.status != '0'
+        run: |
+          cat build-errors.txt
+          exit 1
       - name: Athar tests with compact diagnostics
         run: dotnet test tests/Athar.Tests/Athar.Tests.csproj --configuration Release --no-build --verbosity quiet
