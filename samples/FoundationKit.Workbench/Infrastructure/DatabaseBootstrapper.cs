@@ -1,9 +1,22 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace FoundationKit.Workbench.Infrastructure;
 
 public static class DatabaseBootstrapper
 {
+    private static readonly Action<ILogger, Exception?> DatabaseReadyLog =
+        LoggerMessage.Define(
+            LogLevel.Information,
+            new EventId(1101, "WorkbenchDatabaseReady"),
+            "FoundationKit Workbench database is ready.");
+
+    private static readonly Action<ILogger, int, int, Exception?> MigrationRetryLog =
+        LoggerMessage.Define<int, int>(
+            LogLevel.Warning,
+            new EventId(1102, "WorkbenchDatabaseMigrationRetry"),
+            "SQL Server is not ready. Migration attempt {Attempt}/{Attempts} will retry.");
+
     public static async Task MigrateAsync(
         IServiceProvider services,
         ILogger logger,
@@ -21,18 +34,14 @@ public static class DatabaseBootstrapper
                 await using var scope = services.CreateAsyncScope();
                 var dbContext = scope.ServiceProvider.GetRequiredService<WorkbenchDbContext>();
                 await dbContext.Database.MigrateAsync(cancellationToken);
-                logger.LogInformation("FoundationKit Workbench database is ready.");
+                DatabaseReadyLog(logger, null);
                 return;
             }
             catch (Exception exception) when (
                 attempt < attempts &&
                 !cancellationToken.IsCancellationRequested)
             {
-                logger.LogWarning(
-                    exception,
-                    "SQL Server is not ready. Migration attempt {Attempt}/{Attempts} will retry.",
-                    attempt,
-                    attempts);
+                MigrationRetryLog(logger, attempt, attempts, exception);
                 await Task.Delay(TimeSpan.FromSeconds(delaySeconds), cancellationToken);
             }
         }
