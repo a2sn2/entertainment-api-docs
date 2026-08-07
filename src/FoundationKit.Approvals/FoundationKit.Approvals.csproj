@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Provider-neutral single-decision approval, maker-checker, authorization, workflow, and audit primitives for FoundationKit consumers.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FoundationKit.Authorization\FoundationKit.Authorization.csproj" />
+    <ProjectReference Include="..\FoundationKit.Workflow\FoundationKit.Workflow.csproj" />
+    <ProjectReference Include="..\FoundationKit.Auditing\FoundationKit.Auditing.csproj" />
+  </ItemGroup>
+</Project>
