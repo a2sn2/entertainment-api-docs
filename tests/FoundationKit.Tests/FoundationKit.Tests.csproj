@@ -19,5 +19,6 @@
     <ProjectReference Include="..\..\src\FoundationKit.Infrastructure\FoundationKit.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\FoundationKit.WebApi\FoundationKit.WebApi.csproj" />
     <ProjectReference Include="..\..\src\FoundationKit.Blazor\FoundationKit.Blazor.csproj" />
+    <ProjectReference Include="..\..\src\FoundationKit.Auditing\FoundationKit.Auditing.csproj" />
   </ItemGroup>
 </Project>
