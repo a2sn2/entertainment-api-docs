@@ -15,7 +15,7 @@ for pattern in "${patterns[@]}"; do
 done
 
 unexpected_top_level="$(find . -mindepth 1 -maxdepth 1 \
-  ! -name '.git' ! -name '.github' ! -name '.editorconfig' ! -name '.gitignore' \
+  ! -name '.git' ! -name '.github' ! -name '.dockerignore' ! -name '.editorconfig' ! -name '.gitignore' \
   ! -name 'CHANGELOG.md' ! -name 'CONTRIBUTING.md' ! -name 'Directory.Build.props' \
   ! -name 'Directory.Packages.props' ! -name 'EXPOSE-ATHAR.cmd' ! -name 'FoundationKit.sln' \
   ! -name 'LICENSE' ! -name 'README.md' ! -name 'SECURITY.md' ! -name 'START-ATHAR.cmd' \
@@ -38,12 +38,11 @@ fi
 migration_leaks="$(find src -type d -iname migrations -print)"
 if [[ -n "$migration_leaks" ]]; then
   echo "EF Core migrations must belong to consuming applications, not reusable packages:" >&2
-  echo "$migration_leaks" >&2
   exit 1
 fi
 
 required_files=(
-  "README.md" "foundationkit.ps1" "START-ATHAR.cmd" "STOP-ATHAR.cmd" "EXPOSE-ATHAR.cmd"
+  "README.md" ".dockerignore" "foundationkit.ps1" "START-ATHAR.cmd" "STOP-ATHAR.cmd" "EXPOSE-ATHAR.cmd"
   ".github/CODEOWNERS" ".github/pull_request_template.md"
   ".github/workflows/ci.yml" ".github/workflows/codeql.yml" ".github/workflows/security-scan.yml"
   ".github/workflows/pages.yml" ".github/workflows/windows-launcher-check.yml"
