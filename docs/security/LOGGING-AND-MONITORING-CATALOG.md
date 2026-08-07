@@ -1,6 +1,14 @@
 # FoundationKit / Athar — Logging and Monitoring Event Catalog
 
-This is the repository-side event contract. Selection of SIEM/observability vendor, retention, alert thresholds, on-call ownership, and escalation times are organizational decisions.
+This is the repository-side **target event contract**, not evidence that every listed event is already emitted by the current application. The implemented event set must be verified from source/tests and the policy register. Selection of SIEM/observability vendor, retention, alert thresholds, on-call ownership, and escalation times are organizational decisions.
+
+## Implementation status rule
+
+- An event listed here is a required/desired security telemetry contract.
+- It becomes `Implemented` only when source code emits it using the approved structured schema.
+- It becomes `Verified` only when a test or captured runtime evidence demonstrates emission without prohibited sensitive data.
+- Events not yet implemented remain design requirements; this catalog must never be cited by itself as proof of runtime logging coverage.
+- Central sink, retention, alert routing, deletion restriction, and operational response remain `External Configuration Required` until deployment evidence exists.
 
 ## Event schema
 
@@ -80,4 +88,5 @@ Repository audit rows are useful product evidence but are not sufficient as the 
 
 - CI/unit tests must assert sensitive token values are never returned by request-email/reset endpoints.
 - Security event code must use structured fields, not string concatenation with secrets/free text.
+- The policy register identifies which catalog events are actually implemented/verified.
 - Central sink/retention/alert routing is `External Configuration Required` until environment evidence exists.
