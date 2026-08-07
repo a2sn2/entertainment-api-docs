@@ -6,6 +6,7 @@ using Athar.Contracts;
 using Athar.Domain;
 using Athar.Infrastructure;
 using FoundationKit.Application.Persistence;
+using FoundationKit.Identity;
 using FoundationKit.Infrastructure;
 using FoundationKit.Infrastructure.Events;
 using FoundationKit.Infrastructure.Persistence;
@@ -23,10 +24,11 @@ ProductionConfigurationValidator.Validate(
     builder.Configuration,
     builder.Environment.IsDevelopment());
 
-var accountSecurity = builder.Configuration
-    .GetSection(AccountSecurityOptions.SectionName)
-    .Get<AccountSecurityOptions>()
-    ?? new AccountSecurityOptions();
+var identityPolicy = builder.Configuration
+    .GetSection(IdentityPolicyOptions.SectionName)
+    .Get<IdentityPolicyOptions>()
+    ?? new IdentityPolicyOptions();
+IdentityPolicyValidator.Validate(identityPolicy);
 
 var reverseProxySecurity = builder.Configuration
     .GetSection(TrustedProxyOptions.SectionName)
@@ -41,7 +43,7 @@ builder.Services.AddScoped<Athar.Application.ICurrentUser, CurrentUserAccessor>(
 builder.Services.AddScoped<IInitiativeManager, InitiativeManager>();
 builder.Services.AddScoped<IInitiativeQueryService, InitiativeQueryService>();
 builder.Services.AddScoped<IAuditWriter, AuditWriter>();
-builder.Services.AddScoped<IAccountNotificationSender, SmtpAccountNotificationSender>();
+builder.Services.AddScoped<IIdentityNotificationSender, SmtpAccountNotificationSender>();
 builder.Services.AddScoped<IRepository<Initiative, Guid>, EfRepository<Initiative, Guid, AtharDbContext>>();
 builder.Services.AddScoped<IRepository<InitiativeReview, Guid>, EfRepository<InitiativeReview, Guid, AtharDbContext>>();
 builder.Services.AddScoped<FoundationKit.Application.Abstractions.IUnitOfWork, EfUnitOfWork<AtharDbContext>>();
@@ -62,12 +64,12 @@ builder.Services
     .AddIdentity<AtharUser, IdentityRole<Guid>>(options =>
     {
         options.User.RequireUniqueEmail = true;
-        options.SignIn.RequireConfirmedEmail = accountSecurity.RequireConfirmedEmail;
-        options.Password.RequiredLength = accountSecurity.PasswordRequiredLength;
-        options.Password.RequireDigit = accountSecurity.PasswordRequireDigit;
-        options.Password.RequireLowercase = accountSecurity.PasswordRequireLowercase;
-        options.Password.RequireUppercase = accountSecurity.PasswordRequireUppercase;
-        options.Password.RequireNonAlphanumeric = accountSecurity.PasswordRequireNonAlphanumeric;
+        options.SignIn.RequireConfirmedEmail = identityPolicy.RequireConfirmedEmail;
+        options.Password.RequiredLength = identityPolicy.PasswordRequiredLength;
+        options.Password.RequireDigit = identityPolicy.PasswordRequireDigit;
+        options.Password.RequireLowercase = identityPolicy.PasswordRequireLowercase;
+        options.Password.RequireUppercase = identityPolicy.PasswordRequireUppercase;
+        options.Password.RequireNonAlphanumeric = identityPolicy.PasswordRequireNonAlphanumeric;
         options.Lockout.AllowedForNewUsers = true;
         options.Lockout.MaxFailedAccessAttempts = 5;
         options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
@@ -101,7 +103,7 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AtharAdministrator", policy =>
     {
         policy.RequireRole(AtharRoles.Administrator);
-        if (accountSecurity.RequireAdministratorMfa)
+        if (identityPolicy.RequireAdministratorMfa)
             policy.RequireFoundationMultiFactor();
     });
 });
@@ -151,10 +153,14 @@ builder.Services.AddOptions<AdminSeedOptions>()
         "When AdminSeed is enabled, Email and a password of at least 12 characters are required.")
     .ValidateOnStart();
 
-builder.Services.AddOptions<AccountSecurityOptions>()
-    .Bind(builder.Configuration.GetSection(AccountSecurityOptions.SectionName))
+builder.Services.AddOptions<IdentityPolicyOptions>()
+    .Bind(builder.Configuration.GetSection(IdentityPolicyOptions.SectionName))
     .Validate(options => options.PasswordRequiredLength is >= 1 and <= 128,
         "AccountSecurity:PasswordRequiredLength must be between 1 and 128.")
+    .ValidateOnStart();
+
+builder.Services.AddOptions<AccountSecurityDeliveryOptions>()
+    .Bind(builder.Configuration.GetSection(AccountSecurityDeliveryOptions.SectionName))
     .Validate(options => options.SmtpPort is >= 1 and <= 65535,
         "AccountSecurity:SmtpPort must be a valid TCP port.")
     .ValidateOnStart();
