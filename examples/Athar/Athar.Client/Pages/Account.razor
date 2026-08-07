@@ -197,9 +197,11 @@
                         <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Class="mt-5">
                             هذه الرموز تُعرض هنا لتسليمها لك فقط. خزّنها خارج الجهاز بصورة آمنة؛ المجموعة الجديدة تبطل السابقة.
                         </MudAlert>
-                        @foreach (var code in ViewModel.RecoveryCodes)
+                        @foreach (var recoveryCode in ViewModel.RecoveryCodes)
                         {
-                            <MudCodeHighlight Code="@code" Language="text" />
+                            <MudPaper Class="mt-2 pa-3" Elevation="0">
+                                <code>@recoveryCode</code>
+                            </MudPaper>
                         }
                     }
                 </MudTabPanel>
