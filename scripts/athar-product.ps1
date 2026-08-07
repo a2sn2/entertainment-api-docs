@@ -80,10 +80,31 @@ function New-StrongPassword {
     return $Prefix + [Guid]::NewGuid().ToString("N") + "Aa1!"
 }
 
+function Protect-LocalFile {
+    param([Parameter(Mandatory)][string]$Path)
+
+    if (-not (Test-Path $Path)) {
+        return
+    }
+
+    try {
+        $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+        $sid = $identity.User.Value
+        & icacls $Path /inheritance:r /grant:r "*$sid`:(F)" *> $null
+        if ($LASTEXITCODE -ne 0) {
+            throw "icacls returned exit code $LASTEXITCODE."
+        }
+    }
+    catch {
+        throw "Could not restrict ACLs on local secret file '$Path'. Refusing to continue with unprotected local credentials. $($_.Exception.Message)"
+    }
+}
+
 function Initialize-EnvironmentFile {
     New-Item -ItemType Directory -Force -Path $LocalDirectory | Out-Null
 
     if (Test-Path $EnvironmentFile) {
+        Protect-LocalFile $EnvironmentFile
         return
     }
 
@@ -100,9 +121,10 @@ function Initialize-EnvironmentFile {
         $EnvironmentFile,
         $lines,
         [System.Text.UTF8Encoding]::new($false))
+    Protect-LocalFile $EnvironmentFile
 
-    Write-Host "Created local settings at .local/athar-product.env" -ForegroundColor Green
-    Write-Host "This file is ignored by Git and will not be committed." -ForegroundColor DarkYellow
+    Write-Host "Created protected local settings at .local/athar-product.env" -ForegroundColor Green
+    Write-Host "This file is ignored by Git and restricted to the current Windows account." -ForegroundColor DarkYellow
 }
 
 function Get-EnvironmentValues {
@@ -301,6 +323,8 @@ function Start-NativeProduct {
     $env:AdminSeed__Enabled = "true"
     $env:AdminSeed__Email = $values["ATHAR_ADMIN_EMAIL"]
     $env:AdminSeed__Password = $values["ATHAR_ADMIN_PASSWORD"]
+    $env:DatabaseStartup__ApplyMigrationsOnStartup = "true"
+    $env:DatabaseStartup__SeedRolesOnStartup = "true"
     $env:DatabaseStartup__MigrationAttempts = "30"
     $env:DatabaseStartup__DelaySeconds = "2"
 
@@ -387,12 +411,12 @@ function Show-AccessInformation {
     Write-Host "  Account:       $BaseUrl/account"
     Write-Host "  Initiatives:   $BaseUrl/initiatives"
     Write-Host "  Admin:         $BaseUrl/admin"
-    Write-Host "  Swagger:       $BaseUrl/swagger"
+    Write-Host "  Swagger:       $BaseUrl/swagger (Development only)"
     Write-Host "  Readiness:     $BaseUrl/health/ready"
     Write-Host ""
     Write-Host "Local administrator account" -ForegroundColor Cyan
     Write-Host "  Email:         $($values['ATHAR_ADMIN_EMAIL'])"
-    Write-Host "  Password:      $($values['ATHAR_ADMIN_PASSWORD'])"
+    Write-Host "  Credential file: .local/athar-product.env (ACL restricted; never share or commit it)"
     Write-Host ""
 }
 
@@ -410,13 +434,14 @@ function Show-LanUrls {
         return
     }
 
+    Write-Host "WARNING: Workbench/Athar LAN exposure is for controlled development only. Do not use real or sensitive data." -ForegroundColor Yellow
     Write-Host "Possible URLs for devices on the same Wi-Fi or LAN:" -ForegroundColor Cyan
     foreach ($address in $addresses) {
         Write-Host "  http://${address}:8090"
     }
 
     Write-Host ""
-    Write-Host "If another device cannot connect, allow TCP port 8090 through Windows Firewall." -ForegroundColor Yellow
+    Write-Host "If another device cannot connect, allow TCP port 8090 through Windows Firewall only for the trusted local network and remove the rule after testing." -ForegroundColor Yellow
 }
 
 function Backup-DockerDatabase {
@@ -440,10 +465,13 @@ fi
 '@.Replace("__BACKUP_PATH__", $containerPath)
 
     Invoke-Compose -ComposeArguments @("exec", "-T", "athar-sqlserver", "bash", "-lc", $backupCommand)
-    Invoke-Compose -ComposeArguments @("cp", "athar-sqlserver:$containerPath", (Join-Path $BackupDirectory $fileName))
+    $localBackupFile = Join-Path $BackupDirectory $fileName
+    Invoke-Compose -ComposeArguments @("cp", "athar-sqlserver:$containerPath", $localBackupFile)
+    Protect-LocalFile $localBackupFile
 
-    Write-Host "Database backup created:" -ForegroundColor Green
-    Write-Host "  $(Join-Path $BackupDirectory $fileName)"
+    Write-Host "Development database backup created with restricted ACL:" -ForegroundColor Green
+    Write-Host "  $localBackupFile"
+    Write-Host "This local backup is not production recovery evidence until an isolated restore test passes." -ForegroundColor Yellow
 }
 
 function Backup-NativeDatabase {
@@ -487,8 +515,10 @@ function Backup-NativeDatabase {
     $localBackupFile = Join-Path $BackupDirectory $fileName
     try {
         Copy-Item $serverBackupFile $localBackupFile -Force
-        Write-Host "Database backup created:" -ForegroundColor Green
+        Protect-LocalFile $localBackupFile
+        Write-Host "Development database backup created with restricted ACL:" -ForegroundColor Green
         Write-Host "  $localBackupFile"
+        Write-Host "This local backup is not production recovery evidence until an isolated restore test passes." -ForegroundColor Yellow
     }
     catch {
         Write-Host "SQL Server created the backup, but it could not be copied into the repository folder." -ForegroundColor Yellow

@@ -25,8 +25,19 @@ public static class AtharRoutes
     public const string SecurityToken = $"{ApiRoot}/security/antiforgery";
     public const string Register = $"{ApiRoot}/auth/register";
     public const string Login = $"{ApiRoot}/auth/login";
+    public const string LoginTwoFactor = $"{ApiRoot}/auth/login/2fa";
     public const string Logout = $"{ApiRoot}/auth/logout";
     public const string Me = $"{ApiRoot}/auth/me";
+    public const string RequestEmailConfirmation = $"{ApiRoot}/auth/email/request-confirmation";
+    public const string ConfirmEmail = $"{ApiRoot}/auth/email/confirm";
+    public const string ForgotPassword = $"{ApiRoot}/auth/password/forgot";
+    public const string ResetPassword = $"{ApiRoot}/auth/password/reset";
+    public const string ChangePassword = $"{ApiRoot}/auth/password/change";
+    public const string MfaStatus = $"{ApiRoot}/auth/mfa/status";
+    public const string MfaSetup = $"{ApiRoot}/auth/mfa/setup";
+    public const string MfaEnable = $"{ApiRoot}/auth/mfa/enable";
+    public const string MfaDisable = $"{ApiRoot}/auth/mfa/disable";
+    public const string MfaRecoveryCodes = $"{ApiRoot}/auth/mfa/recovery-codes";
     public const string Initiatives = $"{ApiRoot}/initiatives";
     public const string MyInitiatives = $"{ApiRoot}/initiatives/mine";
     public const string AdminQueue = $"{ApiRoot}/admin/initiatives";
@@ -48,7 +59,7 @@ public sealed class RegisterRequest
     [Required, StringLength(120, MinimumLength = 2)]
     public string DisplayName { get; set; } = string.Empty;
 
-    [Required, StringLength(128, MinimumLength = 10)]
+    [Required, StringLength(128, MinimumLength = 1)]
     public string Password { get; set; } = string.Empty;
 }
 
@@ -57,18 +68,112 @@ public sealed class LoginRequest
     [Required, EmailAddress, StringLength(256)]
     public string Email { get; set; } = string.Empty;
 
-    [Required, StringLength(128, MinimumLength = 10)]
+    [Required, StringLength(128, MinimumLength = 1)]
     public string Password { get; set; } = string.Empty;
 
     public bool RememberMe { get; set; }
 }
+
+public sealed class TwoFactorLoginRequest
+{
+    [Required, StringLength(20, MinimumLength = 6)]
+    public string Code { get; set; } = string.Empty;
+
+    public bool RememberMe { get; set; }
+
+    public bool RememberMachine { get; set; }
+}
+
+public sealed record LoginResponse(
+    CurrentUserResponse? User,
+    bool RequiresTwoFactor);
+
+public sealed class EmailAddressRequest
+{
+    [Required, EmailAddress, StringLength(256)]
+    public string Email { get; set; } = string.Empty;
+}
+
+public sealed class ConfirmEmailRequest
+{
+    [Required, EmailAddress, StringLength(256)]
+    public string Email { get; set; } = string.Empty;
+
+    [Required, StringLength(4096)]
+    public string Token { get; set; } = string.Empty;
+}
+
+public sealed class ResetPasswordRequest
+{
+    [Required, EmailAddress, StringLength(256)]
+    public string Email { get; set; } = string.Empty;
+
+    [Required, StringLength(4096)]
+    public string Token { get; set; } = string.Empty;
+
+    [Required, StringLength(128, MinimumLength = 1)]
+    public string NewPassword { get; set; } = string.Empty;
+}
+
+public sealed class ChangePasswordRequest
+{
+    [Required, StringLength(128, MinimumLength = 1)]
+    public string CurrentPassword { get; set; } = string.Empty;
+
+    [Required, StringLength(128, MinimumLength = 1)]
+    public string NewPassword { get; set; } = string.Empty;
+}
+
+public sealed class MfaSetupRequest
+{
+    [Required, StringLength(128, MinimumLength = 1)]
+    public string CurrentPassword { get; set; } = string.Empty;
+}
+
+public sealed record MfaSetupResponse(
+    string SharedKey,
+    string AuthenticatorUri);
+
+public sealed class MfaCodeRequest
+{
+    [Required, StringLength(20, MinimumLength = 6)]
+    public string Code { get; set; } = string.Empty;
+}
+
+public sealed class MfaDisableRequest
+{
+    [Required, StringLength(128, MinimumLength = 1)]
+    public string CurrentPassword { get; set; } = string.Empty;
+
+    [Required, StringLength(20, MinimumLength = 6)]
+    public string Code { get; set; } = string.Empty;
+}
+
+public sealed class MfaRecoveryCodesRequest
+{
+    [Required, StringLength(128, MinimumLength = 1)]
+    public string CurrentPassword { get; set; } = string.Empty;
+
+    [Required, StringLength(20, MinimumLength = 6)]
+    public string Code { get; set; } = string.Empty;
+}
+
+public sealed record MfaStatusResponse(
+    bool TwoFactorEnabled,
+    bool EmailConfirmed,
+    int RecoveryCodesLeft);
+
+public sealed record MfaEnableResponse(
+    IReadOnlyList<string> RecoveryCodes);
 
 public sealed record CurrentUserResponse(
     Guid? Id,
     string? Email,
     string? DisplayName,
     IReadOnlyList<string> Roles,
-    bool IsAuthenticated);
+    bool IsAuthenticated,
+    bool EmailConfirmed = false,
+    bool TwoFactorEnabled = false);
 
 public sealed class CreateInitiativeRequest
 {

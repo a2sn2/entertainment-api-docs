@@ -43,6 +43,10 @@ public sealed class DatabaseStartupOptions
 {
     public const string SectionName = "DatabaseStartup";
 
+    public bool ApplyMigrationsOnStartup { get; set; }
+
+    public bool SeedRolesOnStartup { get; set; }
+
     public int MigrationAttempts { get; set; } = 60;
 
     public int DelaySeconds { get; set; } = 2;

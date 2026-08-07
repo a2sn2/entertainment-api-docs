@@ -8,6 +8,7 @@ using FoundationKit.WebApi.Results;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Athar.Api;
 
@@ -35,13 +36,12 @@ public static class AtharEndpoints
                 return connected
                     ? Results.Ok(new
                     {
-                        status = "ready",
-                        database = "sql-server"
+                        status = "ready"
                     })
                     : Results.Problem(
                         statusCode: StatusCodes.Status503ServiceUnavailable,
-                        title: "DatabaseUnavailable",
-                        detail: "تعذر الاتصال بقاعدة البيانات.");
+                        title: "DependencyUnavailable",
+                        detail: "تعذر إكمال فحص الجاهزية.");
             })
             .WithTags("الصحة")
             .WithName("AtharReady");
@@ -84,6 +84,13 @@ public static class AtharEndpoints
             .Produces<CurrentUserResponse>()
             .ProducesProblem(StatusCodes.Status401Unauthorized);
 
+        auth.MapPost("/login/2fa", TwoFactorLoginAsync)
+            .AddEndpointFilter<AntiforgeryEndpointFilter>()
+            .RequireRateLimiting("auth")
+            .WithName("LoginAtharUserTwoFactor")
+            .Produces<CurrentUserResponse>()
+            .ProducesProblem(StatusCodes.Status401Unauthorized);
+
         auth.MapPost("/logout", async (
                 SignInManager<AtharUser> signInManager) =>
             {
@@ -98,6 +105,70 @@ public static class AtharEndpoints
         auth.MapGet("/me", GetCurrentUserAsync)
             .WithName("GetAtharCurrentUser")
             .Produces<CurrentUserResponse>();
+
+        auth.MapPost("/email/request-confirmation", RequestEmailConfirmationAsync)
+            .AddEndpointFilter<AntiforgeryEndpointFilter>()
+            .RequireRateLimiting("auth")
+            .WithName("RequestAtharEmailConfirmation")
+            .Produces<ApiMessageResponse>();
+
+        auth.MapPost("/email/confirm", ConfirmEmailAsync)
+            .AddEndpointFilter<AntiforgeryEndpointFilter>()
+            .RequireRateLimiting("auth")
+            .WithName("ConfirmAtharEmail")
+            .Produces<ApiMessageResponse>();
+
+        auth.MapPost("/password/forgot", ForgotPasswordAsync)
+            .AddEndpointFilter<AntiforgeryEndpointFilter>()
+            .RequireRateLimiting("auth")
+            .WithName("RequestAtharPasswordReset")
+            .Produces<ApiMessageResponse>();
+
+        auth.MapPost("/password/reset", ResetPasswordAsync)
+            .AddEndpointFilter<AntiforgeryEndpointFilter>()
+            .RequireRateLimiting("auth")
+            .WithName("ResetAtharPassword")
+            .Produces<ApiMessageResponse>();
+
+        auth.MapPost("/password/change", ChangePasswordAsync)
+            .AddEndpointFilter<AntiforgeryEndpointFilter>()
+            .RequireAuthorization()
+            .RequireRateLimiting("write")
+            .WithName("ChangeAtharPassword")
+            .Produces<ApiMessageResponse>();
+
+        auth.MapGet("/mfa/status", GetMfaStatusAsync)
+            .RequireAuthorization()
+            .WithName("GetAtharMfaStatus")
+            .Produces<MfaStatusResponse>();
+
+        auth.MapPost("/mfa/setup", SetupMfaAsync)
+            .AddEndpointFilter<AntiforgeryEndpointFilter>()
+            .RequireAuthorization()
+            .RequireRateLimiting("write")
+            .WithName("SetupAtharMfa")
+            .Produces<MfaSetupResponse>();
+
+        auth.MapPost("/mfa/enable", EnableMfaAsync)
+            .AddEndpointFilter<AntiforgeryEndpointFilter>()
+            .RequireAuthorization()
+            .RequireRateLimiting("write")
+            .WithName("EnableAtharMfa")
+            .Produces<MfaEnableResponse>();
+
+        auth.MapPost("/mfa/disable", DisableMfaAsync)
+            .AddEndpointFilter<AntiforgeryEndpointFilter>()
+            .RequireAuthorization()
+            .RequireRateLimiting("write")
+            .WithName("DisableAtharMfa")
+            .Produces<ApiMessageResponse>();
+
+        auth.MapPost("/mfa/recovery-codes", RegenerateRecoveryCodesAsync)
+            .AddEndpointFilter<AntiforgeryEndpointFilter>()
+            .RequireAuthorization()
+            .RequireRateLimiting("write")
+            .WithName("RegenerateAtharMfaRecoveryCodes")
+            .Produces<MfaEnableResponse>();
     }
 
     private static void MapInitiatives(IEndpointRouteBuilder endpoints)
@@ -202,13 +273,17 @@ public static class AtharEndpoints
             .RequireRateLimiting("write")
             .WithName("ReviewAtharInitiative")
             .Produces<InitiativeDetailsDto>()
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status409Conflict);
     }
 
     private static async Task<IResult> RegisterAsync(
         RegisterRequest request,
         UserManager<AtharUser> userManager,
-        SignInManager<AtharUser> signInManager)
+        SignInManager<AtharUser> signInManager,
+        IAccountNotificationSender notificationSender,
+        IOptions<AccountSecurityOptions> securityOptions,
+        CancellationToken cancellationToken)
     {
         var validation = Validate(request);
         if (validation is not null)
@@ -243,6 +318,28 @@ public static class AtharEndpoints
             return IdentityValidationProblem(role);
         }
 
+        if (securityOptions.Value.RequireConfirmedEmail)
+        {
+            var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
+            var delivered = await notificationSender.SendEmailConfirmationAsync(
+                user.Email!,
+                token,
+                cancellationToken);
+
+            if (!delivered)
+            {
+                return Results.Problem(
+                    statusCode: StatusCodes.Status503ServiceUnavailable,
+                    title: "AccountNotificationUnavailable",
+                    detail: "تعذر إرسال رسالة تأكيد الحساب. حاول لاحقًا.");
+            }
+
+            return Results.Ok(await ToCurrentUserAsync(
+                user,
+                userManager,
+                isAuthenticated: false));
+        }
+
         await signInManager.SignInAsync(user, isPersistent: false);
         return Results.Ok(await ToCurrentUserAsync(user, userManager));
     }
@@ -262,16 +359,28 @@ public static class AtharEndpoints
             request.RememberMe,
             lockoutOnFailure: true);
 
+        if (result.RequiresTwoFactor)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status401Unauthorized,
+                title: "TwoFactorRequired",
+                detail: "أدخل رمز المصادقة الثنائية أو أحد رموز الاسترداد لإكمال تسجيل الدخول.");
+        }
+
         if (!result.Succeeded)
         {
             return Results.Problem(
                 statusCode: StatusCodes.Status401Unauthorized,
                 title: result.IsLockedOut
                     ? "AccountLocked"
-                    : "InvalidCredentials",
+                    : result.IsNotAllowed
+                        ? "AccountNotAllowed"
+                        : "InvalidCredentials",
                 detail: result.IsLockedOut
                     ? "تم قفل الحساب مؤقتًا بسبب محاولات متكررة."
-                    : "البريد الإلكتروني أو كلمة المرور غير صحيحة.");
+                    : result.IsNotAllowed
+                        ? "الحساب غير جاهز لتسجيل الدخول. تحقق من البريد الإلكتروني ومتطلبات الأمان."
+                        : "البريد الإلكتروني أو كلمة المرور غير صحيحة.");
         }
 
         var user = await userManager.FindByEmailAsync(request.Email.Trim())
@@ -279,6 +388,416 @@ public static class AtharEndpoints
                 "Authenticated user was not found.");
 
         return Results.Ok(await ToCurrentUserAsync(user, userManager));
+    }
+
+    private static async Task<IResult> TwoFactorLoginAsync(
+        TwoFactorLoginRequest request,
+        UserManager<AtharUser> userManager,
+        SignInManager<AtharUser> signInManager)
+    {
+        var validation = Validate(request);
+        if (validation is not null)
+            return Results.ValidationProblem(validation);
+
+        var user = await signInManager.GetTwoFactorAuthenticationUserAsync();
+        if (user is null)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status401Unauthorized,
+                title: "TwoFactorSessionMissing",
+                detail: "أعد تسجيل الدخول بكلمة المرور قبل إدخال رمز المصادقة الثنائية.");
+        }
+
+        var normalizedCode = request.Code
+            .Replace(" ", string.Empty, StringComparison.Ordinal)
+            .Trim();
+
+        SignInResult result;
+        if (normalizedCode.Length == 6
+            && normalizedCode.All(char.IsDigit))
+        {
+            result = await signInManager.TwoFactorAuthenticatorSignInAsync(
+                normalizedCode,
+                request.RememberMe,
+                request.RememberMachine);
+        }
+        else
+        {
+            result = await signInManager.TwoFactorRecoveryCodeSignInAsync(
+                normalizedCode);
+        }
+
+        if (!result.Succeeded)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status401Unauthorized,
+                title: result.IsLockedOut ? "AccountLocked" : "InvalidTwoFactorCode",
+                detail: result.IsLockedOut
+                    ? "تم قفل الحساب مؤقتًا بسبب محاولات متكررة."
+                    : "رمز المصادقة الثنائية أو الاسترداد غير صحيح.");
+        }
+
+        return Results.Ok(await ToCurrentUserAsync(user, userManager));
+    }
+
+    private static async Task<IResult> RequestEmailConfirmationAsync(
+        EmailAddressRequest request,
+        UserManager<AtharUser> userManager,
+        IAccountNotificationSender notificationSender,
+        CancellationToken cancellationToken)
+    {
+        var validation = Validate(request);
+        if (validation is not null)
+            return Results.ValidationProblem(validation);
+
+        var user = await userManager.FindByEmailAsync(request.Email.Trim());
+        if (user is not null && !await userManager.IsEmailConfirmedAsync(user))
+        {
+            var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
+            await notificationSender.SendEmailConfirmationAsync(
+                user.Email!,
+                token,
+                cancellationToken);
+        }
+
+        return Results.Ok(GenericAccountNotificationResponse());
+    }
+
+    private static async Task<IResult> ConfirmEmailAsync(
+        ConfirmEmailRequest request,
+        UserManager<AtharUser> userManager)
+    {
+        var validation = Validate(request);
+        if (validation is not null)
+            return Results.ValidationProblem(validation);
+
+        var user = await userManager.FindByEmailAsync(request.Email.Trim());
+        if (user is null)
+            return Results.ValidationProblem(GenericInvalidTokenProblem());
+
+        var result = await userManager.ConfirmEmailAsync(user, request.Token);
+        return result.Succeeded
+            ? Results.Ok(new ApiMessageResponse("تم تأكيد البريد الإلكتروني بنجاح."))
+            : IdentityValidationProblem(result);
+    }
+
+    private static async Task<IResult> ForgotPasswordAsync(
+        EmailAddressRequest request,
+        UserManager<AtharUser> userManager,
+        IAccountNotificationSender notificationSender,
+        CancellationToken cancellationToken)
+    {
+        var validation = Validate(request);
+        if (validation is not null)
+            return Results.ValidationProblem(validation);
+
+        var user = await userManager.FindByEmailAsync(request.Email.Trim());
+        if (user is not null && await userManager.IsEmailConfirmedAsync(user))
+        {
+            var token = await userManager.GeneratePasswordResetTokenAsync(user);
+            await notificationSender.SendPasswordResetAsync(
+                user.Email!,
+                token,
+                cancellationToken);
+        }
+
+        return Results.Ok(GenericAccountNotificationResponse());
+    }
+
+    private static async Task<IResult> ResetPasswordAsync(
+        ResetPasswordRequest request,
+        UserManager<AtharUser> userManager,
+        IAccountNotificationSender notificationSender,
+        CancellationToken cancellationToken)
+    {
+        var validation = Validate(request);
+        if (validation is not null)
+            return Results.ValidationProblem(validation);
+
+        var user = await userManager.FindByEmailAsync(request.Email.Trim());
+        if (user is null)
+            return Results.ValidationProblem(GenericInvalidTokenProblem());
+
+        var result = await userManager.ResetPasswordAsync(
+            user,
+            request.Token,
+            request.NewPassword);
+
+        if (!result.Succeeded)
+            return IdentityValidationProblem(result);
+
+        await notificationSender.SendSecurityNotificationAsync(
+            user.Email!,
+            AccountSecurityNotification.PasswordReset,
+            cancellationToken);
+
+        return Results.Ok(new ApiMessageResponse(
+            "تم تحديث كلمة المرور. سجّل الدخول من جديد."));
+    }
+
+    private static async Task<IResult> ChangePasswordAsync(
+        ChangePasswordRequest request,
+        ClaimsPrincipal principal,
+        UserManager<AtharUser> userManager,
+        SignInManager<AtharUser> signInManager,
+        IAccountNotificationSender notificationSender,
+        CancellationToken cancellationToken)
+    {
+        var validation = Validate(request);
+        if (validation is not null)
+            return Results.ValidationProblem(validation);
+
+        var user = await userManager.GetUserAsync(principal);
+        if (user is null)
+            return Results.Unauthorized();
+
+        var result = await userManager.ChangePasswordAsync(
+            user,
+            request.CurrentPassword,
+            request.NewPassword);
+
+        if (!result.Succeeded)
+            return IdentityValidationProblem(result);
+
+        await notificationSender.SendSecurityNotificationAsync(
+            user.Email!,
+            AccountSecurityNotification.PasswordChanged,
+            cancellationToken);
+
+        await signInManager.RefreshSignInAsync(user);
+        return Results.Ok(new ApiMessageResponse(
+            "تم تغيير كلمة المرور بنجاح."));
+    }
+
+    private static async Task<IResult> GetMfaStatusAsync(
+        ClaimsPrincipal principal,
+        UserManager<AtharUser> userManager)
+    {
+        var user = await userManager.GetUserAsync(principal);
+        if (user is null)
+            return Results.Unauthorized();
+
+        return Results.Ok(new MfaStatusResponse(
+            await userManager.GetTwoFactorEnabledAsync(user),
+            await userManager.IsEmailConfirmedAsync(user),
+            await userManager.CountRecoveryCodesAsync(user)));
+    }
+
+    private static async Task<IResult> SetupMfaAsync(
+        MfaSetupRequest request,
+        ClaimsPrincipal principal,
+        UserManager<AtharUser> userManager)
+    {
+        var validation = Validate(request);
+        if (validation is not null)
+            return Results.ValidationProblem(validation);
+
+        var user = await userManager.GetUserAsync(principal);
+        if (user is null)
+            return Results.Unauthorized();
+
+        if (!await userManager.CheckPasswordAsync(user, request.CurrentPassword))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status403Forbidden,
+                title: "ReauthenticationRequired",
+                detail: "كلمة المرور الحالية غير صحيحة.");
+        }
+
+        var key = await userManager.GetAuthenticatorKeyAsync(user);
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            var reset = await userManager.ResetAuthenticatorKeyAsync(user);
+            if (!reset.Succeeded)
+                return IdentityValidationProblem(reset);
+
+            key = await userManager.GetAuthenticatorKeyAsync(user);
+        }
+
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "MfaKeyUnavailable",
+                detail: "تعذر إنشاء مفتاح المصادقة الثنائية.");
+        }
+
+        var email = user.Email ?? user.UserName ?? user.Id.ToString();
+        var uri = $"otpauth://totp/Athar:{Uri.EscapeDataString(email)}?secret={Uri.EscapeDataString(key)}&issuer=Athar&digits=6";
+
+        return Results.Ok(new MfaSetupResponse(key, uri));
+    }
+
+    private static async Task<IResult> EnableMfaAsync(
+        MfaCodeRequest request,
+        ClaimsPrincipal principal,
+        UserManager<AtharUser> userManager,
+        SignInManager<AtharUser> signInManager,
+        IAccountNotificationSender notificationSender,
+        CancellationToken cancellationToken)
+    {
+        var validation = Validate(request);
+        if (validation is not null)
+            return Results.ValidationProblem(validation);
+
+        var user = await userManager.GetUserAsync(principal);
+        if (user is null)
+            return Results.Unauthorized();
+
+        var code = request.Code
+            .Replace(" ", string.Empty, StringComparison.Ordinal)
+            .Replace("-", string.Empty, StringComparison.Ordinal);
+
+        var valid = await userManager.VerifyTwoFactorTokenAsync(
+            user,
+            TokenOptions.DefaultAuthenticatorProvider,
+            code);
+
+        if (!valid)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: "InvalidTwoFactorCode",
+                detail: "رمز تطبيق المصادقة غير صحيح.");
+        }
+
+        var enabled = await userManager.SetTwoFactorEnabledAsync(user, true);
+        if (!enabled.Succeeded)
+            return IdentityValidationProblem(enabled);
+
+        var recoveryCodes = (await userManager.GenerateNewTwoFactorRecoveryCodesAsync(
+                user,
+                10))
+            ?.ToArray()
+            ?? [];
+
+        await userManager.UpdateSecurityStampAsync(user);
+        await notificationSender.SendSecurityNotificationAsync(
+            user.Email!,
+            AccountSecurityNotification.MfaEnabled,
+            cancellationToken);
+        await signInManager.SignOutAsync();
+
+        return Results.Ok(new MfaEnableResponse(recoveryCodes));
+    }
+
+    private static async Task<IResult> DisableMfaAsync(
+        MfaDisableRequest request,
+        ClaimsPrincipal principal,
+        UserManager<AtharUser> userManager,
+        SignInManager<AtharUser> signInManager,
+        IAccountNotificationSender notificationSender,
+        CancellationToken cancellationToken)
+    {
+        var validation = Validate(request);
+        if (validation is not null)
+            return Results.ValidationProblem(validation);
+
+        var user = await userManager.GetUserAsync(principal);
+        if (user is null)
+            return Results.Unauthorized();
+
+        if (!await userManager.GetTwoFactorEnabledAsync(user))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "TwoFactorNotEnabled",
+                detail: "المصادقة الثنائية غير مفعلة على هذا الحساب.");
+        }
+
+        if (!await userManager.CheckPasswordAsync(user, request.CurrentPassword)
+            || !await VerifyFreshMfaAsync(userManager, user, request.Code))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status403Forbidden,
+                title: "FullReauthenticationRequired",
+                detail: "يلزم التحقق بكلمة المرور الحالية وعامل المصادقة الثنائية قبل تعديل إعدادات MFA.");
+        }
+
+        var disabled = await userManager.SetTwoFactorEnabledAsync(user, false);
+        if (!disabled.Succeeded)
+            return IdentityValidationProblem(disabled);
+
+        await userManager.ResetAuthenticatorKeyAsync(user);
+        await userManager.UpdateSecurityStampAsync(user);
+        await notificationSender.SendSecurityNotificationAsync(
+            user.Email!,
+            AccountSecurityNotification.MfaDisabled,
+            cancellationToken);
+        await signInManager.SignOutAsync();
+
+        return Results.Ok(new ApiMessageResponse(
+            "تم تعطيل المصادقة الثنائية وتسجيل الخروج من الجلسة الحالية."));
+    }
+
+    private static async Task<IResult> RegenerateRecoveryCodesAsync(
+        MfaRecoveryCodesRequest request,
+        ClaimsPrincipal principal,
+        UserManager<AtharUser> userManager,
+        IAccountNotificationSender notificationSender,
+        CancellationToken cancellationToken)
+    {
+        var validation = Validate(request);
+        if (validation is not null)
+            return Results.ValidationProblem(validation);
+
+        var user = await userManager.GetUserAsync(principal);
+        if (user is null)
+            return Results.Unauthorized();
+
+        if (!await userManager.GetTwoFactorEnabledAsync(user))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "TwoFactorNotEnabled",
+                detail: "فعّل المصادقة الثنائية قبل إنشاء رموز استرداد جديدة.");
+        }
+
+        if (!await userManager.CheckPasswordAsync(user, request.CurrentPassword)
+            || !await VerifyFreshMfaAsync(userManager, user, request.Code))
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status403Forbidden,
+                title: "FullReauthenticationRequired",
+                detail: "يلزم التحقق بكلمة المرور الحالية وعامل المصادقة الثنائية قبل تجديد رموز الاسترداد.");
+        }
+
+        var recoveryCodes = (await userManager.GenerateNewTwoFactorRecoveryCodesAsync(
+                user,
+                10))
+            ?.ToArray()
+            ?? [];
+
+        await notificationSender.SendSecurityNotificationAsync(
+            user.Email!,
+            AccountSecurityNotification.RecoveryCodesRegenerated,
+            cancellationToken);
+
+        return Results.Ok(new MfaEnableResponse(recoveryCodes));
+    }
+
+    private static async Task<bool> VerifyFreshMfaAsync(
+        UserManager<AtharUser> userManager,
+        AtharUser user,
+        string suppliedCode)
+    {
+        var normalized = suppliedCode
+            .Replace(" ", string.Empty, StringComparison.Ordinal)
+            .Trim();
+        var authenticatorCode = normalized.Replace("-", string.Empty, StringComparison.Ordinal);
+
+        if (authenticatorCode.Length == 6 && authenticatorCode.All(char.IsDigit))
+        {
+            return await userManager.VerifyTwoFactorTokenAsync(
+                user,
+                TokenOptions.DefaultAuthenticatorProvider,
+                authenticatorCode);
+        }
+
+        var recoveryResult = await userManager.RedeemTwoFactorRecoveryCodeAsync(
+            user,
+            normalized);
+        return recoveryResult.Succeeded;
     }
 
     private static async Task<IResult> GetCurrentUserAsync(
@@ -308,13 +827,25 @@ public static class AtharEndpoints
 
     private static async Task<CurrentUserResponse> ToCurrentUserAsync(
         AtharUser user,
-        UserManager<AtharUser> userManager) =>
+        UserManager<AtharUser> userManager,
+        bool isAuthenticated = true) =>
         new(
             user.Id,
             user.Email,
             user.DisplayName,
             (await userManager.GetRolesAsync(user)).ToArray(),
-            true);
+            isAuthenticated,
+            await userManager.IsEmailConfirmedAsync(user),
+            await userManager.GetTwoFactorEnabledAsync(user));
+
+    private static ApiMessageResponse GenericAccountNotificationResponse() =>
+        new("إذا كان الحساب موجودًا ومؤهلًا للعملية، فسيتم إرسال تعليمات إلى البريد الإلكتروني المسجل.");
+
+    private static Dictionary<string, string[]> GenericInvalidTokenProblem() =>
+        new()
+        {
+            ["Token"] = ["رمز التحقق غير صالح أو انتهت صلاحيته."]
+        };
 
     private static Dictionary<string, string[]>? Validate<T>(T request)
     {

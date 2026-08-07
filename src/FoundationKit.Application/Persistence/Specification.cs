@@ -40,11 +40,8 @@ public abstract class Specification<TEntity> : ISpecification<TEntity>
 
     protected void ApplyPaging(int skip, int take)
     {
-        if (skip < 0)
-            throw new ArgumentOutOfRangeException(nameof(skip));
-
-        if (take <= 0)
-            throw new ArgumentOutOfRangeException(nameof(take));
+        ArgumentOutOfRangeException.ThrowIfNegative(skip);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(take);
 
         Skip = skip;
         Take = take;

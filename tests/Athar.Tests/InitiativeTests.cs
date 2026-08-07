@@ -60,6 +60,33 @@ public sealed class InitiativeTests
     }
 
     [Fact]
+    public void Owner_cannot_review_own_initiative_even_when_authorized_as_administrator()
+    {
+        var ownerId = Guid.NewGuid();
+        var initiative = Initiative.Create(
+            Guid.NewGuid(),
+            ownerId,
+            "مساحة أحياء رقمية",
+            "مبادرة تربط سكان الحي بخدمات تطوعية ومعلومات موثوقة عبر منصة رقمية محلية.",
+            "مجتمع",
+            "صنعاء",
+            18_000,
+            450,
+            DateTimeOffset.UtcNow).Value;
+
+        var review = initiative.Review(
+            InitiativeDecisions.Approve,
+            ownerId,
+            "محاولة مراجعة ذاتية يجب رفضها.",
+            DateTimeOffset.UtcNow.AddMinutes(1));
+
+        Assert.True(review.IsFailure);
+        Assert.Equal("Athar.SelfReviewNotAllowed", review.Error.Code);
+        Assert.Equal(InitiativeStatuses.Submitted, initiative.Status);
+        Assert.Single(initiative.DomainEvents);
+    }
+
+    [Fact]
     public void Final_initiative_cannot_be_reviewed_twice()
     {
         var initiative = Initiative.Create(

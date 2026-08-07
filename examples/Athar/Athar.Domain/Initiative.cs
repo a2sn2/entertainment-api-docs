@@ -151,6 +151,9 @@ public sealed class Initiative : AggregateRoot<Guid>
         if (reviewerUserId == Guid.Empty)
             return Result.Failure(InitiativeErrors.InvalidReviewer);
 
+        if (reviewerUserId == OwnerUserId)
+            return Result.Failure(InitiativeErrors.SelfReviewNotAllowed);
+
         if (!InitiativeDecisions.IsValid(normalizedDecision))
             return Result.Failure(InitiativeErrors.InvalidDecision);
 
@@ -272,6 +275,10 @@ public static class InitiativeErrors
     public static readonly Error InvalidReviewer = Error.Forbidden(
         "Athar.InvalidReviewer",
         "تعذر تحديد المراجع الإداري.");
+
+    public static readonly Error SelfReviewNotAllowed = Error.Forbidden(
+        "Athar.SelfReviewNotAllowed",
+        "لا يمكن لمسؤول النظام مراجعة مبادرة يملكها هو.");
 
     public static readonly Error InvalidDecision = Error.Validation(
         "Athar.InvalidDecision",
