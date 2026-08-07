@@ -19,7 +19,7 @@ public static class ProductionConfigurationValidator
 
         ValidateAllowedHosts(configuration);
         ValidateExplicitSecurityDecisions(configuration);
-        ValidateIdentityPolicy(configuration);
+        ValidateAccountSecurityPolicy(configuration);
         ValidateReverseProxy(configuration);
         ValidateNoStartupPrivilege(configuration);
         ValidateAccountRecoveryDelivery(configuration);
@@ -43,40 +43,40 @@ public static class ProductionConfigurationValidator
     {
         RequireExplicitBooleanDecision(
             configuration,
-            $"{IdentityPolicyOptions.SectionName}:RequireConfirmedEmail");
+            $"{AccountSecurityOptions.SectionName}:RequireConfirmedEmail");
         RequireExplicitBooleanDecision(
             configuration,
-            $"{IdentityPolicyOptions.SectionName}:RequireAdministratorMfa");
+            $"{AccountSecurityOptions.SectionName}:RequireAdministratorMfa");
         RequireExplicitIntegerDecision(
             configuration,
-            $"{IdentityPolicyOptions.SectionName}:PasswordRequiredLength",
+            $"{AccountSecurityOptions.SectionName}:PasswordRequiredLength",
             minimum: 1,
             maximum: 128);
         RequireExplicitBooleanDecision(
             configuration,
-            $"{IdentityPolicyOptions.SectionName}:PasswordRequireDigit");
+            $"{AccountSecurityOptions.SectionName}:PasswordRequireDigit");
         RequireExplicitBooleanDecision(
             configuration,
-            $"{IdentityPolicyOptions.SectionName}:PasswordRequireLowercase");
+            $"{AccountSecurityOptions.SectionName}:PasswordRequireLowercase");
         RequireExplicitBooleanDecision(
             configuration,
-            $"{IdentityPolicyOptions.SectionName}:PasswordRequireUppercase");
+            $"{AccountSecurityOptions.SectionName}:PasswordRequireUppercase");
         RequireExplicitBooleanDecision(
             configuration,
-            $"{IdentityPolicyOptions.SectionName}:PasswordRequireNonAlphanumeric");
+            $"{AccountSecurityOptions.SectionName}:PasswordRequireNonAlphanumeric");
         RequireExplicitBooleanDecision(
             configuration,
             $"{TrustedProxyOptions.SectionName}:Enabled");
     }
 
-    private static void ValidateIdentityPolicy(IConfiguration configuration)
+    private static void ValidateAccountSecurityPolicy(IConfiguration configuration)
     {
         var policy = configuration
-            .GetSection(IdentityPolicyOptions.SectionName)
-            .Get<IdentityPolicyOptions>()
-            ?? new IdentityPolicyOptions();
+            .GetSection(AccountSecurityOptions.SectionName)
+            .Get<AccountSecurityOptions>()
+            ?? new AccountSecurityOptions();
 
-        IdentityPolicyValidator.Validate(policy);
+        AccountSecurityOptionsValidator.Validate(policy);
     }
 
     private static void RequireExplicitBooleanDecision(
