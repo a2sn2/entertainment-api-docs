@@ -80,18 +80,20 @@ public sealed record RolePermissionGrant
                 "Role cannot exceed 120 characters.");
         }
 
-        Permissions = permissions
+        var normalizedPermissions = permissions
             .Select(PermissionId.Normalize)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        if (Permissions.Count == 0)
+        if (normalizedPermissions.Length == 0)
         {
             throw new ArgumentException(
                 "A role permission grant must contain at least one permission.",
                 nameof(permissions));
         }
+
+        Permissions = Array.AsReadOnly(normalizedPermissions);
     }
 
     public string Role { get; }
