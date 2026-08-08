@@ -1,6 +1,10 @@
 # تشغيل FoundationKit وWorkbench ومنصة أثَر على Visual Studio 2026
 
-هذا الدليل مخصص لتشغيل الحل كاملًا على Windows مع SQL Server محلي. لا تحتاج إلى تشغيل مشروع Blazor منفصل؛ مشروع الـAPI يستضيف ملفات Blazor WebAssembly ويعملان من عنوان واحد.
+هذا الدليل مخصص لتشغيل الحل كاملًا على Windows مع SQL Server محلي من داخل Visual Studio. ابدأ أولًا من الدليل الكانوني [`LOCAL-RUN-WINDOWS-AR.md`](LOCAL-RUN-WINDOWS-AR.md) لفحص الأدوات وSQL Server والمنافذ قبل الدخول في إعدادات Visual Studio.
+
+لا تحتاج إلى تشغيل مشروع Blazor منفصل؛ مشروع الـAPI يستضيف ملفات Blazor WebAssembly ويعمل العميل والـAPI من عنوان واحد.
+
+> مهم: منافذ Visual Studio تختلف جزئيًا عن منافذ المدير الموحد `foundationkit.ps1`. Visual Studio يستخدم Workbench على `5057` وAthar على `5068`، بينما المدير الموحد Native يستخدم Workbench على `5057` وAthar على `8090`.
 
 ## 1. المتطلبات
 
@@ -9,7 +13,7 @@
 - Visual Studio 2026.
 - Workload: **ASP.NET and web development**.
 - .NET 8 SDK، وفق `global.json` داخل المستودع.
-- SQL Server 2025 أو SQL Server Express.
+- SQL Server محلي مثل SQL Server 2025 أو SQL Server Express.
 - SQL Server Management Studio لفحص قواعد البيانات.
 - Git.
 
@@ -32,7 +36,8 @@ Server=.\SQLEXPRESS
 ```powershell
 git clone https://github.com/a2sn2/foundationkit-dotnet.git
 cd foundationkit-dotnet
-git pull origin main
+git switch main
+git pull --ff-only origin main
 ```
 
 ثم افتح:
@@ -61,7 +66,7 @@ SQL Server (MSSQLSERVER)   Running
 SQL Server (SQLEXPRESS)    Running
 ```
 
-اختبر الاتصال من SSMS باستخدام Windows Authentication قبل تشغيل الحل.
+اختبر الاتصال من SSMS باستخدام Windows Authentication قبل تشغيل الحل. استخدم في User Secrets نفس اسم الـServer الذي نجح في SSMS.
 
 ---
 
@@ -80,7 +85,7 @@ samples
   → Manage User Secrets
 ```
 
-ضع:
+للـDefault Instance:
 
 ```json
 {
@@ -90,7 +95,7 @@ samples
 }
 ```
 
-لـSQL Express استخدم:
+لـSQL Express:
 
 ```json
 {
@@ -176,7 +181,9 @@ examples
   → Manage User Secrets
 ```
 
-ضع إعدادات محلية مثل:
+أنشئ كلمة مرور محلية قوية وفريدة بنفسك. لا تستخدم كلمة مرور موحدة من التوثيق ولا تعيد استخدامها في حساب حقيقي.
+
+للـDefault Instance ضع مثلًا:
 
 ```json
 {
@@ -187,14 +194,12 @@ examples
     "Enabled": true,
     "Email": "admin@athar.local",
     "DisplayName": "مسؤول منصة أثر",
-    "Password": "AtharLocal!2026Aa"
+    "Password": "<LOCAL-STRONG-PASSWORD>"
   }
 }
 ```
 
-كلمة المرور السابقة مثال محلي فقط. غيّرها ولا تستخدمها في أي بيئة حقيقية.
-
-لـSQL Express:
+ولـSQL Express:
 
 ```json
 {
@@ -205,10 +210,12 @@ examples
     "Enabled": true,
     "Email": "admin@athar.local",
     "DisplayName": "مسؤول منصة أثر",
-    "Password": "AtharLocal!2026Aa"
+    "Password": "<LOCAL-STRONG-PASSWORD>"
   }
 }
 ```
+
+استبدل `<LOCAL-STRONG-PASSWORD>` بقيمة محلية فعلية داخل User Secrets فقط. لا تضعها في ملف tracked ولا ترسلها في issue أو screenshot أو رسالة تشخيص.
 
 ## 8. اختيار Startup Project
 
@@ -224,11 +231,13 @@ Build → Rebuild Solution
 F5
 ```
 
-يفتح:
+يفتح Visual Studio على:
 
 ```text
 http://localhost:5068
 ```
+
+هذا صحيح لمسار Visual Studio. إذا شغلت Athar من `foundationkit.ps1 -Mode Native` فالعنوان يكون `http://localhost:8090` بدلًا منه.
 
 مشروع `Athar.Api` يستضيف `Athar.Client` تلقائيًا؛ لا تجعل `Athar.Client` Startup Project مستقلًا عند تشغيل المسار الكامل.
 
@@ -257,7 +266,7 @@ http://localhost:5068/initiatives
 
 ```text
 Email: admin@athar.local
-Password: القيمة الموجودة في User Secrets
+Password: القيمة المحلية الموجودة في User Secrets
 ```
 
 3. افتح:
@@ -296,7 +305,7 @@ Database: Athar
 
 ---
 
-# تشغيل المشروعين معًا
+# تشغيل المشروعين معًا من Visual Studio
 
 يمكن تشغيل Workbench وأثَر في وقت واحد لأن المنافذ مختلفة:
 
@@ -346,7 +355,7 @@ Databases
 → Tables
 ```
 
-لا تنشئ الجداول يدويًا؛ المهاجرات هي المصدر الرسمي لبنية قاعدة البيانات.
+لا تنشئ الجداول يدويًا؛ **EF migrations هي المصدر الرسمي لبنية قاعدة البيانات**.
 
 ---
 
@@ -355,18 +364,28 @@ Databases
 من جذر المستودع:
 
 ```powershell
+.\foundationkit.ps1 doctor
+.\foundationkit.ps1 restore
+.\foundationkit.ps1 build
+.\foundationkit.ps1 test
+.\foundationkit.ps1 verify
+```
+
+أو مباشرة:
+
+```powershell
 dotnet restore FoundationKit.sln
 dotnet build FoundationKit.sln --configuration Release --no-restore
 dotnet test FoundationKit.sln --configuration Release --no-build
 ```
 
-تشغيل Workbench:
+تشغيل Workbench مباشرة يستخدم launch profile على `5057`:
 
 ```powershell
 dotnet run --project .\samples\FoundationKit.Workbench\FoundationKit.Workbench.Api.csproj
 ```
 
-تشغيل أثَر:
+تشغيل أثَر مباشرة يستخدم launch profile على `5068`:
 
 ```powershell
 dotnet run --project .\examples\Athar\Athar.Api\Athar.Api.csproj
@@ -388,11 +407,21 @@ dotnet run --project .\examples\Athar\Athar.Api\Athar.Api.csproj
 - تأكد أن حساب Windows لديه صلاحية إنشاء قاعدة محلية.
 - أوقف التطبيق، صحح User Secrets، ثم شغله مرة أخرى.
 
+### Port already in use / Address already in use
+
+شغّل:
+
+```powershell
+.\foundationkit.ps1 doctor
+```
+
+سيعرض المنافذ الأساسية التي عليها listener. أوقف العملية القديمة أو اختر مسار تشغيل واحدًا فقط بدل تشغيل Visual Studio والمدير الموحد لنفس التطبيق في الوقت نفسه.
+
 ### المتصفح يعرض 401 أو 403
 
 - `401`: المستخدم غير مسجل الدخول.
-- `403`: المستخدم دخل لكنه لا يملك دور Administrator.
-- تأكد أن AdminSeed مفعّل في أول تشغيل وأن بريد المسؤول صحيح.
+- `403`: المستخدم دخل لكنه لا يملك دور Administrator أو السياسة المطلوبة.
+- تأكد أن AdminSeed مفعّل محليًا في أول تشغيل وأن بريد المسؤول صحيح.
 
 ### صفحة Blazor لا تحمل
 
@@ -406,3 +435,5 @@ dotnet run --project .\examples\Athar\Athar.Api\Athar.Api.csproj
 - أوقف التطبيق بالكامل.
 - تأكد أنك فتحت Manage User Secrets للمشروع الصحيح.
 - شغّل من جديد؛ User Secrets تُقرأ في Development فقط.
+
+عند طلب المساعدة، أرسل الخطأ وسجل التشغيل بدون User Secrets أو محتوى `.local/*.env` أو كلمات المرور.

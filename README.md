@@ -247,9 +247,15 @@ Useful commands:
 .\foundationkit.ps1 production-check
 ```
 
+`doctor` checks the required commands, availability of a .NET 8 SDK, visible local SQL Server services on Windows, the main local ports, Git state, and running application health where available.
+
+Workbench and Athar local credential/state files live under ignored `.local/` paths. The Windows manager restricts credential files to the current Windows account and refuses to continue if the ACL cannot be applied.
+
 `pack` delegates to the canonical `scripts/pack.ps1` path. Package discovery/count validation therefore has one source of truth rather than a second hard-coded list in the manager.
 
 `Auto` uses Docker when Docker Desktop is ready and otherwise uses local .NET/SQL Server where supported.
+
+For the exact first-run sequence, SQL Server instance overrides, port map, and failure diagnostics, read [`docs/LOCAL-RUN-WINDOWS-AR.md`](docs/LOCAL-RUN-WINDOWS-AR.md).
 
 ---
 
@@ -365,6 +371,7 @@ Do not infer `Stable` from the human catalog; maturity belongs to the compositio
 Pull-request CI verifies the repository as one system, including applicable stages such as:
 
 - tracked-source secret scanning;
+- tracked-repository hygiene checks that reject local/generated/sensitive artifacts;
 - repository boundary checks;
 - JSON and Atlas validation;
 - container hardening checks;
@@ -439,18 +446,20 @@ That stop rule is intentional: FoundationKit should be broadly useful without si
 
 Start here:
 
-1. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-2. [`docs/PACKAGES.md`](docs/PACKAGES.md)
-3. [`docs/FEATURES.md`](docs/FEATURES.md)
-4. [`docs/CAPABILITY-MODEL-V1.md`](docs/CAPABILITY-MODEL-V1.md)
-5. [`docs/CAPABILITY-ROADMAP-V1.md`](docs/CAPABILITY-ROADMAP-V1.md)
-6. [`docs/CAPABILITY-EXTRACTION-STATUS.md`](docs/CAPABILITY-EXTRACTION-STATUS.md)
-7. [`docs/COMPOSER-CLI-V1.md`](docs/COMPOSER-CLI-V1.md)
-8. [`docs/WORKBENCH.md`](docs/WORKBENCH.md)
-9. [`docs/DUAL-FULL-STACK.md`](docs/DUAL-FULL-STACK.md)
-10. [`docs/ADDING-A-PROJECT-AR.md`](docs/ADDING-A-PROJECT-AR.md)
-11. [`docs/PRODUCTION-READINESS-AR.md`](docs/PRODUCTION-READINESS-AR.md)
-12. [`examples/Athar/README.md`](examples/Athar/README.md)
+1. [`docs/LOCAL-RUN-WINDOWS-AR.md`](docs/LOCAL-RUN-WINDOWS-AR.md) — Windows first run and diagnostics.
+2. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+3. [`docs/PACKAGES.md`](docs/PACKAGES.md)
+4. [`docs/FEATURES.md`](docs/FEATURES.md)
+5. [`docs/CAPABILITY-MODEL-V1.md`](docs/CAPABILITY-MODEL-V1.md)
+6. [`docs/CAPABILITY-ROADMAP-V1.md`](docs/CAPABILITY-ROADMAP-V1.md)
+7. [`docs/CAPABILITY-EXTRACTION-STATUS.md`](docs/CAPABILITY-EXTRACTION-STATUS.md)
+8. [`docs/COMPOSER-CLI-V1.md`](docs/COMPOSER-CLI-V1.md)
+9. [`docs/WORKBENCH.md`](docs/WORKBENCH.md)
+10. [`docs/DUAL-FULL-STACK.md`](docs/DUAL-FULL-STACK.md)
+11. [`docs/VISUAL-STUDIO-2026-AR.md`](docs/VISUAL-STUDIO-2026-AR.md)
+12. [`docs/ADDING-A-PROJECT-AR.md`](docs/ADDING-A-PROJECT-AR.md)
+13. [`docs/PRODUCTION-READINESS-AR.md`](docs/PRODUCTION-READINESS-AR.md)
+14. [`examples/Athar/README.md`](examples/Athar/README.md)
 
 The GitHub Pages Atlas is generated from `site/portal-manifest.json` and provides a navigable view of the same repository surfaces.
 

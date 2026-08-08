@@ -11,20 +11,36 @@
 .DS_Store
 Thumbs.db
 
-# Build, test, package, and coverage output
+# Build, test, package, coverage, and tool output
 artifacts/
 TestResults/
 coverage/
+**/BenchmarkDotNet.Artifacts/
+**/node_modules/
+**/__pycache__/
+**/.pytest_cache/
 *.trx
 *.nupkg
 *.snupkg
+*.coverage
+*.coveragexml
 
-# Local configuration and secrets
+# Local configuration, secrets, certificates, and data
 .env
 .env.*
+!.env.example
+!.env.sample
+!.env.template
 .local/
 *.local
 *.secrets.json
+*.pfx
+*.p12
+*.key
+*.bak
+*.db
+*.sqlite
+*.sqlite3
 
 # Logs
 *.log

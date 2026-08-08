@@ -50,6 +50,8 @@ All notable repository and package changes are documented here.
 - `FoundationKit.Caching` reference capability with bounded byte-cache contracts, explicit TTL/hit/miss/remove semantics, caller cancellation, defensive snapshots, and a BCL-only bounded in-memory provider.
 - Workbench adoption of Caching on the existing embedded capability-catalog read path, with direct consumer tests and repeated `/api/catalog` SQL-smoke coverage proving miss/fill then hit behavior.
 - Repository consistency verification that derives the reusable package set from `src/FoundationKit.*` and fails if the human catalog or Atlas package cards drift from the actual projects.
+- Tracked-repository hygiene gate that rejects committed build output, IDE state, local settings/secrets, logs, packages, backups, local databases, and private-key material independently of `.gitignore`.
+- Canonical Arabic Windows first-run guide covering Native/Docker/Visual Studio paths, SQL Server instance overrides, port mapping, diagnostic commands, and safe troubleshooting evidence.
 
 ### Changed
 
@@ -63,6 +65,15 @@ All notable repository and package changes are documented here.
 - The unified `foundationkit.ps1 pack` path delegates to canonical `scripts/pack.ps1` instead of maintaining a stale five-package list.
 - The human package catalog, generated `FEATURES.md`, Atlas package cards, and root README now describe the same seventeen reusable projects.
 - CI PowerShell syntax validation now includes the unified manager and canonical pack script and aggregates parser errors across all checked scripts.
+- `.gitignore` now covers a broader set of generated, local-data, certificate/private-key, backup, package, test, and tool artifacts while preserving explicit environment-template exceptions.
+- The Windows `doctor` command now verifies that a .NET 8 SDK exists and reports visible SQL Server services, local port listeners, Git state, Docker readiness, and application health to make first-run failures diagnosable.
+- Visual Studio guidance now distinguishes its launch-profile ports from root-manager ports and uses a password placeholder instead of publishing a reusable example administrator credential.
+- GitHub workflow dependencies now use the Dependabot-proposed immutable revisions for `actions/checkout` v7.0.1, `actions/setup-dotnet` v6.0.0, and `actions/upload-artifact` v7.0.1 instead of revisions that trigger the hosted-runner Node.js 20 deprecation path.
+
+### Fixed
+
+- Workbench local `.local/workbench-product.env` credentials are now ACL-restricted to the current Windows account, matching the existing Athar local-secret posture.
+- Athar Native startup now restores every process-level environment variable used for child launch after the application process is spawned, preventing the calling PowerShell session from retaining the local connection string or administrator password.
 
 ## [0.1.0] - 2026-08-06
 

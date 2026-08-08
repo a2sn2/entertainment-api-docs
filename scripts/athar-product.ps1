@@ -316,40 +316,65 @@ function Start-NativeProduct {
     Remove-Item $NativeOutputLog -Force -ErrorAction SilentlyContinue
     Remove-Item $NativeErrorLog -Force -ErrorAction SilentlyContinue
 
-    $env:ASPNETCORE_ENVIRONMENT = "Development"
-    $env:DOTNET_ENVIRONMENT = "Development"
-    $env:ASPNETCORE_URLS = $ListenUrl
-    $env:ConnectionStrings__Athar = $connectionString
-    $env:AdminSeed__Enabled = "true"
-    $env:AdminSeed__Email = $values["ATHAR_ADMIN_EMAIL"]
-    $env:AdminSeed__Password = $values["ATHAR_ADMIN_PASSWORD"]
-    $env:DatabaseStartup__ApplyMigrationsOnStartup = "true"
-    $env:DatabaseStartup__SeedRolesOnStartup = "true"
-    $env:DatabaseStartup__MigrationAttempts = "30"
-    $env:DatabaseStartup__DelaySeconds = "2"
+    $environmentNames = @(
+        "ASPNETCORE_ENVIRONMENT",
+        "DOTNET_ENVIRONMENT",
+        "ASPNETCORE_URLS",
+        "ConnectionStrings__Athar",
+        "AdminSeed__Enabled",
+        "AdminSeed__Email",
+        "AdminSeed__Password",
+        "DatabaseStartup__ApplyMigrationsOnStartup",
+        "DatabaseStartup__SeedRolesOnStartup",
+        "DatabaseStartup__MigrationAttempts",
+        "DatabaseStartup__DelaySeconds")
 
-    $executable = Join-Path $NativeAppDirectory "Athar.Api.exe"
-    $applicationDll = Join-Path $NativeAppDirectory "Athar.Api.dll"
+    $oldEnvironment = @{}
+    foreach ($name in $environmentNames) {
+        $oldEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, "Process")
+    }
 
-    if (Test-Path $executable) {
-        $process = Start-Process `
-            -FilePath $executable `
-            -WorkingDirectory $NativeAppDirectory `
-            -RedirectStandardOutput $NativeOutputLog `
-            -RedirectStandardError $NativeErrorLog `
-            -PassThru
+    try {
+        [Environment]::SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development", "Process")
+        [Environment]::SetEnvironmentVariable("DOTNET_ENVIRONMENT", "Development", "Process")
+        [Environment]::SetEnvironmentVariable("ASPNETCORE_URLS", $ListenUrl, "Process")
+        [Environment]::SetEnvironmentVariable("ConnectionStrings__Athar", $connectionString, "Process")
+        [Environment]::SetEnvironmentVariable("AdminSeed__Enabled", "true", "Process")
+        [Environment]::SetEnvironmentVariable("AdminSeed__Email", $values["ATHAR_ADMIN_EMAIL"], "Process")
+        [Environment]::SetEnvironmentVariable("AdminSeed__Password", $values["ATHAR_ADMIN_PASSWORD"], "Process")
+        [Environment]::SetEnvironmentVariable("DatabaseStartup__ApplyMigrationsOnStartup", "true", "Process")
+        [Environment]::SetEnvironmentVariable("DatabaseStartup__SeedRolesOnStartup", "true", "Process")
+        [Environment]::SetEnvironmentVariable("DatabaseStartup__MigrationAttempts", "30", "Process")
+        [Environment]::SetEnvironmentVariable("DatabaseStartup__DelaySeconds", "2", "Process")
+
+        $executable = Join-Path $NativeAppDirectory "Athar.Api.exe"
+        $applicationDll = Join-Path $NativeAppDirectory "Athar.Api.dll"
+
+        if (Test-Path $executable) {
+            $process = Start-Process `
+                -FilePath $executable `
+                -WorkingDirectory $NativeAppDirectory `
+                -RedirectStandardOutput $NativeOutputLog `
+                -RedirectStandardError $NativeErrorLog `
+                -PassThru
+        }
+        elseif (Test-Path $applicationDll) {
+            $process = Start-Process `
+                -FilePath "dotnet" `
+                -ArgumentList @($applicationDll) `
+                -WorkingDirectory $NativeAppDirectory `
+                -RedirectStandardOutput $NativeOutputLog `
+                -RedirectStandardError $NativeErrorLog `
+                -PassThru
+        }
+        else {
+            throw "Published Athar executable was not found."
+        }
     }
-    elseif (Test-Path $applicationDll) {
-        $process = Start-Process `
-            -FilePath "dotnet" `
-            -ArgumentList @($applicationDll) `
-            -WorkingDirectory $NativeAppDirectory `
-            -RedirectStandardOutput $NativeOutputLog `
-            -RedirectStandardError $NativeErrorLog `
-            -PassThru
-    }
-    else {
-        throw "Published Athar executable was not found."
+    finally {
+        foreach ($name in $environmentNames) {
+            [Environment]::SetEnvironmentVariable($name, $oldEnvironment[$name], "Process")
+        }
     }
 
     [System.IO.File]::WriteAllText(
