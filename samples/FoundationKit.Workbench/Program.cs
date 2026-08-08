@@ -1,6 +1,7 @@
 using FoundationKit.Application.Abstractions;
 using FoundationKit.Application.Events;
 using FoundationKit.Application.Persistence;
+using FoundationKit.Caching;
 using FoundationKit.FeatureManagement;
 using FoundationKit.Infrastructure;
 using FoundationKit.Infrastructure.Events;
@@ -44,6 +45,13 @@ builder.Services.AddSingleton<IFeatureEvaluator, SettingBackedFeatureEvaluator>(
 builder.Services.AddSingleton(_ => new SupportedCultureSet(
     ["ar-YE", "en-US"],
     "ar-YE"));
+builder.Services.AddSingleton<ICacheStore>(_ => new InMemoryCacheStore(
+    new InMemoryCacheOptions
+    {
+        MaximumEntries = 128,
+        MaximumValueBytes = 1_048_576,
+        MaximumTimeToLive = TimeSpan.FromHours(1)
+    }));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {

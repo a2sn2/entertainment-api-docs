@@ -4,6 +4,10 @@ set -euo pipefail
 base_url="${WORKBENCH_URL:-http://localhost:8080}"
 
 curl --fail --silent "$base_url/api/health" | grep -q 'healthy'
+
+# Exercise the existing catalog read path twice: the first read fills the
+# in-memory cache and the second read traverses the cache-hit path.
+curl --fail --silent "$base_url/api/catalog" | grep -q 'FoundationKit.Domain'
 curl --fail --silent "$base_url/api/catalog" | grep -q 'FoundationKit.Domain'
 
 platform_reference="$(curl --fail --silent "$base_url/api/platform-reference")"
@@ -48,4 +52,4 @@ echo "$review_response" | grep -q '"status":"approved"'
 curl --fail --silent "$base_url/api/user/requests/$request_id" | grep -q '"status":"approved"'
 curl --fail --silent "$base_url/api/admin/requests?status=approved" | grep -q 'CI Dual Portal'
 
-echo "Dual full-stack SQL Server workflow and Settings/Feature/Localization platform reference passed for request $request_id."
+echo "Dual full-stack SQL Server workflow and Settings/Feature/Localization/Caching reference paths passed for request $request_id."

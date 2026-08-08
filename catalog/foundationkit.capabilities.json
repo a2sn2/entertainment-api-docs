@@ -271,9 +271,9 @@
       "id": "caching",
       "displayName": "Caching",
       "kind": "optional",
-      "maturity": "planned",
+      "maturity": "referenceOnly",
       "category": "Data",
-      "description": "Memory/distributed cache abstraction with TTL and invalidation semantics.",
+      "description": "Bounded provider-neutral byte-cache contracts with explicit TTL, hit/miss, invalidation, and an in-memory reference provider; distributed-provider semantics remain separate.",
       "dependencies": [
         "kernel"
       ]

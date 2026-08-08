@@ -19,8 +19,9 @@ This document records the current consumer-driven capability extraction status. 
 | Settings v1 | `FoundationKit.Settings` | Workbench platform reference | ReferenceOnly |
 | Feature Management v1 | `FoundationKit.FeatureManagement` | Workbench platform reference | ReferenceOnly |
 | Localization v1 | `FoundationKit.Localization` | Workbench platform reference | ReferenceOnly |
+| Caching v1 | `FoundationKit.Caching` | Workbench embedded catalog read path | ReferenceOnly |
 
-After Localization is verified and merged, the reusable package output is expected to be sixteen FoundationKit NuGet packages plus sixteen symbol packages. The exact current-head CI evidence belongs in PR #66 before merge rather than being asserted here in advance.
+Caching v1 is implemented on PR #67 and must not be treated as merged until that PR's exact final head passes every required repository gate. When verified, the reusable package output is expected to be seventeen FoundationKit NuGet packages plus seventeen symbol packages.
 
 ## Verified merge evidence
 
@@ -32,8 +33,9 @@ The capability sequence is merged through pull-request gates rather than direct 
 - SMTP provider v1 — PR #62, merged to `main` at `d12f34fe...`.
 - Consumer-driven extraction closure — PR #63, merged to `main` at `5141f572...`.
 - Settings + Feature Management — PR #65, merged to `main` at `72f15909...`.
+- Localization v1 — PR #66, merged to `main` at `64660c48...`; its final-head CI `31223314887`, Security Scan `31223315171`, and CodeQL `31223315164` all succeeded.
 
-PR #65 verified its exact final source head with CI `31221346528`, Security Scan `31221346353`, and CodeQL `31221346445`: 342 tracked text files scanned, 198 NuGet components in the SBOM, zero build warnings/errors, 167 automated tests, 15 NuGet + 15 symbol packages, Workbench SQL/runtime capability assertions, Athar E2E/non-root, and isolated backup/restore verification.
+PR #65 verified its exact final source head with CI `31221346528`, Security Scan `31221346353`, and CodeQL `31221346445`, including zero build warnings/errors, Workbench SQL/runtime capability assertions, Athar E2E/non-root, and isolated backup/restore verification.
 
 These automated results are technical repository evidence. They are not independent organizational approval, Production Approval, ISO certification, or formal Segregation-of-Duties evidence.
 
@@ -72,9 +74,17 @@ Workbench supplies `ar-YE` and `UTC` through Settings and proves Localization th
 
 Important boundary: Localization v1 does not select a translation/resource provider, persist user/tenant preferences, negotiate HTTP languages, perform OS-specific time-zone conversion, or invent Windows/IANA mappings.
 
-## Current next autonomous candidate
+### Caching v1
 
-**Caching v1** is the next capability that can be extracted without an owner/provider decision. The reusable boundary can define bounded keys, bounded byte payloads, explicit TTL, cache miss semantics, remove operations, and an in-memory reference provider using BCL time primitives. Workbench can prove the boundary on an existing read path without choosing Redis or distributed consistency semantics.
+The reusable package provides a bounded normalized `CacheKey`, explicit positive finite TTL, explicit hit/miss results, provider-neutral get/set/remove operations, caller cancellation, and a bounded BCL-only in-memory reference provider. The reference provider copies values defensively, removes expired entries, and uses deterministic earliest-expiry eviction when its configured capacity is reached.
+
+Workbench is the first real consumer: `CatalogService` caches the existing embedded capability-catalog byte payload. The SQL integration smoke flow reads `/api/catalog` twice so the live host exercises the initial miss/fill path followed by the cache-hit path before continuing the existing SQL workflow.
+
+Important boundary: Caching v1 does not select Redis or another production cache provider, define distributed coherence/locking, serialize arbitrary objects, make cache state authoritative, provide tag invalidation/refresh-ahead/stale-while-revalidate, or classify which sensitive data a product may cache.
+
+## Current autonomous boundary
+
+After Caching v1, no additional package is currently justified by both a reusable provider-neutral boundary and a real independent consumer. The remaining autonomous work is a repository consistency sweep; further capability extraction should wait for real product semantics or provider choices.
 
 ## Capabilities that still require stronger consumer evidence or owner semantics
 
@@ -125,6 +135,12 @@ FoundationKit can define vocabulary in the capability graph, but it must not inv
 
 Status: **Planned — owner/product model required before runtime extraction**.
 
+### Search / Reporting / Privacy / Retention / Money / Numbering
+
+These remain catalog/roadmap vocabulary until a real consumer establishes their semantics and their required provider/policy boundaries.
+
+Status: **Planned — no extraction yet**.
+
 ## Governance boundary
 
-This status tracks **repository capability extraction**, not Production Approval. Independent approval, branch/ruleset evidence, deployment-provider choices, legal/user-data retention, monitoring/SIEM, production secret/KMS operations, and formal certification remain separate organizational/deployment controls under `docs/security/`.
+This status tracks **repository capability extraction**, not Production Approval. Independent approval, branch/ruleset evidence, deployment-provider choices, legal/user-data retention, monitoring/SIEM, production secret/KMS operations, distributed-cache provider policy, and formal certification remain separate organizational/deployment controls under `docs/security/`.
