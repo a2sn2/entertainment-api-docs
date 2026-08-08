@@ -67,6 +67,8 @@ builder.Services.AddScoped<ICaseTimelineService, CaseTimelineService>();
 builder.Services.AddScoped<ICaseTimelineQueryService, CaseTimelineQueryService>();
 builder.Services.AddScoped<IUserDirectory, UserDirectory>();
 builder.Services.AddScoped<IDepartmentDirectory, DepartmentDirectory>();
+builder.Services.AddScoped<IDepartmentAdministrationManager, DepartmentAdministrationManager>();
+builder.Services.AddScoped<IDepartmentAdministrationStore, DepartmentAdministrationStore>();
 builder.Services.AddScoped<IRepository<Case, Guid>, EfRepository<Case, Guid, MadarDbContext>>();
 builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork<MadarDbContext>>();
 builder.Services.AddScoped<IMadarReadinessProbe, MadarReadinessProbe>();
@@ -238,6 +240,7 @@ await DatabaseInitializer.InitializeAsync(
 
 app.MapMadarEndpoints();
 app.MapMadarDepartmentEndpoints();
+app.MapMadarDepartmentAdministrationEndpoints();
 app.MapMadarCaseCommentEndpoints();
 app.MapMadarCaseApprovalEndpoints();
 app.MapFallbackToFile("index.html");
