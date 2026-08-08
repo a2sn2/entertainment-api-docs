@@ -24,7 +24,9 @@ Consumers and providers must not log `Destination` or `Body` by default. The v1 
 
 The package does not own transport encryption, provider credentials, secrets management, retry policy, retention, or delivery-history storage.
 
-## Athar consumer evidence
+## Consumer evidence
+
+### Athar
 
 Athar is the first real consumer. Its previous combined account-security SMTP sender is split into two responsibilities:
 
@@ -32,6 +34,22 @@ Athar is the first real consumer. Its previous combined account-security SMTP se
 2. `SmtpNotificationSender` implements `FoundationKit.Notifications.INotificationSender`. It owns SMTP transport, TLS/configuration usage, and conversion of the generic title/body/destination into `MailMessage`.
 
 The adapter maps the generic delivery result back to the existing `bool` account-notification contract, preserving endpoint behavior. SMTP remains an Athar/provider concern rather than becoming a dependency of FoundationKit.Notifications.
+
+### Madar
+
+Madar v0.5 is the second independent product consumer. It uses the unchanged v1 contracts for operational case notifications after assignment, approval decision, and resolution.
+
+Madar owns:
+
+- Arabic product copy and purpose codes;
+- recipient selection and Identity-backed destination lookup;
+- when a notification is appropriate for a case event;
+- bounded audit evidence containing purpose, target user ID, and delivery status only;
+- the decision to commit the business operation before attempting transport delivery.
+
+Madar currently composes the existing SMTP provider as an optional email transport. Empty provider configuration resolves to `NotConfigured`; provider failure resolves to `Failed`. Neither reusable result contains destination/body/provider exception details.
+
+This second consumer demonstrates that the same provider-neutral message/result boundary works for both account-security mail (Athar) and operational case mail (Madar) without expanding the public API. It does not demonstrate multi-channel routing, durable delivery, or production notification orchestration.
 
 ## Explicit non-goals
 
@@ -53,6 +71,6 @@ Those require additional consumer evidence and, where appropriate, separate capa
 
 ## Maturity
 
-Capability Model v1 marks Notifications as `ReferenceOnly`: the v1 contracts are implemented, packaged, tested, and consumed by Athar, but one transport consumer is not enough to claim broad multi-channel production maturity.
+Capability Model v1 remains `ReferenceOnly`. The v1 contracts are implemented, packaged, tested, and now consumed by two independent products, but both current consumers use the same SMTP transport class and neither proves queues/retries, multi-channel routing, provider diversity, delivery-history semantics, or production operational certification.
 
 `ReferenceOnly` is not a production approval, external certification, or claim that templates, preferences, queues, retries, or multiple channels are implemented.
