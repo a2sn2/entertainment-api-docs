@@ -1,10 +1,13 @@
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace Madar.Infrastructure.Migrations;
 
-public partial class AddCaseApprovals : Migration
+[DbContext(typeof(MadarDbContext))]
+[Migration("20260808155000_AddCaseApprovals")]
+public sealed class AddCaseApprovals : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
@@ -25,24 +28,24 @@ public partial class AddCaseApprovals : Migration
             },
             constraints: table =>
             {
-                table.PrimaryKey("PK_CaseApprovals", x => x.Id);
+                table.PrimaryKey("PK_CaseApprovals", item => item.Id);
                 table.ForeignKey(
                     name: "FK_CaseApprovals_Cases_CaseId",
-                    column: x => x.CaseId,
+                    column: item => item.CaseId,
                     principalSchema: "madar",
                     principalTable: "Cases",
                     principalColumn: "Id",
                     onDelete: ReferentialAction.Cascade);
                 table.ForeignKey(
                     name: "FK_CaseApprovals_Users_RequestedByUserId",
-                    column: x => x.RequestedByUserId,
+                    column: item => item.RequestedByUserId,
                     principalSchema: "identity",
                     principalTable: "Users",
                     principalColumn: "Id",
                     onDelete: ReferentialAction.Restrict);
                 table.ForeignKey(
                     name: "FK_CaseApprovals_Users_ReviewedByUserId",
-                    column: x => x.ReviewedByUserId,
+                    column: item => item.ReviewedByUserId,
                     principalSchema: "identity",
                     principalTable: "Users",
                     principalColumn: "Id",
