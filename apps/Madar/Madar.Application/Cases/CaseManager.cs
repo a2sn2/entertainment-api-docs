@@ -34,7 +34,7 @@ public interface ICaseManager
 }
 
 public sealed class CaseManager(
-    ICurrentUser currentUser,
+    IMadarCurrentUser currentUser,
     IAuthorizationEvaluator authorization,
     ICaseQueryService queryService,
     IRepository<Case, Guid> caseRepository,
