@@ -117,7 +117,7 @@ public static class FoundationCapabilityCatalog
         new(FoundationCapabilityIds.SqlServerProvider, "SQL Server Provider", CapabilityKind.Provider, CapabilityMaturity.ReferenceOnly, "Provider", "SQL Server adapter family owned outside the provider-agnostic kernel.", [FoundationCapabilityIds.Kernel]),
         new(FoundationCapabilityIds.RedisProvider, "Redis Provider", CapabilityKind.Provider, CapabilityMaturity.Planned, "Provider", "Redis adapter for caching and related distributed primitives.", [FoundationCapabilityIds.Caching]),
         new(FoundationCapabilityIds.SmtpProvider, "SMTP Provider", CapabilityKind.Provider, CapabilityMaturity.ReferenceOnly, "Provider", "SMTP delivery adapter for notification and account-security messages.", [FoundationCapabilityIds.Notifications]),
-        new(FoundationCapabilityIds.CliTooling, "FoundationKit CLI", CapabilityKind.Tooling, CapabilityMaturity.Planned, "Tooling", "Interactive project composer driven by the capability graph and project manifest.", [FoundationCapabilityIds.Kernel]),
+        new(FoundationCapabilityIds.CliTooling, "FoundationKit CLI", CapabilityKind.Tooling, CapabilityMaturity.ReferenceOnly, "Tooling", "Current Composer reference tooling for strict manifest validation, capability/profile discovery, and dependency explanation; interactive project generation remains future work.", [FoundationCapabilityIds.Kernel]),
         new(FoundationCapabilityIds.WorkbenchTooling, "FoundationKit Workbench", CapabilityKind.Tooling, CapabilityMaturity.ReferenceOnly, "Tooling", "Interactive repository consumer and future visual project composer.", [FoundationCapabilityIds.Kernel])
     ];
 
