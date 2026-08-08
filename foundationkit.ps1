@@ -118,6 +118,30 @@ function New-StrongPassword {
     return $Prefix + [Guid]::NewGuid().ToString("N") + "Aa1!"
 }
 
+function Protect-LocalFile {
+    param([Parameter(Mandatory)][string]$Path)
+
+    if (-not (Test-Path $Path)) {
+        return
+    }
+
+    if ($env:OS -ne "Windows_NT") {
+        throw "Local credential-file protection requires Windows ACL support."
+    }
+
+    try {
+        $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+        $sid = $identity.User.Value
+        & icacls $Path /inheritance:r /grant:r "*$sid`:(F)" *> $null
+        if ($LASTEXITCODE -ne 0) {
+            throw "icacls returned exit code $LASTEXITCODE."
+        }
+    }
+    catch {
+        throw "Could not restrict ACLs on local secret file '$Path'. Refusing to continue with unprotected local credentials. $($_.Exception.Message)"
+    }
+}
+
 function Invoke-ChildPowerShell {
     param(
         [Parameter(Mandatory)][string]$ScriptPath,
@@ -212,6 +236,7 @@ function Initialize-WorkbenchEnvironment {
     New-Item -ItemType Directory -Force -Path $LocalDirectory | Out-Null
 
     if (Test-Path $WorkbenchEnvironmentFile) {
+        Protect-LocalFile $WorkbenchEnvironmentFile
         return
     }
 
@@ -224,6 +249,10 @@ function Initialize-WorkbenchEnvironment {
         $WorkbenchEnvironmentFile,
         $lines,
         [System.Text.UTF8Encoding]::new($false))
+    Protect-LocalFile $WorkbenchEnvironmentFile
+
+    Write-Host "Created protected local Workbench settings at .local/workbench-product.env" -ForegroundColor Green
+    Write-Host "This file is ignored by Git and restricted to the current Windows account." -ForegroundColor DarkYellow
 }
 
 function Get-WorkbenchEnvironment {
@@ -693,11 +722,16 @@ function Invoke-Verify {
     if (Test-Command "python") {
         Invoke-CheckedCommand `
             -FilePath "python" `
+            -Arguments @((Join-Path $RepositoryRoot "scripts/repository-hygiene.py")) `
+            -FailureMessage "Tracked repository hygiene check failed."
+
+        Invoke-CheckedCommand `
+            -FilePath "python" `
             -Arguments @((Join-Path $RepositoryRoot "scripts/verify-pages.py")) `
             -FailureMessage "GitHub Pages manifest verification failed."
     }
     else {
-        Write-Host "Python was not found; Pages manifest verification was skipped locally." -ForegroundColor Yellow
+        Write-Host "Python was not found; local repository-hygiene and Pages checks were skipped." -ForegroundColor Yellow
     }
 
     if (Test-Command "node") {
@@ -757,12 +791,51 @@ function Invoke-Doctor {
     }
 
     if (Test-Command "dotnet") {
-        Write-Host "dotnet SDK: $(& dotnet --version)"
+        $activeSdk = (& dotnet --version).Trim()
+        Write-Host "dotnet SDK: $activeSdk"
+
+        $sdkLines = @(& dotnet --list-sdks)
+        $hasDotNet8 = @($sdkLines | Where-Object { $_ -match '^8\.' }).Count -gt 0
+        if ($hasDotNet8) {
+            Write-Host "[PASS] .NET 8 SDK is installed for global.json." -ForegroundColor Green
+        }
+        else {
+            Write-Host "[FAIL] .NET 8 SDK is required by global.json but was not found." -ForegroundColor Red
+            $failed = $true
+        }
     }
 
     Write-Host "Docker ready: $(Test-DockerReady)"
     Write-Host "Solution: $SolutionFile"
     Write-Host "Repository root: $RepositoryRoot"
+    Write-Host "Local run guide: $(Join-Path $RepositoryRoot 'docs/LOCAL-RUN-WINDOWS-AR.md')"
+
+    if ($env:OS -eq "Windows_NT") {
+        $sqlServices = @(Get-Service -Name 'MSSQLSERVER', 'MSSQL$*' -ErrorAction SilentlyContinue | Sort-Object Name)
+        if ($sqlServices.Count -eq 0) {
+            Write-Host "[INFO] No local SQL Server service was detected; Docker mode can still be used." -ForegroundColor DarkYellow
+        }
+        else {
+            foreach ($service in $sqlServices) {
+                $color = if ($service.Status -eq "Running") { "Green" } else { "DarkYellow" }
+                $label = if ($service.Status -eq "Running") { "PASS" } else { "INFO" }
+                Write-Host "[$label] SQL service $($service.Name): $($service.Status)" -ForegroundColor $color
+            }
+        }
+
+        if (Test-Command "Get-NetTCPConnection") {
+            foreach ($port in @(5057, 5068, 8080, 8090, 14333, 14334)) {
+                $listener = Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue |
+                    Select-Object -First 1
+                if ($null -eq $listener) {
+                    Write-Host "[PASS] Port $port is available." -ForegroundColor Green
+                }
+                else {
+                    Write-Host "[INFO] Port $port is already listening (PID $($listener.OwningProcess))." -ForegroundColor DarkYellow
+                }
+            }
+        }
+    }
 
     if (Test-Command "git") {
         $status = & git -C $RepositoryRoot status --porcelain
@@ -789,7 +862,7 @@ function Invoke-Doctor {
     }
 
     if ($failed) {
-        throw "One or more required tools are missing."
+        throw "One or more required local prerequisites are missing."
     }
 }
 
@@ -867,11 +940,11 @@ Product lifecycle actions:
   reset              Remove runtime data; requires -Force
 
 Repository actions:
-  doctor             Check tools, Git state, and running applications
+  doctor             Check tools, .NET 8, SQL services, ports, Git state, and running applications
   restore            Restore NuGet dependencies
   build              Restore and build the full solution
   test               Restore, build, and test the full solution
-  verify             Test plus architecture, catalog, Pages, and JS checks
+  verify             Test plus hygiene, catalog, Pages, and JS checks available locally
   pack               Create all reusable NuGet and symbol packages
   production-check   Run the automated baseline and print external gates
 
@@ -893,6 +966,7 @@ Examples:
   .\foundationkit.ps1 production-check
 
 Auto mode uses Docker when Docker Desktop is ready; otherwise it uses local .NET and SQL Server.
+See docs/LOCAL-RUN-WINDOWS-AR.md for the canonical first-run sequence.
 "@ | Write-Host
 }
 
