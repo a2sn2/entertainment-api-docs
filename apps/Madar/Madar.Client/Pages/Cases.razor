@@ -1,0 +1,244 @@
+@page "/cases"
+@attribute [Authorize]
+@inject MadarApiClient ApiClient
+@inject NavigationManager Navigation
+
+<PageTitle>الحالات | مدار</PageTitle>
+
+<MudStack Spacing="4" dir="rtl">
+    <MudStack Row="true" AlignItems="AlignItems.Center">
+        <div>
+            <MudText Typo="Typo.h3">الحالات التشغيلية</MudText>
+            <MudText Typo="Typo.body1">أنشئ حالة وتابع الإسناد ودورة المعالجة من مكان واحد.</MudText>
+        </div>
+        <MudSpacer />
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="ToggleCreate">
+            @(_showCreate ? "إغلاق النموذج" : "حالة جديدة")
+        </MudButton>
+    </MudStack>
+
+    @if (_showCreate)
+    {
+        <MudPaper Elevation="0" Outlined="true" Class="pa-6">
+            <MudText Typo="Typo.h5" GutterBottom="true">إنشاء حالة</MudText>
+            @if (!string.IsNullOrWhiteSpace(_createError))
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4">@_createError</MudAlert>
+            }
+
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField T="string"
+                                  Label="العنوان"
+                                  Variant="Variant.Outlined"
+                                  @bind-Value="_title"
+                                  Disabled="_creating" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string"
+                                  Label="الوصف"
+                                  Lines="4"
+                                  Variant="Variant.Outlined"
+                                  @bind-Value="_description"
+                                  Disabled="_creating" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudSelect T="string"
+                               Label="نوع الحالة"
+                               Variant="Variant.Outlined"
+                               @bind-Value="_caseType"
+                               Disabled="_creating">
+                        @foreach (var option in CaseTypeOptions)
+                        {
+                            <MudSelectItem T="string" Value="@option.Value">@option.Label</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudSelect T="string"
+                               Label="الأولوية"
+                               Variant="Variant.Outlined"
+                               @bind-Value="_priority"
+                               Disabled="_creating">
+                        @foreach (var option in PriorityOptions)
+                        {
+                            <MudSelectItem T="string" Value="@option.Value">@option.Label</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+
+            <MudButton Color="Color.Primary"
+                       Variant="Variant.Filled"
+                       Disabled="_creating"
+                       OnClick="CreateAsync"
+                       Class="mt-5">
+                @(_creating ? "جارٍ الإنشاء..." : "إنشاء الحالة")
+            </MudButton>
+        </MudPaper>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_loadError))
+    {
+        <MudAlert Severity="Severity.Error">@_loadError</MudAlert>
+    }
+    else if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" />
+    }
+    else if (_cases.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">لا توجد حالات متاحة لحسابك حتى الآن.</MudAlert>
+    }
+    else
+    {
+        <MudTable Items="_cases" Hover="true" Dense="true" Elevation="0" Outlined="true">
+            <HeaderContent>
+                <MudTh>العنوان</MudTh>
+                <MudTh>النوع</MudTh>
+                <MudTh>الأولوية</MudTh>
+                <MudTh>الحالة</MudTh>
+                <MudTh>آخر تحديث</MudTh>
+                <MudTh></MudTh>
+            </HeaderContent>
+            <RowTemplate Context="item">
+                <MudTd DataLabel="العنوان">@item.Title</MudTd>
+                <MudTd DataLabel="النوع">@DisplayCaseType(item.CaseType)</MudTd>
+                <MudTd DataLabel="الأولوية">@DisplayPriority(item.Priority)</MudTd>
+                <MudTd DataLabel="الحالة">@DisplayStatus(item.Status)</MudTd>
+                <MudTd DataLabel="آخر تحديث">@item.UpdatedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudTd>
+                <MudTd>
+                    <MudButton Size="Size.Small"
+                               Variant="Variant.Text"
+                               Href="@($"/cases/{item.Id:D}")">
+                        فتح
+                    </MudButton>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudStack>
+
+@code {
+    private static readonly (string Value, string Label)[] CaseTypeOptions =
+    [
+        ("customer-complaint", "شكوى عميل"),
+        ("operational-incident", "حادث تشغيلي"),
+        ("internal-service-request", "طلب خدمة داخلي"),
+        ("access-request", "طلب صلاحية"),
+        ("compliance-case", "حالة امتثال"),
+        ("technical-escalation", "تصعيد تقني"),
+        ("operational-exception", "استثناء تشغيلي")
+    ];
+
+    private static readonly (string Value, string Label)[] PriorityOptions =
+    [
+        ("low", "منخفضة"),
+        ("medium", "متوسطة"),
+        ("high", "عالية"),
+        ("critical", "حرجة")
+    ];
+
+    private readonly List<CaseDto> _cases = [];
+    private bool _loading = true;
+    private bool _showCreate;
+    private bool _creating;
+    private string? _loadError;
+    private string? _createError;
+    private string _title = string.Empty;
+    private string _description = string.Empty;
+    private string _caseType = "internal-service-request";
+    private string _priority = "medium";
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private void ToggleCreate()
+    {
+        _showCreate = !_showCreate;
+        _createError = null;
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _loadError = null;
+        try
+        {
+            var result = await ApiClient.ListCasesAsync();
+            if (result.IsFailure || result.Value is null)
+            {
+                _loadError = result.Error ?? "تعذر تحميل الحالات.";
+                return;
+            }
+
+            _cases.Clear();
+            _cases.AddRange(result.Value);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task CreateAsync()
+    {
+        if (_creating)
+            return;
+
+        _creating = true;
+        _createError = null;
+        try
+        {
+            var result = await ApiClient.CreateCaseAsync(new CreateCaseRequest(
+                _title,
+                _description,
+                _caseType,
+                _priority));
+
+            if (result.IsFailure || result.Value is null)
+            {
+                _createError = result.Error ?? "تعذر إنشاء الحالة.";
+                return;
+            }
+
+            Navigation.NavigateTo($"/cases/{result.Value.Id:D}");
+        }
+        finally
+        {
+            _creating = false;
+        }
+    }
+
+    private static string DisplayCaseType(string value) => value switch
+    {
+        "customer-complaint" => "شكوى عميل",
+        "operational-incident" => "حادث تشغيلي",
+        "internal-service-request" => "طلب خدمة داخلي",
+        "access-request" => "طلب صلاحية",
+        "compliance-case" => "حالة امتثال",
+        "technical-escalation" => "تصعيد تقني",
+        "operational-exception" => "استثناء تشغيلي",
+        _ => value
+    };
+
+    private static string DisplayPriority(string value) => value switch
+    {
+        "low" => "منخفضة",
+        "medium" => "متوسطة",
+        "high" => "عالية",
+        "critical" => "حرجة",
+        _ => value
+    };
+
+    private static string DisplayStatus(string value) => value switch
+    {
+        "new" => "جديدة",
+        "assigned" => "مسندة",
+        "in-progress" => "قيد المعالجة",
+        "resolved" => "تم الحل",
+        "closed" => "مغلقة",
+        _ => value
+    };
+}
