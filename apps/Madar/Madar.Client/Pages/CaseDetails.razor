@@ -29,6 +29,17 @@ else if (_case is not null)
             <MudAlert Severity="Severity.Error">@_actionError</MudAlert>
         }
 
+        @if (_case.SlaState == "breached")
+        {
+            <MudAlert Severity="Severity.Warning">
+                تم تجاوز مهلة SLA لهذه الحالة.
+                @if (_case.EscalatedUtc.HasValue)
+                {
+                    <span> سُجل التصعيد في @_case.EscalatedUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss").</span>
+                }
+            </MudAlert>
+        }
+
         <MudPaper Elevation="0" Outlined="true" Class="pa-6">
             <MudGrid>
                 <MudItem xs="12" md="8">
@@ -40,6 +51,10 @@ else if (_case is not null)
                         <MudText><b>الحالة:</b> @DisplayStatus(_case.Status)</MudText>
                         <MudText><b>النوع:</b> @DisplayCaseType(_case.CaseType)</MudText>
                         <MudText><b>الأولوية:</b> @DisplayPriority(_case.Priority)</MudText>
+                        <MudText><b>SLA:</b> @DisplaySlaState(_case.SlaState)</MudText>
+                        <MudText><b>هدف SLA:</b> @DisplayUtc(_case.SlaTargetUtc)</MudText>
+                        <MudText><b>وقت الخرق:</b> @DisplayUtc(_case.SlaBreachedUtc)</MudText>
+                        <MudText><b>وقت التصعيد:</b> @DisplayUtc(_case.EscalatedUtc)</MudText>
                         <MudText><b>المنشئ:</b> @_case.CreatedByUserId.ToString("D")</MudText>
                         <MudText><b>المسند إليه:</b> @(_case.AssignedToUserId?.ToString("D") ?? "غير مسندة")</MudText>
                         <MudText><b>أُنشئت:</b> @_case.CreatedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudText>
@@ -124,7 +139,7 @@ else if (_case is not null)
             }
             else if (_case.Status == "closed")
             {
-                <MudAlert Severity="Severity.Success">الحالة مغلقة ولا توجد إجراءات إضافية في v0.1.</MudAlert>
+                <MudAlert Severity="Severity.Success">الحالة مغلقة ولا توجد إجراءات إضافية على دورة المعالجة الحالية.</MudAlert>
             }
             else
             {
@@ -292,13 +307,28 @@ else if (_case is not null)
         _ => value
     };
 
+    private static string DisplaySlaState(string value) => value switch
+    {
+        "not-applicable" => "غير مفعّل",
+        "active" => "ضمن المهلة",
+        "met" => "تم ضمن المهلة",
+        "breached" => "متجاوز",
+        _ => value
+    };
+
     private static string DisplayTimelineAction(string value) => value switch
     {
         "madar.case.created" => "إنشاء الحالة",
         "madar.case.assigned" => "إسناد الحالة",
         "madar.case.transitioned" => "تغيير الحالة",
+        "madar.case.sla-breached" => "تجاوز SLA وتصعيد الحالة",
         _ => value
     };
+
+    private static string DisplayUtc(DateTimeOffset? value) =>
+        value.HasValue
+            ? value.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")
+            : "—";
 
     private static string DisplayAttributes(IReadOnlyDictionary<string, string> attributes) =>
         attributes.Count == 0
