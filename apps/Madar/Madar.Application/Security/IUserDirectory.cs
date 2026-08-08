@@ -2,7 +2,7 @@ namespace Madar.Application.Security;
 
 public interface IUserDirectory
 {
-    Task<bool> ExistsAsync(
+    Task<bool> IsAssignableOperatorAsync(
         Guid userId,
         CancellationToken cancellationToken = default);
 }
