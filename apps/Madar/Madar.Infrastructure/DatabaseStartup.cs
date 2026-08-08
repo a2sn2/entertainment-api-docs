@@ -25,11 +25,8 @@ internal static class DatabaseStartupRetry
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(operation);
-
-        if (attempts < 1)
-            throw new ArgumentOutOfRangeException(nameof(attempts));
-        if (delay < TimeSpan.Zero)
-            throw new ArgumentOutOfRangeException(nameof(delay));
+        ArgumentOutOfRangeException.ThrowIfLessThan(attempts, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(delay, TimeSpan.Zero);
 
         Exception? lastError = null;
         for (var attempt = 1; attempt <= attempts; attempt++)
