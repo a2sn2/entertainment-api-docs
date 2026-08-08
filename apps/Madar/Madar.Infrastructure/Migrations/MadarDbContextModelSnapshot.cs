@@ -250,6 +250,8 @@ public sealed class MadarDbContextModelSnapshot : ModelSnapshot
                 .IsRequired()
                 .ValueGeneratedOnAddOrUpdate()
                 .HasColumnType("rowversion");
+            entity.Property<DateTimeOffset>("UpdatedUtc")
+                .HasColumnType("datetimeoffset");
             entity.HasKey("Id");
             entity.HasIndex("Code")
                 .IsUnique();
