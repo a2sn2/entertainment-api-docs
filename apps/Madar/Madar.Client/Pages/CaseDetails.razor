@@ -52,6 +52,8 @@ else if (_case is not null)
                         <MudText><b>الحالة:</b> @DisplayStatus(_case.Status)</MudText>
                         <MudText><b>النوع:</b> @DisplayCaseType(_case.CaseType)</MudText>
                         <MudText><b>الأولوية:</b> @DisplayPriority(_case.Priority)</MudText>
+                        <MudText><b>القسم:</b> @DisplayDepartment(_case.DepartmentId)</MudText>
+                        <MudText><b>وقت التوجيه:</b> @DisplayUtc(_case.RoutedUtc)</MudText>
                         <MudText><b>SLA:</b> @DisplaySlaState(_case.SlaState)</MudText>
                         <MudText><b>هدف SLA:</b> @DisplayUtc(_case.SlaTargetUtc)</MudText>
                         <MudText><b>وقت الخرق:</b> @DisplayUtc(_case.SlaBreachedUtc)</MudText>
@@ -70,7 +72,44 @@ else if (_case is not null)
                 @if (_case.Status == "new")
                 {
                     <MudPaper Elevation="0" Outlined="true" Class="pa-6">
+                        <MudText Typo="Typo.h5" GutterBottom="true">توجيه الحالة</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-3">
+                            التوجيه يضع الحالة في قائمة انتظار القسم مع بقائها جديدة حتى يتم استلامها أو إسنادها.
+                        </MudText>
+                        @if (_departments.Count == 0)
+                        {
+                            <MudAlert Severity="Severity.Info">لا توجد أقسام تشغيلية فعالة متاحة للتوجيه.</MudAlert>
+                        }
+                        else
+                        {
+                            <MudSelect T="Guid?"
+                                       Label="القسم"
+                                       Variant="Variant.Outlined"
+                                       @bind-Value="_selectedDepartmentId"
+                                       Disabled="_acting">
+                                @foreach (var department in _departments)
+                                {
+                                    <MudSelectItem T="Guid?" Value="@((Guid?)department.Id)">@department.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudButton Color="Color.Primary"
+                                       Variant="Variant.Outlined"
+                                       Disabled="_acting || !_selectedDepartmentId.HasValue"
+                                       OnClick="RouteAsync"
+                                       Class="mt-4">
+                                توجيه للقسم
+                            </MudButton>
+                        }
+                    </MudPaper>
+
+                    <MudPaper Elevation="0" Outlined="true" Class="pa-6">
                         <MudText Typo="Typo.h5" GutterBottom="true">إسناد الحالة</MudText>
+                        @if (_case.DepartmentId.HasValue)
+                        {
+                            <MudAlert Severity="Severity.Info" Class="mb-3">
+                                الحالة موجهة إلى قسم؛ يقبل النظام الإسناد فقط لموظف Operator عضو في هذا القسم.
+                            </MudAlert>
+                        }
                         @if (_operators.Count == 0)
                         {
                             <MudAlert Severity="Severity.Info">لا يوجد موظفون بدور Operator متاحون للإسناد.</MudAlert>
@@ -101,6 +140,26 @@ else if (_case is not null)
                 }
             </Authorized>
         </AuthorizeView>
+
+        @if (_case.Status == "new" && _case.DepartmentId.HasValue)
+        {
+            <AuthorizeView Roles="Operator">
+                <Authorized>
+                    <MudPaper Elevation="0" Outlined="true" Class="pa-6">
+                        <MudText Typo="Typo.h5" GutterBottom="true">استلام الحالة</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-3">
+                            إذا كنت عضوًا في القسم الموجهة إليه الحالة يمكنك استلامها؛ عند النجاح تصبح الحالة مسندة إليك.
+                        </MudText>
+                        <MudButton Color="Color.Primary"
+                                   Variant="Variant.Filled"
+                                   Disabled="_acting"
+                                   OnClick="ClaimAsync">
+                            استلام من قائمة الانتظار
+                        </MudButton>
+                    </MudPaper>
+                </Authorized>
+            </AuthorizeView>
+        }
 
         <CaseApprovalPanel Case="_case" />
 
@@ -150,9 +209,13 @@ else if (_case is not null)
             {
                 <MudAlert Severity="Severity.Success">الحالة مغلقة ولا توجد إجراءات إضافية على دورة المعالجة الحالية.</MudAlert>
             }
+            else if (_case.DepartmentId.HasValue)
+            {
+                <MudAlert Severity="Severity.Info">الحالة في قائمة انتظار القسم وتنتظر الاستلام أو الإسناد.</MudAlert>
+            }
             else
             {
-                <MudAlert Severity="Severity.Info">يجب إسناد الحالة قبل بدء المعالجة.</MudAlert>
+                <MudAlert Severity="Severity.Info">يجب توجيه الحالة أو إسنادها قبل بدء المعالجة.</MudAlert>
             }
         </MudPaper>
 
@@ -191,12 +254,14 @@ else if (_case is not null)
 
     private readonly List<CaseTimelineEntryDto> _timeline = [];
     private readonly List<OperatorOptionDto> _operators = [];
+    private readonly List<DepartmentDto> _departments = [];
     private CaseDto? _case;
     private bool _loading = true;
     private bool _acting;
     private string? _error;
     private string? _actionError;
     private string? _selectedOperatorId;
+    private Guid? _selectedDepartmentId;
 
     protected override async Task OnParametersSetAsync() => await LoadAsync();
 
@@ -214,7 +279,16 @@ else if (_case is not null)
             }
 
             _case = caseResult.Value;
+            _selectedDepartmentId = _case.DepartmentId;
             await LoadTimelineAsync();
+
+            var departmentsResult = await ApiClient.ListDepartmentsAsync();
+            _departments.Clear();
+            if (departmentsResult.IsSuccess && departmentsResult.Value is not null)
+            {
+                _departments.AddRange(departmentsResult.Value);
+                _selectedDepartmentId ??= _departments.FirstOrDefault()?.Id;
+            }
 
             var operatorsResult = await ApiClient.GetOperatorsAsync();
             _operators.Clear();
@@ -234,6 +308,22 @@ else if (_case is not null)
         if (result.IsSuccess && result.Value is not null)
             _timeline.AddRange(result.Value);
     }
+
+    private async Task RouteAsync()
+    {
+        if (!_selectedDepartmentId.HasValue)
+        {
+            _actionError = "اختر قسمًا صالحًا للتوجيه.";
+            return;
+        }
+
+        await RunActionAsync(() => ApiClient.RouteCaseAsync(
+            CaseId,
+            new RouteCaseRequest(_selectedDepartmentId.Value)));
+    }
+
+    private Task ClaimAsync() =>
+        RunActionAsync(() => ApiClient.ClaimCaseAsync(CaseId));
 
     private async Task AssignAsync()
     {
@@ -279,12 +369,22 @@ else if (_case is not null)
             }
 
             _case = result.Value;
+            _selectedDepartmentId = _case.DepartmentId ?? _selectedDepartmentId;
             await LoadTimelineAsync();
         }
         finally
         {
             _acting = false;
         }
+    }
+
+    private string DisplayDepartment(Guid? departmentId)
+    {
+        if (!departmentId.HasValue)
+            return "غير موجهة";
+
+        return _departments.FirstOrDefault(item => item.Id == departmentId.Value)?.Name
+            ?? departmentId.Value.ToString("D");
     }
 
     private static string DisplayCaseType(string value) => value switch
@@ -330,12 +430,15 @@ else if (_case is not null)
     private static string DisplayTimelineAction(string value) => value switch
     {
         "madar.case.created" => "إنشاء الحالة",
+        "madar.case.routed" => "توجيه الحالة إلى قسم",
+        "madar.case.claimed" => "استلام الحالة من قائمة الانتظار",
         "madar.case.assigned" => "إسناد الحالة",
         "madar.case.transitioned" => "تغيير الحالة",
         "madar.case.sla-breached" => "تجاوز SLA وتصعيد الحالة",
         "madar.case.comment-added" => "إضافة تعليق",
         "madar.case.approval-requested" => "طلب اعتماد الحالة",
         "madar.case.approval-decided" => "قرار اعتماد الحالة",
+        "madar.case.notification-delivery" => "محاولة إرسال إشعار",
         _ => value
     };
 
