@@ -20,20 +20,26 @@ public sealed class CaseCommentStore(MadarDbContext dbContext)
     public Task<CaseCommentDto?> GetByIdAsync(
         Guid commentId,
         CancellationToken cancellationToken = default) =>
-        ProjectComments()
-            .SingleOrDefaultAsync(item => item.Id == commentId, cancellationToken);
+        ProjectComments(
+                dbContext.CaseComments
+                    .AsNoTracking()
+                    .Where(item => item.Id == commentId))
+            .SingleOrDefaultAsync(cancellationToken);
 
     public async Task<IReadOnlyList<CaseCommentDto>> ListForCaseAsync(
         Guid caseId,
         CancellationToken cancellationToken = default) =>
-        await ProjectComments()
-            .Where(item => item.CaseId == caseId)
+        await ProjectComments(
+                dbContext.CaseComments
+                    .AsNoTracking()
+                    .Where(item => item.CaseId == caseId))
             .OrderBy(item => item.CreatedUtc)
             .ThenBy(item => item.Id)
             .ToListAsync(cancellationToken);
 
-    private IQueryable<CaseCommentDto> ProjectComments() =>
-        from comment in dbContext.CaseComments.AsNoTracking()
+    private IQueryable<CaseCommentDto> ProjectComments(
+        IQueryable<CaseComment> comments) =>
+        from comment in comments
         join user in dbContext.Set<MadarUser>().AsNoTracking()
             on comment.AuthorUserId equals user.Id
         select new CaseCommentDto(
