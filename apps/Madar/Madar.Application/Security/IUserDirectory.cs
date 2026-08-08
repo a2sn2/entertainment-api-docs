@@ -13,5 +13,6 @@ public interface IUserDirectory
 
     Task<string?> GetNotificationDestinationAsync(
         Guid userId,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<string?>(null);
 }
