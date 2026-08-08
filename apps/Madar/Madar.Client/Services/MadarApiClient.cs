@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using FoundationKit.Blazor.Api;
 using Madar.Contracts.Cases;
+using Madar.Contracts.Organization;
 using Madar.Contracts.Security;
 using Microsoft.AspNetCore.Components.Authorization;
 
@@ -75,6 +76,40 @@ public sealed class MadarApiClient(HttpClient httpClient)
             HttpMethod.Post,
             CaseRoutes.Assign(caseId),
             request,
+            cancellationToken);
+
+    public Task<ApiResult<CaseDto>> RouteCaseAsync(
+        Guid caseId,
+        RouteCaseRequest request,
+        CancellationToken cancellationToken = default) =>
+        SendProtectedAsync<CaseDto>(
+            HttpMethod.Post,
+            CaseRoutes.Route(caseId),
+            request,
+            cancellationToken);
+
+    public Task<ApiResult<CaseDto>> ClaimCaseAsync(
+        Guid caseId,
+        CancellationToken cancellationToken = default) =>
+        SendProtectedAsync<CaseDto>(
+            HttpMethod.Post,
+            CaseRoutes.Claim(caseId),
+            new { },
+            cancellationToken);
+
+    public Task<ApiResult<DepartmentDto[]>> ListDepartmentsAsync(
+        CancellationToken cancellationToken = default) =>
+        SendAsync<DepartmentDto[]>(
+            new HttpRequestMessage(HttpMethod.Get, DepartmentRoutes.Root),
+            cancellationToken);
+
+    public Task<ApiResult<DepartmentQueueDto>> GetDepartmentQueueAsync(
+        Guid departmentId,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<DepartmentQueueDto>(
+            new HttpRequestMessage(
+                HttpMethod.Get,
+                DepartmentRoutes.Queue(departmentId)),
             cancellationToken);
 
     public Task<ApiResult<CaseDto>> TransitionCaseAsync(
