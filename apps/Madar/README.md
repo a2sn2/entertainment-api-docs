@@ -1,6 +1,6 @@
 # Madar
 
-> Status: **v0.1–v0.7 are implemented and repository-verified; v0.8 controlled transfer/reassignment is in development**. Repository evidence demonstrates the implemented product behavior for the exact verified commit; it is not Production Approval or an external security certification.
+> Status: **v0.1–v0.8 implementation is complete; exact-head repository verification is enforced before merge**. Repository evidence demonstrates the implemented product behavior for the exact verified commit; it is not Production Approval or an external security certification.
 
 Madar is an operational case-management and orchestration product built on FoundationKit. It is intentionally separate from the reusable FoundationKit packages, the Workbench architecture sample, and the Athar reference product.
 
@@ -54,7 +54,7 @@ v0.4   Maker-checker approval gate for sensitive case resolution
 v0.5   Bounded operational notifications
 v0.6   Department queues + routing + operator claim flow
 v0.7   Department administration + safe Operator membership
-v0.8   Controlled transfer + reassignment                    ← current
+v0.8   Controlled transfer + reassignment                    ← current product depth
 ```
 
 The deterministic lifecycle remains:
@@ -382,4 +382,4 @@ When Madar reveals a missing capability, first decide whether the behavior is pr
 - #82 — v0.5 notifications: complete.
 - #84 — v0.6 department queues/routing: complete.
 - #86 — v0.7 department administration: complete.
-- #88 — v0.8 controlled transfer/reassignment: current work.
+- #88 — v0.8 controlled transfer/reassignment: implementation complete; merge closure pending.
