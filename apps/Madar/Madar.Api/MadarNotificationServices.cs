@@ -22,12 +22,12 @@ public static class MadarNotificationServices
 
         var options = new SmtpNotificationOptions
         {
-            Host = configured.Host.Trim(),
+            Host = configured.Host?.Trim() ?? string.Empty,
             Port = configured.Port,
             EnableSsl = configured.EnableSsl,
-            Username = configured.Username.Trim(),
-            Password = configured.Password,
-            FromAddress = configured.FromAddress.Trim()
+            Username = configured.Username?.Trim() ?? string.Empty,
+            Password = configured.Password ?? string.Empty,
+            FromAddress = configured.FromAddress?.Trim() ?? string.Empty
         };
 
         services.AddSingleton(options);
