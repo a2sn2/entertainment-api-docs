@@ -30,6 +30,7 @@
     <ProjectReference Include="..\..\src\FoundationKit.Settings\FoundationKit.Settings.csproj" />
     <ProjectReference Include="..\..\src\FoundationKit.FeatureManagement\FoundationKit.FeatureManagement.csproj" />
     <ProjectReference Include="..\..\src\FoundationKit.Localization\FoundationKit.Localization.csproj" />
+    <ProjectReference Include="..\..\src\FoundationKit.Caching\FoundationKit.Caching.csproj" />
     <ProjectReference Include="..\..\tools\FoundationKit.Composer\FoundationKit.Composer.csproj" />
   </ItemGroup>
 </Project>
