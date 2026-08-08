@@ -6,18 +6,20 @@
 
 ## 1. ما الذي تحتاجه
 
-الحد الأدنى لمسار Native:
+الحد الأدنى لمسار Native الخاص بـWorkbench وAthar:
 
 - Git.
 - PowerShell 5.1 أو أحدث.
 - .NET 8 SDK؛ `global.json` يطلب خط .NET 8 ويقبل أحدث feature band متوافق.
 - SQL Server محلي يعمل، مثل Default Instance (`MSSQLSERVER`) أو SQL Express.
 
+Madar يستخدم في المسار التشغيلي الحالي Docker Compose، لذلك تحتاج Docker Desktop/Engine جاهزًا إذا أردت تشغيل Madar محليًا من المدير الموحد.
+
 اختياري:
 
 - Visual Studio 2026 مع workload **ASP.NET and web development**.
 - SSMS لفحص قاعدة البيانات.
-- Docker Desktop إذا أردت تشغيل بيئة Docker بدل SQL Server المحلي.
+- Docker Desktop لتشغيل Workbench/Athar عبر Docker، وهو مطلوب حاليًا لمسار Madar التشغيلي.
 - Python وNode.js لتشغيل كل فحوصات التحقق المحلية الإضافية.
 - `sqlcmd` لعمليات النسخ الاحتياطي Native الخاصة بـAthar.
 
@@ -59,13 +61,14 @@ dotnet --info
 - `powershell` = PASS.
 - وجود .NET 8 SDK.
 - Git working tree = clean.
-- Docker قد يكون موجودًا أو غير موجود؛ هو اختياري لمسار Native.
+- حالة Docker موضحة بوضوح.
+- فحص التطبيقات والمنافذ يشمل Workbench وAthar وMadar.
 
 إذا فشل `doctor`، أصلح أول FAIL قبل تشغيل التطبيقات.
 
 ## 4. تحقق من SQL Server قبل التطبيق
 
-اختبر نفس الـinstance من SSMS باستخدام Windows Authentication.
+اختبر نفس الـinstance من SSMS باستخدام Windows Authentication عند تشغيل Workbench أو Athar Native.
 
 Default Instance:
 
@@ -79,7 +82,9 @@ SQL Express:
 Server=.\SQLEXPRESS
 ```
 
-لا تنشئ الجداول يدويًا. Workbench وAthar يملكان EF Core migrations خاصة بهما، وهي مصدر الحقيقة لبنية قواعد البيانات.
+لا تنشئ الجداول يدويًا. Workbench وAthar وMadar يملكون EF Core migrations خاصة بكل مستهلك، وهي مصدر الحقيقة لبنية قواعد البيانات.
+
+Madar عبر Docker لا يستخدم Windows Authentication للـinstance المحلي؛ Compose يشغّل SQL Server خاصًا بالتطوير.
 
 ## 5. أول اختبار: Workbench فقط — Native
 
@@ -196,25 +201,100 @@ ATHAR_NATIVE_CONNECTION_STRING=Server=.\SQLEXPRESS;Database=Athar;Trusted_Connec
 
 ثم أوقف وأعد التشغيل.
 
-## 7. فرق المنافذ بين المدير الموحد وVisual Studio
+## 7. ثالث اختبار: Madar — Docker
 
-هناك مساران صحيحان، لكن لا تخلط بين منافذهما:
+Madar هو أول منتج فعلي تحت `apps/`، ومساره التشغيلي المحلي المعتمد حاليًا Docker-only.
 
-| المسار | Workbench | Athar |
-|---|---:|---:|
-| `foundationkit.ps1` Native | `5057` | `8090` |
-| Visual Studio / `dotnet run` launch profile | `5057` | `5068` |
-| Docker | `8080` | `8090` |
+تأكد أولًا أن Docker جاهز:
 
-لذلك ظهور Athar على `8090` عند استخدام المدير الموحد ليس خطأ، وظهوره على `5068` من Visual Studio ليس خطأ أيضًا.
+```powershell
+docker info
+docker compose version
+```
 
-## 8. تشغيل المشروعين معًا — Native
+ثم:
 
-بعد نجاح كل واحد منفردًا:
+```powershell
+.\foundationkit.ps1 start -Target Madar -Mode Docker
+```
+
+المشغّل ينشئ تلقائيًا ملف تطوير محليًا:
+
+```text
+.local/madar-product.env
+```
+
+ويولّد كلمات مرور عشوائية لـSQL Server وحسابي Administrator وOperator. على Windows يقيّد الملف لحساب Windows الحالي عبر ACL.
+
+العنوان:
+
+```text
+http://localhost:8100
+```
+
+تحقق من الحالة:
+
+```powershell
+.\foundationkit.ps1 status -Target Madar
+```
+
+المسارات المهمة:
+
+```text
+http://localhost:8100/
+http://localhost:8100/login
+http://localhost:8100/cases
+http://localhost:8100/swagger
+http://localhost:8100/health/live
+http://localhost:8100/health/ready
+```
+
+`/health/live` يثبت أن العملية حية فقط، بينما `/health/ready` يتحقق من SQL Server وعدم وجود migrations معلقة.
+
+للسجلات والإيقاف:
+
+```powershell
+.\foundationkit.ps1 logs -Target Madar
+.\foundationkit.ps1 stop -Target Madar
+```
+
+الإيقاف يحافظ على SQL volume. `reset -Target Madar` غير معروض عمدًا في المدير الموحد حاليًا لمنع حذف البيانات عرضًا.
+
+التفاصيل الكاملة موجودة في:
+
+```text
+docs/MADAR-OPERATIONS-AR.md
+```
+
+## 8. فرق المنافذ بين المدير الموحد وVisual Studio وDocker
+
+هناك مسارات صحيحة مختلفة، لكن لا تخلط بين منافذها:
+
+| المسار | Workbench | Athar | Madar |
+|---|---:|---:|---:|
+| `foundationkit.ps1` Native | `5057` | `8090` | غير مدعوم حاليًا |
+| Visual Studio / `dotnet run` launch profile | `5057` | `5068` | راجع launch profile الخاص بمدار عند التطوير المباشر |
+| Docker / unified operational path | `8080` | `8090` | `8100` |
+
+SQL Server Docker host ports الحالية تشمل:
+
+```text
+Workbench: 14333
+Athar:     14334
+Madar:     14335
+```
+
+لذلك ظهور Athar على `8090` عند استخدام المدير الموحد ليس خطأ، وظهوره على `5068` من Visual Studio ليس خطأ أيضًا. Madar في المسار التشغيلي الموحد الحالي يظهر على `8100`.
+
+## 9. تشغيل التطبيقات معًا
+
+### All — Native
 
 ```powershell
 .\foundationkit.ps1 start -Target All -Mode Native
 ```
+
+هذا يحافظ على السلوك التاريخي لـWorkbench + Athar Native. Madar يُتجاوز برسالة واضحة لأنه لا يملك مسار Native موحدًا بعد.
 
 ثم:
 
@@ -222,37 +302,47 @@ ATHAR_NATIVE_CONNECTION_STRING=Server=.\SQLEXPRESS;Database=Athar;Trusted_Connec
 .\foundationkit.ps1 status -Target All -Mode Native
 ```
 
-الإيقاف مع الحفاظ على البيانات:
+الإيقاف:
 
 ```powershell
 .\foundationkit.ps1 stop -Target All -Mode Native
 ```
 
-## 9. تشغيل Docker بدل SQL Server المحلي
+### All — Auto
+
+```powershell
+.\foundationkit.ps1 start -Target All -Mode Auto
+```
+
+إذا كان Docker جاهزًا، يستطيع المدير تشغيل Madar عبر مساره Docker إضافة إلى المستهلكين الآخرين حسب آلية Auto الحالية. إذا لم يكن Docker جاهزًا، يوضّح المدير أن Madar لم يبدأ بدل الادعاء بنجاحه.
+
+### All — Docker
+
+```powershell
+.\foundationkit.ps1 start -Target All -Mode Docker
+```
+
+المنافذ الأساسية:
+
+```text
+Workbench: http://localhost:8080
+Athar:     http://localhost:8090
+Madar:     http://localhost:8100
+```
+
+## 10. تشغيل Docker بشكل منفرد
 
 إذا كان Docker Desktop جاهزًا:
 
 ```powershell
 .\foundationkit.ps1 start -Target Workbench -Mode Docker
 .\foundationkit.ps1 start -Target Athar -Mode Docker
-```
-
-أو:
-
-```powershell
-.\foundationkit.ps1 start -Target All -Mode Docker
-```
-
-المنافذ:
-
-```text
-Workbench: http://localhost:8080
-Athar:     http://localhost:8090
+.\foundationkit.ps1 start -Target Madar -Mode Docker
 ```
 
 Docker ينشئ SQL Server containers خاصة بالتطوير ولا يستخدم Windows Authentication الخاص بالـinstance المحلي.
 
-## 10. تشغيل Visual Studio 2026
+## 11. تشغيل Visual Studio 2026
 
 افتح:
 
@@ -276,6 +366,14 @@ Athar.Api
 
 هو Startup Project.
 
+لـMadar عند التطوير المباشر اجعل:
+
+```text
+Madar.Api
+```
+
+هو Startup Project، ثم استخدم إعدادات تطوير آمنة خاصة بك. المسار التشغيلي الموثق للمستخدم المحلي يظل Docker عبر `foundationkit.ps1`/`madar-product.ps1`.
+
 لا تشغّل مشاريع Blazor Client وحدها عند اختبار المسار الكامل؛ الـAPI host يقدم ملفات العميل.
 
 الدليل التفصيلي لـVisual Studio موجود في:
@@ -284,7 +382,7 @@ Athar.Api
 docs/VISUAL-STUDIO-2026-AR.md
 ```
 
-## 11. فحص المستودع قبل تشخيص Runtime
+## 12. فحص المستودع قبل تشخيص Runtime
 
 قبل أن تعتبر المشكلة من التطبيق، شغّل:
 
@@ -295,9 +393,9 @@ docs/VISUAL-STUDIO-2026-AR.md
 .\foundationkit.ps1 verify
 ```
 
-`verify` يشغل البناء والاختبارات وفحوصات الكتالوج والـPages المتاحة محليًا. CI على GitHub يبقى أوسع لأنه يشغل أيضًا Linux containers وSQL integration وSecurity Scan وCodeQL.
+`verify` يشغل البناء والاختبارات وفحوصات الكتالوج والـPages المتاحة محليًا، بما في ذلك مطابقة مسارات Razor الخاصة بـMadar مع Atlas. CI على GitHub يبقى أوسع لأنه يشغل أيضًا Linux containers وSQL integration وSecurity Scan وCodeQL.
 
-## 12. أوامر التشخيص عند الفشل
+## 13. أوامر التشخيص عند الفشل
 
 Workbench:
 
@@ -309,6 +407,13 @@ Athar:
 
 ```powershell
 .\foundationkit.ps1 logs -Target Athar -Mode Native
+```
+
+Madar:
+
+```powershell
+.\foundationkit.ps1 status -Target Madar
+.\foundationkit.ps1 logs -Target Madar
 ```
 
 حالة Git:
@@ -325,9 +430,16 @@ dotnet --info
 dotnet --list-sdks
 ```
 
-اختبر SQL Server من SSMS بنفس اسم السيرفر الموجود في connection string.
+حالة Docker عند مشكلة Madar أو Docker mode:
 
-## 13. ماذا ترسل عند ظهور مشكلة
+```powershell
+docker info
+docker compose version
+```
+
+اختبر SQL Server من SSMS بنفس اسم السيرفر الموجود في connection string عند تشخيص Native. بالنسبة إلى Madar Docker ابدأ من `/health/ready` ثم سجلات Compose بدل محاولة استخدام Windows Authentication على الـinstance المحلي.
+
+## 14. ماذا ترسل عند ظهور مشكلة
 
 أرسل المعلومات التالية بدون كلمات مرور أو أسرار:
 
@@ -335,14 +447,15 @@ dotnet --list-sdks
 2. أول رسالة خطأ كاملة، وليس آخر سطر فقط.
 3. ناتج `foundationkit.ps1 doctor`.
 4. ناتج `dotnet --info` عند وجود مشكلة SDK/build.
-5. اسم SQL Server المستخدم فقط، مثل `.` أو `.\SQLEXPRESS`.
-6. هل الاتصال بنفس الاسم ينجح من SSMS أم لا.
-7. ناتج `foundationkit.ps1 logs -Target <Athar|Workbench> -Mode Native` عند مشكلة Runtime.
+5. اسم SQL Server المستخدم فقط عند Native، مثل `.` أو `.\SQLEXPRESS`.
+6. هل الاتصال بنفس الاسم ينجح من SSMS أم لا عند Native.
+7. ناتج `foundationkit.ps1 logs -Target <Athar|Workbench|Madar>` عند مشكلة Runtime.
 8. ناتج `git rev-parse HEAD` حتى نتأكد أننا نشخّص نفس النسخة.
+9. حالة `/health/live` و`/health/ready` عند مشكلة Madar أو Athar إن كانت متاحة.
 
 لا ترسل محتوى `.local/*.env` ولا User Secrets ولا كلمات المرور.
 
-## 14. تنظيف Runtime المحلي عند الحاجة
+## 15. تنظيف Runtime المحلي عند الحاجة
 
 الإيقاف العادي يحافظ على البيانات:
 
@@ -350,11 +463,13 @@ dotnet --list-sdks
 .\foundationkit.ps1 stop -Target All -Mode Native
 ```
 
-`reset -Force` مخصص لإعادة ملفات تشغيل المدير المحلي. في Native لا يحذف قاعدة SQL Server تلقائيًا؛ هذا متعمد لحماية البيانات المحلية.
+`reset -Force` مخصص للمسارات التي تعرضه صراحةً. في Native لا يحذف قاعدة SQL Server تلقائيًا؛ هذا متعمد لحماية البيانات المحلية.
 
 ```powershell
 .\foundationkit.ps1 reset -Target Workbench -Mode Native -Force
 .\foundationkit.ps1 reset -Target Athar -Mode Native -Force
 ```
 
-إذا احتجت حذف قواعد البيانات نفسها، افعل ذلك يدويًا وبوعي من SSMS بعد التأكد أنها قواعد تطوير محلية فقط.
+Madar لا يعرض reset موحدًا في v0.1.1. إذا احتجت حذف بيانات Madar Docker، افعل ذلك يدويًا وبوعي بعد التأكد أنها بيانات تطوير فقط، واتبع `docs/MADAR-OPERATIONS-AR.md`.
+
+إذا احتجت حذف قواعد Native نفسها، افعل ذلك يدويًا وبوعي من SSMS بعد التأكد أنها قواعد تطوير محلية فقط.
