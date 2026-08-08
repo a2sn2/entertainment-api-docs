@@ -35,6 +35,19 @@ Athar's initiative review flow is the first real consumer:
 
 This preserves the existing non-disclosure order and domain invariant while removing reusable approval mechanics from product orchestration.
 
+## Madar consumer evidence
+
+Madar v0.4 is a second independent product consumer. Sensitive `access-request` and `compliance-case` records require a product-owned approval before resolution:
+
+1. Madar supplies the `madar.cases.approve` permission and checks decision permission before loading approval details;
+2. `ApprovalPolicy.Evaluate` enforces permission-first maker-checker between the approval requester and current reviewer;
+3. `ApprovalDecisions.TryResolve` normalizes and resolves `approve` / `reject` through Madar's small approval workflow;
+4. the `CaseApproval` domain model independently blocks self-review and repeat/invalid decisions;
+5. Madar owns `madar.CaseApprovals`, SQL migration, case-type policy, API, Arabic UI, audit actions, and decision-note privacy boundary;
+6. the parent case resolve transition remains product-owned and is allowed only when the latest sensitive-case approval is `approved`.
+
+Madar reuses the existing v1 public surface without requiring a new abstraction or package API change.
+
 ## Explicit non-goals
 
 The current package does **not** implement:
@@ -53,6 +66,6 @@ Those concerns require additional product evidence and, where appropriate, separ
 
 ## Maturity
 
-Capability Model v1 marks Approvals as `ReferenceOnly`. That means the implemented v1 surface is real and tested, but one consumer and a deliberately narrow decision model are not evidence of broad production maturity.
+Capability Model v1 continues to mark Approvals as `ReferenceOnly`. Athar and Madar now provide two independent consumer shapes for the narrow v1 mechanics, which strengthens reuse evidence, but it does not by itself establish broad production maturity, organizational approval, or evidence for advanced approval patterns.
 
 `ReferenceOnly` is not a certification, deployment approval, or claim that advanced approval patterns are implemented.
