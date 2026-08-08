@@ -96,6 +96,25 @@ public sealed class MadarApiClient(HttpClient httpClient)
             request,
             cancellationToken);
 
+    public Task<ApiResult<CaseCommentDto[]>> ListCaseCommentsAsync(
+        Guid caseId,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<CaseCommentDto[]>(
+            new HttpRequestMessage(
+                HttpMethod.Get,
+                CaseCommentRoutes.ForCase(caseId)),
+            cancellationToken);
+
+    public Task<ApiResult<CaseCommentDto>> AddCaseCommentAsync(
+        Guid caseId,
+        AddCaseCommentRequest request,
+        CancellationToken cancellationToken = default) =>
+        SendProtectedAsync<CaseCommentDto>(
+            HttpMethod.Post,
+            CaseCommentRoutes.ForCase(caseId),
+            request,
+            cancellationToken);
+
     public Task<ApiResult<CaseTimelineEntryDto[]>> GetTimelineAsync(
         Guid caseId,
         CancellationToken cancellationToken = default) =>
