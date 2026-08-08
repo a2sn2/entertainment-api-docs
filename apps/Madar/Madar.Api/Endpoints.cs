@@ -123,6 +123,18 @@ public static class MadarEndpoints
             .Produces<CaseDto>()
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        cases.MapGet(
+                "/{caseId:guid}/timeline",
+                async (
+                    Guid caseId,
+                    ICaseTimelineService timelineService,
+                    CancellationToken cancellationToken) =>
+                    (await timelineService.GetAsync(caseId, cancellationToken))
+                        .ToHttpResult(Results.Ok))
+            .WithName("GetMadarCaseTimeline")
+            .Produces<IReadOnlyList<CaseTimelineEntryDto>>()
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         cases.MapPost(
                 "/{caseId:guid}/assignment",
                 async (
