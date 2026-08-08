@@ -28,11 +28,37 @@ public sealed class CaseManagerTests
         Assert.True(result.IsSuccess);
         Assert.Equal(CaseStatuses.New, result.Value.Status);
         Assert.Equal(currentUser.UserId, result.Value.CreatedByUserId);
+        Assert.Null(result.Value.SlaTargetUtc);
+        Assert.Equal(CaseSlaStates.NotApplicable, result.Value.SlaState);
         Assert.Single(fixture.Repository.Items);
         Assert.Equal(1, fixture.UnitOfWork.SaveCount);
         Assert.Contains(
             fixture.AuditSink.Events,
             auditEvent => auditEvent.Action == "madar.case.created");
+    }
+
+    [Fact]
+    public async Task Create_WithConfiguredSla_SnapshotsTargetAndAuditsIt()
+    {
+        var currentUser = TestCurrentUser.Authenticated(MadarRoles.Requester);
+        var fixture = CreateFixture(
+            currentUser,
+            slaPolicy: new FixedCaseSlaPolicy(TimeSpan.FromMinutes(30)));
+        var expectedTarget = fixture.Clock.UtcNow.AddMinutes(30);
+
+        var result = await fixture.Manager.CreateAsync(new CreateCaseRequest(
+            "حالة بمهلة تشغيلية",
+            "وصف صالح لحالة يجب أن تحتفظ بهدف SLA وقت الإنشاء.",
+            CaseTypes.OperationalIncident,
+            CasePriorities.High));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(expectedTarget, result.Value.SlaTargetUtc);
+        Assert.Equal(CaseSlaStates.Active, result.Value.SlaState);
+        var createdAudit = Assert.Single(
+            fixture.AuditSink.Events,
+            auditEvent => auditEvent.Action == "madar.case.created");
+        Assert.Equal(expectedTarget.ToString("O"), createdAudit.Attributes["slaTargetUtc"]);
     }
 
     [Fact]
@@ -123,6 +149,34 @@ public sealed class CaseManagerTests
     }
 
     [Fact]
+    public async Task Transition_LateResolve_PersistsSlaBreachAuditOnce()
+    {
+        var operatorUserId = Guid.NewGuid();
+        var creator = Guid.NewGuid();
+        var target = Utc(9, 5);
+        var item = CreateCase(creator, Utc(9), target);
+        Assert.True(item.Assign(operatorUserId, Guid.NewGuid(), Utc(9, 1)).IsSuccess);
+        Assert.True(item.StartProgress(operatorUserId, Utc(9, 2)).IsSuccess);
+
+        var currentUser = TestCurrentUser.Authenticated(MadarRoles.Operator, operatorUserId);
+        var fixture = CreateFixture(currentUser);
+        fixture.Repository.Seed(item);
+        fixture.Clock.UtcNow = Utc(9, 6);
+
+        var result = await fixture.Manager.TransitionAsync(
+            item.Id,
+            new TransitionCaseRequest(CaseTriggers.Resolve));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(target, result.Value.SlaBreachedUtc);
+        Assert.Equal(Utc(9, 6), result.Value.EscalatedUtc);
+        Assert.Equal(CaseSlaStates.Breached, result.Value.SlaState);
+        Assert.Single(
+            fixture.AuditSink.Events,
+            auditEvent => auditEvent.Action == "madar.case.sla-breached");
+    }
+
+    [Fact]
     public async Task List_UsesUserScopeUnlessRoleHasReadAllPermission()
     {
         var userId = Guid.NewGuid();
@@ -158,16 +212,17 @@ public sealed class CaseManagerTests
     private static Fixture CreateFixture(
         TestCurrentUser currentUser,
         IEnumerable<Guid>? knownUsers = null,
-        FakeCaseRepository? repository = null)
+        FakeCaseRepository? repository = null,
+        ICaseSlaPolicy? slaPolicy = null)
     {
         repository ??= new FakeCaseRepository();
-        var queryService = new FakeCaseQueryService(repository);
-        var userDirectory = new FakeUserDirectory(knownUsers ?? []);
-        var unitOfWork = new FakeUnitOfWork();
         var clock = new TestClock
         {
             UtcNow = Utc(9)
         };
+        var queryService = new FakeCaseQueryService(repository, clock);
+        var userDirectory = new FakeUserDirectory(knownUsers ?? []);
+        var unitOfWork = new FakeUnitOfWork();
         var auditSink = new CollectingAuditSink();
         var authorization = new RolePermissionAuthorizationEvaluator(
             currentUser,
@@ -184,6 +239,7 @@ public sealed class CaseManagerTests
                 queryService,
                 repository,
                 userDirectory,
+                slaPolicy ?? new FixedCaseSlaPolicy(null),
                 unitOfWork,
                 auditRecorder,
                 clock),
@@ -193,7 +249,10 @@ public sealed class CaseManagerTests
             clock);
     }
 
-    private static Case CreateCase(Guid creator, DateTimeOffset createdUtc)
+    private static Case CreateCase(
+        Guid creator,
+        DateTimeOffset createdUtc,
+        DateTimeOffset? slaTargetUtc = null)
     {
         var result = Case.Create(
             creator,
@@ -201,7 +260,8 @@ public sealed class CaseManagerTests
             "هذا وصف صالح ومفصل لحالة تشغيلية مستخدمة في اختبارات مدير الحالات.",
             CaseTypes.InternalServiceRequest,
             CasePriorities.Medium,
-            createdUtc);
+            createdUtc,
+            slaTargetUtc);
 
         Assert.True(result.IsSuccess);
         return result.Value;
@@ -297,8 +357,9 @@ public sealed class CaseManagerTests
         }
     }
 
-    private sealed class FakeCaseQueryService(FakeCaseRepository repository)
-        : ICaseQueryService
+    private sealed class FakeCaseQueryService(
+        FakeCaseRepository repository,
+        TestClock clock) : ICaseQueryService
     {
         public Task<CaseDto?> GetByIdAsync(
             Guid caseId,
@@ -324,7 +385,7 @@ public sealed class CaseManagerTests
             Task.FromResult<IReadOnlyList<CaseDto>>(
                 repository.Items.Values.Select(ToDto).ToArray());
 
-        private static CaseDto ToDto(Case item) =>
+        private CaseDto ToDto(Case item) =>
             new(
                 item.Id,
                 item.CreatedByUserId,
@@ -337,7 +398,11 @@ public sealed class CaseManagerTests
                 item.CreatedUtc,
                 item.UpdatedUtc,
                 item.ResolvedUtc,
-                item.ClosedUtc);
+                item.ClosedUtc,
+                item.SlaTargetUtc,
+                item.SlaBreachedUtc,
+                item.EscalatedUtc,
+                item.GetSlaState(clock.UtcNow));
     }
 
     private sealed class FakeUserDirectory(IEnumerable<Guid> users) : IUserDirectory
@@ -348,6 +413,11 @@ public sealed class CaseManagerTests
             Guid userId,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(_users.Contains(userId));
+    }
+
+    private sealed class FixedCaseSlaPolicy(TimeSpan? duration) : ICaseSlaPolicy
+    {
+        public TimeSpan? ResolveDuration(string? priority) => duration;
     }
 
     private sealed class FakeUnitOfWork : IUnitOfWork
