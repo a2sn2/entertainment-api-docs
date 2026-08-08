@@ -333,12 +333,18 @@ jobs:
           grep -q "LoginMadarUser" <<< "$swagger"
           grep -q "CreateMadarCase" <<< "$swagger"
           grep -q "AssignMadarCase" <<< "$swagger"
+          grep -q "RouteMadarCase" <<< "$swagger"
+          grep -q "ClaimMadarCase" <<< "$swagger"
+          grep -q "GetMadarDepartmentQueue" <<< "$swagger"
           grep -q "TransitionMadarCase" <<< "$swagger"
           grep -q "GetMadarCaseTimeline" <<< "$swagger"
           grep -q "EvaluateMadarCaseSla" <<< "$swagger"
 
       - name: Run Madar end-to-end workflow
         run: bash scripts/smoke-madar.sh
+
+      - name: Run Madar department routing SQL workflow
+        run: bash scripts/smoke-madar-routing.sh
 
       - name: Print Madar logs on failure
         if: failure()
