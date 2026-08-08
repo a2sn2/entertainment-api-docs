@@ -8,6 +8,7 @@
 - Post-review technical closure source: `c3f7754441a3f39956836aef48377cda5119c7f4`.
 - Post-review closure evidence: `docs/security/evidence/STEP-06-PR34-REVIEW-CLOSURE.md`.
 - Owner-approved Foundation defaults: `docs/security/SECURITY-DECISIONS.md`.
+- Protected-main governance evidence: issue #35 dated 2026-08-08.
 - This file is not an ISO/IEC 27001 certificate, Statement of Applicability, legal opinion, residual-risk acceptance for a future deployment, or Production Approval.
 
 ## Current verdict
@@ -25,11 +26,15 @@ The Security Scan black-box suite explicitly passed authorization, CSRF, BOLA, a
 
 Documentation/evidence-only commits after that technical source do not invalidate the runtime evidence unless they modify application/security source, workflows, dependencies, deployment behavior or tests.
 
+On 2026-08-08 the repository owner activated GitHub ruleset `Protect main` for the default branch `main`. The current ruleset has an empty bypass list and requires pull-request review, one approval, stale-approval dismissal, approval of the most recent reviewable push by someone other than the pusher, conversation resolution, required status checks, an up-to-date branch, deletion restriction, and force-push blocking. Dated external configuration evidence is recorded in issue #35.
+
+Historical PR #34 had already been merged before this ruleset existed. No retroactive independent-approval claim is made for that historical merge; the current control governs subsequent changes to `main`.
+
 ## PR #34 review-closure status
 
 | Review finding | Current state | Repository closure |
 |---|---|---|
-| PR34-REV-01 independent approval | **External governance blocker remains** | Owner baseline requires at least one independent reviewer. PR #34 still needs a GitHub `APPROVE` from an account other than `a2sn2`; self-approval is not accepted. |
+| PR34-REV-01 independent approval | **Historical exception recorded / current governance implemented** | PR #34 was merged before the current protected-main ruleset. Current `main` now requires one independent approval and protected-branch checks. No retroactive approval claim is made. |
 | PR34-APP-01 reverse proxy / forwarded headers | **Verified** | Explicit reverse-proxy decision; exact trusted proxy IP allow-list; no trust-all behavior; middleware runs before HTTPS/rate limiting; trusted/untrusted tests passed. |
 | PR34-AUTH-01 MFA full re-authentication | **Verified** | MFA disable and recovery-code rotation require current password + fresh TOTP/recovery factor; black-box negative/positive paths passed. |
 | PR34-AUTH-02 independent security notifications | **Repository capability verified / provider external** | Notifications exist for password reset/change, MFA enable/disable and recovery-code regeneration; real Production delivery provider remains external configuration. |
@@ -45,7 +50,7 @@ Documentation/evidence-only commits after that technical source do not invalidat
 
 | Area | Current state | Notes |
 |---|---|---|
-| Independent review / protected `main` | **External Configuration Required** | Independent approval still required. Protected-branch/required-check evidence depends on GitHub repository settings and plan support. |
+| Independent review / protected `main` | **Current GitHub ruleset implemented** | `Protect main` is active for `main` with one-approval PR governance, required checks, branch-up-to-date enforcement, deletion restriction, force-push blocking and no bypass entries. Historical PR #34 predates this control. |
 | Risk/threat model | **Verified baseline** | Risk register, threat model, decision register and tracked residual technical risks exist. |
 | Secure SDLC / malware gates | **Verified** | Secret scan, NuGet audit, CodeQL, Trivy, baseline SBOM, integrity evidence, build/test/publish/pack passed at post-review technical closure. |
 | Dependency/supply-chain baseline | **Verified baseline / partial provenance** | Dependabot + vulnerability gates + SHA-pinned security-sensitive Actions. Full artifact signing/provenance remains external/next hardening. |
@@ -108,8 +113,8 @@ Therefore the following remain external by design and are not repository blocker
 
 **FoundationKit has a verified global production-grade technical security baseline for the documented repository/automated scope.**
 
-**PR #34 technical review blockers are closed in repository scope.**
+**Current `main` governance is protected by an active one-approval ruleset with required checks and no bypass entries.**
 
-**PR #34 still requires independent GitHub approval before merge because the authenticated account is the author and must not self-approve.**
+**Historical PR #34 was merged before that control existed; no retroactive independent-approval claim is made.**
 
 **Production Approved: not asserted. ISO/IEC 27001 Certified: not asserted.**
