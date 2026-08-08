@@ -74,6 +74,7 @@ All notable repository and package changes are documented here.
 
 - Workbench local `.local/workbench-product.env` credentials are now ACL-restricted to the current Windows account, matching the existing Athar local-secret posture.
 - Athar Native startup now restores every process-level environment variable used for child launch after the application process is spawned, preventing the calling PowerShell session from retaining the local connection string or administrator password.
+- `foundationkit.ps1 doctor` now probes explicit IPv4 loopback health endpoints with a bounded retry and distinguishes tracked/listening-but-unhealthy runtimes from truly stopped applications, preventing false `[STOPPED]` diagnostics observed during local dual-runtime testing.
 
 ## [0.1.0] - 2026-08-06
 
