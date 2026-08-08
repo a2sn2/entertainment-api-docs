@@ -124,6 +124,8 @@ public sealed class MadarDbContextModelSnapshot : ModelSnapshot
                 .HasColumnType("uniqueidentifier");
             entity.Property<DateTimeOffset>("CreatedUtc")
                 .HasColumnType("datetimeoffset");
+            entity.Property<Guid?>("DepartmentId")
+                .HasColumnType("uniqueidentifier");
             entity.Property<string>("Description")
                 .IsRequired()
                 .HasMaxLength(4000)
@@ -135,6 +137,8 @@ public sealed class MadarDbContextModelSnapshot : ModelSnapshot
                 .HasMaxLength(20)
                 .HasColumnType("nvarchar(20)");
             entity.Property<DateTimeOffset?>("ResolvedUtc")
+                .HasColumnType("datetimeoffset");
+            entity.Property<DateTimeOffset?>("RoutedUtc")
                 .HasColumnType("datetimeoffset");
             entity.Property<byte[]>("RowVersion")
                 .IsConcurrencyToken()
@@ -158,6 +162,7 @@ public sealed class MadarDbContextModelSnapshot : ModelSnapshot
             entity.HasKey("Id");
             entity.HasIndex("AssignedToUserId", "Status", "UpdatedUtc");
             entity.HasIndex("CreatedByUserId", "CreatedUtc");
+            entity.HasIndex("DepartmentId", "Status", "UpdatedUtc");
             entity.HasIndex("SlaBreachedUtc", "ResolvedUtc", "SlaTargetUtc");
             entity.HasIndex("Status", "Priority", "CreatedUtc");
             entity.ToTable("Cases", "madar");
@@ -221,6 +226,47 @@ public sealed class MadarDbContextModelSnapshot : ModelSnapshot
             entity.HasIndex("AuthorUserId");
             entity.HasIndex("CaseId", "CreatedUtc", "Id");
             entity.ToTable("CaseComments", "madar");
+        });
+
+        modelBuilder.Entity("Madar.Domain.Organization.Department", entity =>
+        {
+            entity.Property<Guid>("Id")
+                .ValueGeneratedNever()
+                .HasColumnType("uniqueidentifier");
+            entity.Property<string>("Code")
+                .IsRequired()
+                .HasMaxLength(60)
+                .HasColumnType("nvarchar(60)");
+            entity.Property<DateTimeOffset>("CreatedUtc")
+                .HasColumnType("datetimeoffset");
+            entity.Property<bool>("IsActive")
+                .HasColumnType("bit");
+            entity.Property<string>("Name")
+                .IsRequired()
+                .HasMaxLength(120)
+                .HasColumnType("nvarchar(120)");
+            entity.Property<byte[]>("RowVersion")
+                .IsConcurrencyToken()
+                .IsRequired()
+                .ValueGeneratedOnAddOrUpdate()
+                .HasColumnType("rowversion");
+            entity.HasKey("Id");
+            entity.HasIndex("Code")
+                .IsUnique();
+            entity.ToTable("Departments", "madar");
+        });
+
+        modelBuilder.Entity("Madar.Domain.Organization.DepartmentMembership", entity =>
+        {
+            entity.Property<Guid>("DepartmentId")
+                .HasColumnType("uniqueidentifier");
+            entity.Property<Guid>("UserId")
+                .HasColumnType("uniqueidentifier");
+            entity.Property<DateTimeOffset>("JoinedUtc")
+                .HasColumnType("datetimeoffset");
+            entity.HasKey("DepartmentId", "UserId");
+            entity.HasIndex("UserId", "DepartmentId");
+            entity.ToTable("DepartmentMemberships", "madar");
         });
 
         modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", entity =>
@@ -324,6 +370,11 @@ public sealed class MadarDbContextModelSnapshot : ModelSnapshot
                 .HasForeignKey("CreatedByUserId")
                 .OnDelete(DeleteBehavior.Restrict)
                 .IsRequired();
+
+            entity.HasOne("Madar.Domain.Organization.Department", null)
+                .WithMany()
+                .HasForeignKey("DepartmentId")
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity("Madar.Domain.Cases.CaseApproval", entity =>
@@ -358,6 +409,21 @@ public sealed class MadarDbContextModelSnapshot : ModelSnapshot
                 .WithMany()
                 .HasForeignKey("CaseId")
                 .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired();
+        });
+
+        modelBuilder.Entity("Madar.Domain.Organization.DepartmentMembership", entity =>
+        {
+            entity.HasOne("Madar.Domain.Organization.Department", null)
+                .WithMany()
+                .HasForeignKey("DepartmentId")
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired();
+
+            entity.HasOne("Madar.Infrastructure.Identity.MadarUser", null)
+                .WithMany()
+                .HasForeignKey("UserId")
+                .OnDelete(DeleteBehavior.Restrict)
                 .IsRequired();
         });
 
