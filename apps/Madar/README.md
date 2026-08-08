@@ -133,7 +133,7 @@ Assignment also validates that the selected assignee is an Identity user holding
 ```text
 identity/*  ASP.NET Core Identity tables
 madar/Cases
- audit/AuditEvents
+audit/AuditEvents
 ```
 
 The first migration is:
