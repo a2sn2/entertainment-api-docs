@@ -111,7 +111,20 @@ python3 -c 'import json,sys; department_id=sys.argv[1]; operator_id=sys.argv[2];
 
 echo "Madar department route + queue + claim SQL workflow passed for case $case_id in department $department_id"
 
-MADAR_ADMIN_COOKIE_FILE="$admin_cookie" \
-MADAR_ADMIN_CSRF_TOKEN="$admin_token" \
-MADAR_OPERATOR_ID="$operator_id" \
-  bash scripts/smoke-madar-department-admin.sh
+# The preceding Madar suites intentionally exercise the real per-user write limiter.
+# Restart only the API process before the independent administration suite so its
+# deterministic assertions are not coupled to permits consumed by earlier suites.
+docker compose -f deploy/madar-compose.yml restart madar-api >/dev/null
+for attempt in {1..60}; do
+  if curl --fail --silent "$base_url/health/ready" >/dev/null; then
+    break
+  fi
+  if [ "$attempt" -eq 60 ]; then
+    echo "Madar did not become ready after resetting the in-memory rate limiter." >&2
+    docker compose -f deploy/madar-compose.yml ps >&2
+    exit 1
+  fi
+  sleep 2
+done
+
+bash scripts/smoke-madar-department-admin.sh
