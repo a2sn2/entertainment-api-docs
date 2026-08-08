@@ -40,6 +40,7 @@ builder.Services.AddScoped<IAuthorizationEvaluator, RolePermissionAuthorizationE
 builder.Services.AddScoped<ICaseManager, CaseManager>();
 builder.Services.AddScoped<ICaseSlaManager, CaseSlaManager>();
 builder.Services.AddScoped<ICaseCommentManager, CaseCommentManager>();
+builder.Services.AddScoped<ICaseApprovalManager, CaseApprovalManager>();
 builder.Services.AddScoped<CaseQueryService>();
 builder.Services.AddScoped<ICaseQueryService>(serviceProvider =>
     serviceProvider.GetRequiredService<CaseQueryService>());
@@ -50,6 +51,11 @@ builder.Services.AddScoped<ICaseCommentStore>(serviceProvider =>
     serviceProvider.GetRequiredService<CaseCommentStore>());
 builder.Services.AddScoped<ICaseCommentQueryService>(serviceProvider =>
     serviceProvider.GetRequiredService<CaseCommentStore>());
+builder.Services.AddScoped<CaseApprovalStore>();
+builder.Services.AddScoped<ICaseApprovalRepository>(serviceProvider =>
+    serviceProvider.GetRequiredService<CaseApprovalStore>());
+builder.Services.AddScoped<ICaseApprovalQueryService>(serviceProvider =>
+    serviceProvider.GetRequiredService<CaseApprovalStore>());
 builder.Services.AddSingleton<ICaseSlaPolicy, ConfiguredCaseSlaPolicy>();
 builder.Services.AddScoped<ICaseTimelineService, CaseTimelineService>();
 builder.Services.AddScoped<ICaseTimelineQueryService, CaseTimelineQueryService>();
@@ -225,6 +231,7 @@ await DatabaseInitializer.InitializeAsync(
 
 app.MapMadarEndpoints();
 app.MapMadarCaseCommentEndpoints();
+app.MapMadarCaseApprovalEndpoints();
 app.MapFallbackToFile("index.html");
 
 app.Run();
