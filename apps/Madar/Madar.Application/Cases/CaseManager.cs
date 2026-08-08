@@ -126,8 +126,12 @@ public sealed class CaseManager(
         if (!authorization.HasPermission(MadarPermissions.AssignCases))
             return Result<CaseDto>.Failure(CaseApplicationErrors.AssignmentForbidden);
 
-        if (!await userDirectory.ExistsAsync(request.AssigneeUserId, cancellationToken))
-            return Result<CaseDto>.Failure(CaseApplicationErrors.AssigneeNotFound);
+        if (!await userDirectory.IsAssignableOperatorAsync(
+                request.AssigneeUserId,
+                cancellationToken))
+        {
+            return Result<CaseDto>.Failure(CaseApplicationErrors.AssigneeNotEligible);
+        }
 
         var item = await caseRepository.GetByIdAsync(caseId, cancellationToken);
         if (item is null)
@@ -250,9 +254,9 @@ public static class CaseApplicationErrors
         "Madar.AssignmentForbidden",
         "لا تملك صلاحية إسناد الحالات.");
 
-    public static readonly Error AssigneeNotFound = Error.Validation(
-        "Madar.AssigneeNotFound",
-        "الموظف المطلوب إسناد الحالة إليه غير موجود.");
+    public static readonly Error AssigneeNotEligible = Error.Validation(
+        "Madar.AssigneeNotEligible",
+        "المستخدم المحدد غير مؤهل لاستلام الحالات التشغيلية.");
 
     public static readonly Error ProgressForbidden = Error.Forbidden(
         "Madar.ProgressForbidden",
