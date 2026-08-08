@@ -40,6 +40,7 @@ public sealed class CaseManager(
     IRepository<Case, Guid> caseRepository,
     IUserDirectory userDirectory,
     ICaseSlaPolicy slaPolicy,
+    ICaseApprovalQueryService approvalQueryService,
     IUnitOfWork unitOfWork,
     IAuditRecorder auditRecorder,
     IClock clock) : ICaseManager
@@ -198,6 +199,19 @@ public sealed class CaseManager(
                     && !authorization.HasPermission(MadarPermissions.ProgressAnyCase))
                 {
                     return Result<CaseDto>.Failure(CaseApplicationErrors.ProgressForbidden);
+                }
+
+                if (trigger == CaseTriggers.Resolve
+                    && CaseApprovalRequirement.IsRequired(item.CaseType))
+                {
+                    var latestApproval = await approvalQueryService.GetLatestForCaseAsync(
+                        item.Id,
+                        cancellationToken);
+                    if (latestApproval?.Status != CaseApprovalStatuses.Approved)
+                    {
+                        return Result<CaseDto>.Failure(
+                            CaseApprovalApplicationErrors.ApprovalRequired);
+                    }
                 }
 
                 transition = trigger == CaseTriggers.StartProgress
