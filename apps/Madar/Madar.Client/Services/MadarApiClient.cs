@@ -88,6 +88,26 @@ public sealed class MadarApiClient(HttpClient httpClient)
             request,
             cancellationToken);
 
+    public Task<ApiResult<CaseDto>> TransferCaseAsync(
+        Guid caseId,
+        TransferCaseRequest request,
+        CancellationToken cancellationToken = default) =>
+        SendProtectedAsync<CaseDto>(
+            HttpMethod.Post,
+            CaseRoutes.Transfer(caseId),
+            request,
+            cancellationToken);
+
+    public Task<ApiResult<CaseDto>> ReassignCaseAsync(
+        Guid caseId,
+        ReassignCaseRequest request,
+        CancellationToken cancellationToken = default) =>
+        SendProtectedAsync<CaseDto>(
+            HttpMethod.Post,
+            CaseRoutes.Reassign(caseId),
+            request,
+            cancellationToken);
+
     public Task<ApiResult<CaseDto>> ClaimCaseAsync(
         Guid caseId,
         CancellationToken cancellationToken = default) =>
