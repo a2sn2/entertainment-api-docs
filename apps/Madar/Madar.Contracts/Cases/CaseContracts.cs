@@ -10,6 +10,14 @@ public sealed record AssignCaseRequest(Guid AssigneeUserId);
 
 public sealed record TransitionCaseRequest(string Trigger);
 
+public sealed record EvaluateCaseSlaRequest(int Limit = 50);
+
+public sealed record CaseSlaEvaluationResponse(
+    DateTimeOffset EvaluatedUtc,
+    int EvaluatedCount,
+    int BreachedCount,
+    bool HasMore);
+
 public sealed record CaseDto(
     Guid Id,
     Guid CreatedByUserId,
@@ -22,11 +30,17 @@ public sealed record CaseDto(
     DateTimeOffset CreatedUtc,
     DateTimeOffset UpdatedUtc,
     DateTimeOffset? ResolvedUtc,
-    DateTimeOffset? ClosedUtc);
+    DateTimeOffset? ClosedUtc,
+    DateTimeOffset? SlaTargetUtc,
+    DateTimeOffset? SlaBreachedUtc,
+    DateTimeOffset? EscalatedUtc,
+    string SlaState);
 
 public static class CaseRoutes
 {
     public const string Root = "/api/cases";
+
+    public const string EvaluateSla = $"{Root}/sla/evaluate";
 
     public static string ById(Guid caseId) => $"{Root}/{caseId:D}";
 

@@ -94,10 +94,16 @@ function Initialize-LocalConfig {
         MADAR_ADMIN_PASSWORD    = New-RandomSecret
         MADAR_OPERATOR_EMAIL    = 'operator@madar.local'
         MADAR_OPERATOR_PASSWORD = New-RandomSecret
+        MADAR_SLA_ENABLED       = 'false'
+        MADAR_SLA_LOW           = '01:00:00'
+        MADAR_SLA_MEDIUM        = '01:00:00'
+        MADAR_SLA_HIGH          = '01:00:00'
+        MADAR_SLA_CRITICAL      = '01:00:00'
     }
 
     $content = @(
-        '# Local Madar development credentials. Do not commit this file.'
+        '# Local Madar development settings. Do not commit this file.'
+        '# SLA is disabled by default. Duration values are development placeholders only.'
         ($values.GetEnumerator() | Sort-Object Key | ForEach-Object { '{0}={1}' -f $_.Key, $_.Value })
     )
     [System.IO.File]::WriteAllLines($ConfigPath, $content, [System.Text.UTF8Encoding]::new($false))
@@ -117,6 +123,11 @@ function Get-ComposeEnvironment {
         MADAR_ADMIN_PASSWORD = 'unused'
         MADAR_OPERATOR_EMAIL = 'unused@madar.local'
         MADAR_OPERATOR_PASSWORD = 'unused'
+        MADAR_SLA_ENABLED = 'false'
+        MADAR_SLA_LOW = '01:00:00'
+        MADAR_SLA_MEDIUM = '01:00:00'
+        MADAR_SLA_HIGH = '01:00:00'
+        MADAR_SLA_CRITICAL = '01:00:00'
     }
 }
 
@@ -241,7 +252,8 @@ switch ($Action) {
         Write-Host 'Local development accounts:' -ForegroundColor Cyan
         Write-Host ("  Administrator: {0}" -f $config['MADAR_ADMIN_EMAIL'])
         Write-Host ("  Operator:      {0}" -f $config['MADAR_OPERATOR_EMAIL'])
-        Write-Host "Credentials are stored in $ConfigPath with local-only ACLs on Windows."
+        Write-Host ("  SLA enabled:   {0}" -f $config['MADAR_SLA_ENABLED'])
+        Write-Host "Settings are stored in $ConfigPath with local-only ACLs on Windows."
     }
 
     'status' {

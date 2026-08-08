@@ -15,3 +15,11 @@ public interface ICaseQueryService
     Task<IReadOnlyList<CaseDto>> ListAllAsync(
         CancellationToken cancellationToken = default);
 }
+
+public interface ICaseSlaQueryService
+{
+    Task<IReadOnlyList<Guid>> ListDueCaseIdsAsync(
+        DateTimeOffset evaluatedUtc,
+        int limit,
+        CancellationToken cancellationToken = default);
+}

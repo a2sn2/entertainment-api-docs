@@ -128,6 +128,8 @@ public sealed class MadarDbContextModelSnapshot : ModelSnapshot
                 .IsRequired()
                 .HasMaxLength(4000)
                 .HasColumnType("nvarchar(4000)");
+            entity.Property<DateTimeOffset?>("EscalatedUtc")
+                .HasColumnType("datetimeoffset");
             entity.Property<string>("Priority")
                 .IsRequired()
                 .HasMaxLength(20)
@@ -139,6 +141,10 @@ public sealed class MadarDbContextModelSnapshot : ModelSnapshot
                 .IsRequired()
                 .ValueGeneratedOnAddOrUpdate()
                 .HasColumnType("rowversion");
+            entity.Property<DateTimeOffset?>("SlaBreachedUtc")
+                .HasColumnType("datetimeoffset");
+            entity.Property<DateTimeOffset?>("SlaTargetUtc")
+                .HasColumnType("datetimeoffset");
             entity.Property<string>("Status")
                 .IsRequired()
                 .HasMaxLength(30)
@@ -152,6 +158,7 @@ public sealed class MadarDbContextModelSnapshot : ModelSnapshot
             entity.HasKey("Id");
             entity.HasIndex("AssignedToUserId", "Status", "UpdatedUtc");
             entity.HasIndex("CreatedByUserId", "CreatedUtc");
+            entity.HasIndex("SlaBreachedUtc", "ResolvedUtc", "SlaTargetUtc");
             entity.HasIndex("Status", "Priority", "CreatedUtc");
             entity.ToTable("Cases", "madar");
         });

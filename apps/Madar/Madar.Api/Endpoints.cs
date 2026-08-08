@@ -135,6 +135,22 @@ public static class MadarEndpoints
             .WithName("ListMadarCases")
             .Produces<IReadOnlyList<CaseDto>>();
 
+        cases.MapPost(
+                "/sla/evaluate",
+                async (
+                    EvaluateCaseSlaRequest request,
+                    ICaseSlaManager manager,
+                    CancellationToken cancellationToken) =>
+                    (await manager.EvaluateAsync(request, cancellationToken))
+                        .ToHttpResult(Results.Ok))
+            .AddEndpointFilter<AntiforgeryEndpointFilter>()
+            .RequireRateLimiting("write")
+            .WithName("EvaluateMadarCaseSla")
+            .Produces<CaseSlaEvaluationResponse>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
         cases.MapGet(
                 "/{caseId:guid}",
                 async (

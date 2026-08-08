@@ -9,15 +9,35 @@
     <MudStack Row="true" AlignItems="AlignItems.Center">
         <div>
             <MudText Typo="Typo.h3">الحالات التشغيلية</MudText>
-            <MudText Typo="Typo.body1">أنشئ حالة وتابع الإسناد ودورة المعالجة من مكان واحد.</MudText>
+            <MudText Typo="Typo.body1">أنشئ حالة وتابع الإسناد ودورة المعالجة وSLA من مكان واحد.</MudText>
         </div>
         <MudSpacer />
+        <AuthorizeView Roles="Supervisor,Administrator">
+            <Authorized>
+                <MudButton Color="Color.Warning"
+                           Variant="Variant.Outlined"
+                           Disabled="_evaluatingSla"
+                           OnClick="EvaluateSlaAsync"
+                           Class="ms-2">
+                    @(_evaluatingSla ? "جارٍ تقييم SLA..." : "تقييم SLA")
+                </MudButton>
+            </Authorized>
+        </AuthorizeView>
         <MudButton Color="Color.Primary"
                    Variant="Variant.Filled"
                    OnClick="ToggleCreate">
             @(_showCreate ? "إغلاق النموذج" : "حالة جديدة")
         </MudButton>
     </MudStack>
+
+    @if (!string.IsNullOrWhiteSpace(_slaError))
+    {
+        <MudAlert Severity="Severity.Error">@_slaError</MudAlert>
+    }
+    else if (!string.IsNullOrWhiteSpace(_slaMessage))
+    {
+        <MudAlert Severity="Severity.Info">@_slaMessage</MudAlert>
+    }
 
     @if (_showCreate)
     {
@@ -100,6 +120,8 @@
                 <MudTh>النوع</MudTh>
                 <MudTh>الأولوية</MudTh>
                 <MudTh>الحالة</MudTh>
+                <MudTh>SLA</MudTh>
+                <MudTh>الموعد</MudTh>
                 <MudTh>آخر تحديث</MudTh>
                 <MudTh></MudTh>
             </HeaderContent>
@@ -108,6 +130,8 @@
                 <MudTd DataLabel="النوع">@DisplayCaseType(item.CaseType)</MudTd>
                 <MudTd DataLabel="الأولوية">@DisplayPriority(item.Priority)</MudTd>
                 <MudTd DataLabel="الحالة">@DisplayStatus(item.Status)</MudTd>
+                <MudTd DataLabel="SLA">@DisplaySlaState(item.SlaState)</MudTd>
+                <MudTd DataLabel="الموعد">@DisplayUtc(item.SlaTargetUtc)</MudTd>
                 <MudTd DataLabel="آخر تحديث">@item.UpdatedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudTd>
                 <MudTd>
                     <MudButton Size="Size.Small"
@@ -145,8 +169,11 @@
     private bool _loading = true;
     private bool _showCreate;
     private bool _creating;
+    private bool _evaluatingSla;
     private string? _loadError;
     private string? _createError;
+    private string? _slaError;
+    private string? _slaMessage;
     private string _title = string.Empty;
     private string _description = string.Empty;
     private string _caseType = "internal-service-request";
@@ -179,6 +206,36 @@
         finally
         {
             _loading = false;
+        }
+    }
+
+    private async Task EvaluateSlaAsync()
+    {
+        if (_evaluatingSla)
+            return;
+
+        _evaluatingSla = true;
+        _slaError = null;
+        _slaMessage = null;
+        try
+        {
+            var result = await ApiClient.EvaluateCaseSlaAsync(
+                new EvaluateCaseSlaRequest(50));
+            if (result.IsFailure || result.Value is null)
+            {
+                _slaError = result.Error ?? "تعذر تقييم SLA للحالات.";
+                return;
+            }
+
+            var value = result.Value;
+            _slaMessage = value.HasMore
+                ? $"تم تقييم {value.EvaluatedCount} حالة وتسجيل {value.BreachedCount} خرقًا. توجد دفعة أخرى بحاجة للتقييم."
+                : $"تم تقييم {value.EvaluatedCount} حالة وتسجيل {value.BreachedCount} خرقًا.";
+            await LoadAsync();
+        }
+        finally
+        {
+            _evaluatingSla = false;
         }
     }
 
@@ -241,4 +298,18 @@
         "closed" => "مغلقة",
         _ => value
     };
+
+    private static string DisplaySlaState(string value) => value switch
+    {
+        "not-applicable" => "غير مفعّل",
+        "active" => "ضمن المهلة",
+        "met" => "تم ضمن المهلة",
+        "breached" => "متجاوز",
+        _ => value
+    };
+
+    private static string DisplayUtc(DateTimeOffset? value) =>
+        value.HasValue
+            ? value.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+            : "—";
 }

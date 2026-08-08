@@ -1,28 +1,18 @@
 # Madar
 
-> Status: **v0.1 first vertical slice implemented and repository-verified; v0.1.1 operational readiness closure in progress**. Madar has a working authentication → case lifecycle → SQL Server → audit timeline path plus bounded readiness/startup retry and repository operational integration. This is not a claim of production approval or completion of the broader product roadmap.
+> Status: **v0.1 and v0.1.1 are implemented and repository-verified; v0.2 SLA/escalation is in development**. Madar already has a working authentication → case lifecycle → SQL Server → audit timeline path plus bounded readiness/startup retry and repository operational integration. v0.2 adds product-owned SLA targets, breach evidence, and a bounded escalation-evaluation command. This is not a claim of production approval or completion of the broader product roadmap.
 
 Madar is an operational case-management and orchestration product built on FoundationKit. It is intentionally separate from the reusable FoundationKit packages, the Workbench architecture sample, and the Athar reference product.
 
 ## Product purpose
 
-Madar turns operational work into traceable cases that can be created, assigned, progressed through controlled states, audited, and later governed by SLA and escalation policies.
+Madar turns operational work into traceable cases that can be created, assigned, progressed through controlled states, audited, and governed by explicit service-level expectations.
 
-Representative case types include:
-
-- customer complaints;
-- transaction or operational incidents;
-- internal service requests;
-- access requests;
-- compliance cases;
-- technical escalations;
-- operational exceptions.
+Representative case types include customer complaints, operational incidents, internal service requests, access requests, compliance cases, technical escalations, and operational exceptions.
 
 ## Product boundary
 
-Madar owns its business model, database schema, Identity configuration, permissions, Arabic UI copy, runtime composition, and deployment topology. Reusable capabilities are consumed from FoundationKit only where their contracts fit the product.
-
-Runtime projects follow the repository's canonical product structure from `docs/ADDING-A-PROJECT-AR.md`:
+Madar owns its business model, database schema, Identity configuration, permissions, Arabic UI copy, SLA policy values, runtime composition, and deployment topology. Reusable capabilities are consumed from FoundationKit only where their contracts fit the product.
 
 ```text
 apps/Madar/
@@ -53,9 +43,7 @@ Madar.Client → Madar.Contracts + FoundationKit.Blazor
 
 Infrastructure dependencies do not enter Domain. The Blazor client does not reference Infrastructure or `MadarDbContext`. EF Core migrations under `Madar.Infrastructure/Migrations` are the schema source of truth.
 
-## Implemented v0.1 vertical slice
-
-The first end-to-end product path is implemented:
+## Implemented base vertical slice
 
 ```text
 Authenticate
@@ -77,76 +65,135 @@ Read audit timeline
 Blazor UI + API response
 ```
 
-The `Case` aggregate currently owns:
+The `Case` aggregate owns identity, title/description, bounded type and priority, lifecycle status, creator/assignee, timestamps, SQL Server `rowversion`, lifecycle domain events, and now the SLA snapshot/evidence fields described below.
 
-- identifier;
-- title and description;
-- bounded case type;
-- priority;
-- lifecycle status;
-- creator;
-- current assignee;
-- created/updated timestamps;
-- resolved/closed timestamps;
-- SQL Server `rowversion` concurrency metadata;
-- creation, assignment, and status-change domain events.
+The deterministic lifecycle uses `FoundationKit.Workflow`; Madar retains its product-specific states, triggers, authorization rules, SLA semantics, and UI behavior.
 
-The deterministic lifecycle uses `FoundationKit.Workflow`; Madar retains its product-specific states, triggers, authorization rules, and UI behavior.
+## v0.2 SLA model
+
+SLA is deliberately a **Madar product policy**, not a new FoundationKit package.
+
+Configuration is keyed by the existing priorities:
+
+```text
+Madar:Sla:Enabled
+Madar:Sla:Low
+Madar:Sla:Medium
+Madar:Sla:High
+Madar:Sla:Critical
+```
+
+When SLA is enabled, all four durations must be positive and no greater than 365 days. The actual duration values are deployment/product decisions. The repository does not claim that its development or CI values are production policy.
+
+At case creation Madar resolves the duration once and snapshots:
+
+```text
+SlaTargetUtc = CreatedUtc + configured duration
+```
+
+That means later configuration changes do not silently rewrite historical expectations.
+
+The current SLA state is one of:
+
+| State | Meaning |
+|---|---|
+| `not-applicable` | SLA policy was disabled when the case was created |
+| `active` | unresolved and still on/before its target |
+| `met` | resolved on or before the target |
+| `breached` | unresolved after the target or resolved after the target |
+
+The time boundary is explicit: **exactly at `SlaTargetUtc` is still within SLA; breach starts only after the target**. Resolving exactly at the target therefore counts as `met`.
+
+First breach persists:
+
+```text
+SlaBreachedUtc = SlaTargetUtc
+EscalatedUtc   = first detection/evaluation time
+```
+
+`SlaBreachedUtc` is the deterministic instant at which the case crossed the contract boundary. `EscalatedUtc` records when Madar first materialized the breach/escalation evidence.
+
+The domain operation is idempotent: evaluating an already breached case does not create another breach event or change the first escalation time.
+
+### Late resolution without prior scan
+
+A case can be resolved after its target before a periodic evaluator has run. `CaseManager` therefore checks SLA immediately after a successful `resolve` transition. A late resolution persists the breach and audit event in that same application operation.
+
+### Bounded evaluation command
+
+Madar exposes an explicit product command:
+
+```text
+POST /api/cases/sla/evaluate
+```
+
+with a bounded batch size of `1..100`. It:
+
+1. requires authentication;
+2. requires `madar.cases.sla.evaluate`;
+3. is available to Supervisor/Administrator roles in the current role map;
+4. queries only unresolved, not-yet-materialized due cases;
+5. processes at most the requested batch;
+6. records first breach/escalation audit evidence once;
+7. returns evaluated count, breached count, and whether another batch remains.
+
+This endpoint is intentionally the seam a future scheduler may call. v0.2 does **not** choose Hangfire, Quartz, a hosted service, a broker, or a cloud scheduler and does **not** extract `FoundationKit.Jobs`. Scheduling/provider selection needs real deployment evidence first.
+
+The first slice also intentionally uses elapsed UTC time from case creation. Business calendars, holidays, work shifts, and SLA pause/resume semantics are not guessed.
 
 ## FoundationKit reuse proven by Madar
 
-The current slice reuses existing FoundationKit capabilities rather than creating new reusable packages for product-specific needs:
+The product continues to reuse:
 
 - `FoundationKit.Domain` for aggregate/domain primitives;
 - `FoundationKit.Application` for results, current-user, persistence, clock, and unit-of-work contracts;
-- `FoundationKit.Infrastructure` for `EfRepository`, `EfUnitOfWork`, and domain-event dispatch after successful EF Core saves;
-- `FoundationKit.WebApi` for the request pipeline and HTTP result mapping;
-- `FoundationKit.Blazor` for typed resilient API-result handling;
+- `FoundationKit.Infrastructure` for `EfRepository`, `EfUnitOfWork`, and domain-event dispatch;
+- `FoundationKit.WebApi` for request pipeline and HTTP result mapping;
+- `FoundationKit.Blazor` for typed API-result handling;
 - `FoundationKit.Security` for rate-limit partition conventions;
 - `FoundationKit.Authorization` for role/permission evaluation;
-- `FoundationKit.Auditing` for bounded audit events, context, recorder, and sink contracts;
+- `FoundationKit.Auditing` for bounded audit events and sink contracts;
 - `FoundationKit.Workflow` for lifecycle transition resolution.
 
-ASP.NET Core Identity, SQL Server schema, audit persistence, case query rules, API endpoints, readiness policy, and the Blazor product experience remain Madar-owned adapters and behavior.
+ASP.NET Core Identity, SQL Server schema, audit persistence, SLA policy, case/SLA query rules, API endpoints, readiness policy, Docker topology, and Arabic UI remain Madar-owned behavior/adapters.
 
 ## Authentication and authorization
 
-Madar currently uses ASP.NET Core Identity with secure cookie authentication, anti-CSRF validation for write operations, password policy, login lockout, and authentication/write rate limits.
+Madar uses ASP.NET Core Identity with secure cookie authentication, anti-CSRF validation for write operations, password policy, login lockout, and authentication/write rate limits.
 
-Product roles are:
-
-| Role | v0.1 responsibility |
+| Role | Current responsibility |
 |---|---|
 | `Requester` | create cases and see cases they created |
 | `Operator` | see assigned cases and progress their own assignment |
-| `Supervisor` | read all cases, assign cases, progress any case, and close resolved cases |
+| `Supervisor` | read all cases, assign/progress/close cases, evaluate SLA batches |
 | `Administrator` | receives all currently defined Madar case permissions |
 
-The Application layer makes the authorization decision before selecting the query path. Infrastructure does not infer permissions from a user ID. Unauthorized access to a particular case is intentionally exposed as not-found rather than revealing that the case exists.
+The Application layer makes fine-grained authorization decisions. Infrastructure does not infer permissions from a user ID. Assignment validates that the selected assignee holds the `Operator` role.
 
-Assignment also validates that the selected assignee is an Identity user holding the `Operator` role.
+## SQL Server and audit persistence
 
-## SQL Server, startup, and audit persistence
-
-`MadarDbContext` is an `IdentityDbContext<MadarUser, IdentityRole<Guid>, Guid>` and owns three schemas:
+`MadarDbContext` owns:
 
 ```text
-identity/*  ASP.NET Core Identity tables
+identity/*
 madar/Cases
 audit/AuditEvents
 ```
 
-The first migration is:
+Migrations include:
 
 ```text
-apps/Madar/Madar.Infrastructure/Migrations/20260808093000_InitialMadar.cs
+20260808093000_InitialMadar.cs
+20260808110000_AddMadarSla.cs
 ```
 
-Case writes and FoundationKit audit records share the same Madar DbContext/unit-of-work boundary. The SQL audit sink stores action, subject, actor, correlation identifier, outcome, reason code, source, and bounded attributes without moving Madar persistence into the reusable auditing package.
+The SLA migration adds nullable `SlaTargetUtc`, `SlaBreachedUtc`, and `EscalatedUtc` columns plus a due-case query index. Nullable columns preserve compatibility with pre-SLA cases and policy-disabled environments.
 
-The case timeline reads those persisted audit records through an authorized Application service.
+Case writes and audit records share the same Madar DbContext/unit-of-work boundary. SLA breach auditing stores bounded attributes such as priority, target, and escalation time; case description/body content is not copied into audit attributes.
 
-Madar v0.1.1 adds a bounded startup policy:
+## Startup and readiness
+
+Madar retains the v0.1.1 database startup policy:
 
 ```text
 Madar:DatabaseStartup:ApplyMigrationsOnStartup
@@ -155,11 +202,11 @@ Madar:DatabaseStartup:MigrationAttempts
 Madar:DatabaseStartup:DelaySeconds
 ```
 
-Startup retries transient database failures within configured bounds. When automatic migration application is disabled, startup instead verifies connectivity and rejects a schema with pending migrations.
+Startup retries transient database failures within configured bounds. If automatic migrations are disabled, startup verifies connectivity and rejects a schema with pending migrations.
+
+`GET /health/live` proves process liveness. `GET /health/ready` verifies SQL connectivity and that no EF migration remains pending without exposing connection strings/infrastructure details.
 
 ## API surface
-
-The current slice exposes:
 
 ```text
 GET  /health/live
@@ -172,36 +219,29 @@ GET  /api/users/operators
 
 POST /api/cases/
 GET  /api/cases/
+POST /api/cases/sla/evaluate
 GET  /api/cases/{caseId}
 GET  /api/cases/{caseId}/timeline
 POST /api/cases/{caseId}/assignment
 POST /api/cases/{caseId}/transition
 ```
 
-`/health/live` proves only that the ASP.NET Core process is alive. `/health/ready` verifies SQL connectivity and that no EF migration remains pending, returning bounded `503` Problem Details without exposing connection strings or infrastructure details.
-
-Swagger is enabled in Development. Case write endpoints require authentication, anti-CSRF validation, and the write rate-limit policy; the Application layer applies the finer product permission/ownership rules.
+All case writes, including SLA evaluation, use the normal anti-CSRF and write-rate-limit path. The Application layer applies the finer permission and ownership rules.
 
 ## Blazor UI
-
-The current client includes:
 
 ```text
 /                         product landing page
 /login                    cookie-authentication login
-/cases                    visible-case list + create form
-/cases/{CaseId:guid}      details + assignment + lifecycle actions + audit timeline
+/cases                    list/create + SLA state/target + supervisor evaluation
+/cases/{CaseId:guid}      details + lifecycle + SLA/breach/escalation + audit timeline
 ```
 
-The client uses a typed `MadarApiClient`, same-origin cookies, anti-CSRF tokens for protected writes, and an `AuthenticationStateProvider` backed by `/api/auth/me`.
-
-Atlas verifies these routes directly from the Razor `@page` declarations and documents the associated API/readiness/operations surfaces.
+Supervisors and administrators receive a bounded “تقييم SLA” action in the case list. Case details surface the snapshotted target, SLA state, breach time, escalation time, and the SLA breach event in the audit timeline.
 
 ## Local run
 
-The repository includes a development/test topology in `deploy/madar-compose.yml`. It requires explicit temporary credentials; no reusable passwords are committed.
-
-The preferred Windows entry point is the unified manager:
+The current supported operational path is Docker:
 
 ```powershell
 .\foundationkit.ps1 start  -Target Madar -Mode Docker
@@ -210,108 +250,66 @@ The preferred Windows entry point is the unified manager:
 .\foundationkit.ps1 stop   -Target Madar
 ```
 
-The specialized launcher remains available:
+The specialized launcher is also available:
 
 ```powershell
 .\scripts\madar-product.ps1 start
-.\scripts\madar-product.ps1 status
-.\scripts\madar-product.ps1 logs
-.\scripts\madar-product.ps1 stop
 ```
 
-It generates local development credentials under:
+It creates `.local/madar-product.env`, restricts it to the current Windows account, generates local credentials, and writes SLA settings with:
 
 ```text
-.local/madar-product.env
+MADAR_SLA_ENABLED=false
 ```
 
-and restricts that file to the current Windows account through ACLs. Environment values used to invoke Compose are restored after each command.
+The duration values in that local file are placeholders only and have no production-policy meaning. To exercise SLA locally, deliberately set `MADAR_SLA_ENABLED=true` and choose product-appropriate development durations before restarting the stack.
 
-Then open:
-
-```text
-http://localhost:8100/
-http://localhost:8100/swagger
-http://localhost:8100/health/live
-http://localhost:8100/health/ready
-```
-
-The local Compose project name is `madar-product`. Stop preserves the SQL volume. Destructive `reset -Target Madar` is intentionally not exposed by the unified manager in v0.1.1.
-
-`Madar` currently has a Docker operational path only. `-Target All -Mode Native` preserves the existing Athar/Workbench native workflow and reports that Madar was skipped; `-Target All -Mode Auto` includes Madar when Docker is ready.
+The Compose project name is `madar-product`; stop preserves the SQL volume. Destructive Madar reset remains intentionally excluded from the unified manager.
 
 Read [`../../docs/MADAR-OPERATIONS-AR.md`](../../docs/MADAR-OPERATIONS-AR.md) for the detailed runbook.
 
 ## Automated verification
 
-Pull-request CI treats Madar as an executable product consumer. The repository gate covers:
+The repository gate covers the existing Madar baseline plus v0.2 behavior:
 
 - Release solution build with warnings as errors;
-- Madar domain and Application authorization/audit tests;
-- database startup retry unit tests;
-- Madar publish output;
-- non-root Madar container policy;
-- SQL Server migration/startup;
-- liveness and database-backed readiness;
-- anonymous authorization boundary;
-- administrator login with anti-CSRF protection;
-- case creation and SQL persistence;
-- operator discovery and assignment;
-- operator-visible scoped queue;
-- assigned-operator progress and resolution;
-- administrator close;
-- persisted audit timeline;
-- final closed-case read;
-- Atlas route/source verification including Madar;
-- Windows PowerShell 5.1 parsing and unified-manager diagnostics;
-- Trivy HIGH/CRITICAL fixable-vulnerability gate for the Madar image plus complete SARIF evidence;
-- preservation of the 17 reusable NuGet + 17 symbol-package invariant;
-- repository security and CodeQL workflows.
+- domain boundary tests for SLA target/state and exact-target semantics;
+- Application tests for SLA target snapshot and late-resolution breach audit;
+- authorized/bounded/idempotent SLA evaluation tests;
+- SQL migration/readiness;
+- Swagger/API surface including `EvaluateMadarCaseSla`;
+- SQL E2E with an explicitly short **CI-only** critical SLA policy proving target snapshot → elapsed breach → persisted escalation/audit → second evaluation no duplicate;
+- a separate normal case proving SLA `met` on the existing assignment/lifecycle flow;
+- existing Workbench/Athar regressions;
+- non-root container, Trivy image gate/SARIF, CodeQL, Atlas, Windows launcher, and reusable 17+17 package invariant.
 
-Exact evidence belongs to the specific PR/head that produced it; a previous green run is not proof for later behavior-relevant changes.
+Exact evidence belongs to the exact PR head that produced it; a previous green run is not proof for later behavior-relevant changes.
 
-## Deliberately deferred after v0.1.1
+## Deliberately deferred after this slice
 
-The working first slice and operational closure do **not** mean the broader Madar roadmap is complete. These remain deferred until a concrete product requirement justifies them:
-
-- configurable workflow designer;
-- SLA policies, breach tracking, and escalation rules;
-- comments and watchers;
+- production scheduler/provider selection;
+- reusable Background Jobs extraction;
+- business-hours calendars/holidays and shift arithmetic;
+- SLA pause/resume semantics;
+- multiple escalation levels/chains;
+- notification delivery on breach;
+- comments/watchers;
 - document/file handling;
-- advanced search and reporting;
-- organizational hierarchy;
-- multi-tenancy;
-- background jobs;
+- advanced search/reporting;
+- organization hierarchy and multi-tenancy;
 - WhatsApp/email/external channel ingestion;
-- production-grade backup/RPO/RTO and deployment-specific operational controls.
-
-None of these should be moved into FoundationKit merely to make the capability roadmap look more complete.
+- production backup/RPO/RTO and deployment-specific controls.
 
 ## Product rule
 
-When Madar reveals a missing capability, first decide whether the behavior is:
-
-1. **Madar-specific** — keep it inside `apps/Madar`; or
-2. **truly reusable** — extract or extend FoundationKit only with concrete evidence from multiple consumers and without breaking existing consumers.
-
-This rule is central to using Madar as real-product validation for FoundationKit rather than turning FoundationKit into a framework secretly shaped around one product.
+When Madar reveals a missing capability, first decide whether the behavior is Madar-specific or truly reusable. A reusable FoundationKit package requires concrete independent evidence; it is not created merely to reduce roadmap checkboxes.
 
 ## Security and production boundary
 
-The current automated evidence demonstrates the repository/runtime scope above. It does **not** by itself claim:
-
-- production approval;
-- independent Segregation-of-Duties approval;
-- ISO/IEC 27001 certification;
-- production secret/KMS topology;
-- production network architecture;
-- legal retention policy;
-- production backup/restore acceptance;
-- penetration/load acceptance.
-
-Those remain deployment- and organization-specific controls.
+The repository evidence does not itself claim Production Approval, independent Segregation-of-Duties approval, ISO/IEC 27001 certification, production secret/KMS/network topology, legal retention policy, backup/RPO/RTO acceptance, or penetration/load acceptance.
 
 ## Tracking
 
-- GitHub issue **#71 — Madar v0.1: establish product foundation and first case vertical slice** is complete.
-- GitHub issue **#74 — Madar v0.1.1: operational integration and readiness closure** tracks the current operational closure before SLA/escalation work begins.
+- #71 — v0.1 first case vertical slice: complete.
+- #74 — v0.1.1 operational integration/readiness closure: complete.
+- #76 — v0.2 SLA deadlines, breach detection, and escalation semantics: current work.

@@ -49,6 +49,14 @@ public static class CaseStatuses
     public const string Closed = "closed";
 }
 
+public static class CaseSlaStates
+{
+    public const string NotApplicable = "not-applicable";
+    public const string Active = "active";
+    public const string Met = "met";
+    public const string Breached = "breached";
+}
+
 public static class CaseTriggers
 {
     public const string Assign = "assign";
@@ -70,7 +78,8 @@ public sealed class Case : AggregateRoot<Guid>
         string description,
         string caseType,
         string priority,
-        DateTimeOffset createdUtc)
+        DateTimeOffset createdUtc,
+        DateTimeOffset? slaTargetUtc)
         : base(id)
     {
         CreatedByUserId = createdByUserId;
@@ -81,6 +90,7 @@ public sealed class Case : AggregateRoot<Guid>
         Status = CaseStatuses.New;
         CreatedUtc = createdUtc;
         UpdatedUtc = createdUtc;
+        SlaTargetUtc = slaTargetUtc;
     }
 
     public Guid CreatedByUserId { get; private set; }
@@ -105,6 +115,12 @@ public sealed class Case : AggregateRoot<Guid>
 
     public DateTimeOffset? ClosedUtc { get; private set; }
 
+    public DateTimeOffset? SlaTargetUtc { get; private set; }
+
+    public DateTimeOffset? SlaBreachedUtc { get; private set; }
+
+    public DateTimeOffset? EscalatedUtc { get; private set; }
+
     public byte[] RowVersion { get; private set; } = [];
 
     public static Result<Case> Create(
@@ -113,7 +129,8 @@ public sealed class Case : AggregateRoot<Guid>
         string? description,
         string? caseType,
         string? priority,
-        DateTimeOffset createdUtc)
+        DateTimeOffset createdUtc,
+        DateTimeOffset? slaTargetUtc = null)
     {
         var normalizedTitle = Normalize(title);
         var normalizedDescription = Normalize(description);
@@ -135,6 +152,9 @@ public sealed class Case : AggregateRoot<Guid>
         if (!CasePriorities.IsValid(normalizedPriority))
             return Result<Case>.Failure(CaseErrors.InvalidPriority);
 
+        if (slaTargetUtc.HasValue && slaTargetUtc.Value <= createdUtc)
+            return Result<Case>.Failure(CaseErrors.InvalidSlaTarget);
+
         var @case = new Case(
             Guid.NewGuid(),
             createdByUserId,
@@ -142,7 +162,8 @@ public sealed class Case : AggregateRoot<Guid>
             normalizedDescription,
             normalizedType,
             normalizedPriority,
-            createdUtc);
+            createdUtc,
+            slaTargetUtc);
 
         @case.RaiseDomainEvent(new CaseCreated(
             @case.Id,
@@ -214,6 +235,49 @@ public sealed class Case : AggregateRoot<Guid>
         return result;
     }
 
+    public bool EvaluateSla(DateTimeOffset evaluatedUtc)
+    {
+        if (!SlaTargetUtc.HasValue || SlaBreachedUtc.HasValue)
+            return false;
+
+        if (ResolvedUtc.HasValue && ResolvedUtc.Value <= SlaTargetUtc.Value)
+            return false;
+
+        var effectiveTime = ResolvedUtc ?? evaluatedUtc;
+        if (effectiveTime <= SlaTargetUtc.Value)
+            return false;
+
+        SlaBreachedUtc = SlaTargetUtc.Value;
+        EscalatedUtc = evaluatedUtc;
+        UpdatedUtc = evaluatedUtc;
+
+        RaiseDomainEvent(new CaseSlaBreached(
+            Id,
+            Priority,
+            SlaTargetUtc.Value,
+            evaluatedUtc));
+
+        return true;
+    }
+
+    public string GetSlaState(DateTimeOffset evaluatedUtc)
+    {
+        if (!SlaTargetUtc.HasValue)
+            return CaseSlaStates.NotApplicable;
+
+        if (ResolvedUtc.HasValue)
+        {
+            return ResolvedUtc.Value <= SlaTargetUtc.Value
+                ? CaseSlaStates.Met
+                : CaseSlaStates.Breached;
+        }
+
+        if (SlaBreachedUtc.HasValue || evaluatedUtc > SlaTargetUtc.Value)
+            return CaseSlaStates.Breached;
+
+        return CaseSlaStates.Active;
+    }
+
     private Result ApplyTransition(
         string trigger,
         Guid actorUserId,
@@ -265,6 +329,12 @@ public sealed record CaseStatusChanged(
     Guid ActorUserId,
     DateTimeOffset ChangedUtc) : IDomainEvent;
 
+public sealed record CaseSlaBreached(
+    Guid CaseId,
+    string Priority,
+    DateTimeOffset SlaTargetUtc,
+    DateTimeOffset EvaluatedUtc) : IDomainEvent;
+
 public static class CaseErrors
 {
     public static readonly Error InvalidCreator = Error.Unauthorized(
@@ -286,6 +356,10 @@ public static class CaseErrors
     public static readonly Error InvalidPriority = Error.Validation(
         "Madar.InvalidPriority",
         "أولوية الحالة غير صالحة.");
+
+    public static readonly Error InvalidSlaTarget = Error.Validation(
+        "Madar.InvalidSlaTarget",
+        "موعد SLA يجب أن يكون بعد وقت إنشاء الحالة.");
 
     public static readonly Error InvalidAssignee = Error.Validation(
         "Madar.InvalidAssignee",

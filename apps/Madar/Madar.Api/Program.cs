@@ -38,7 +38,13 @@ builder.Services.AddSingleton(MadarPermissions.CreateRolePermissionMap());
 builder.Services.AddScoped<IAuthorizationEvaluator, RolePermissionAuthorizationEvaluator>();
 
 builder.Services.AddScoped<ICaseManager, CaseManager>();
-builder.Services.AddScoped<ICaseQueryService, CaseQueryService>();
+builder.Services.AddScoped<ICaseSlaManager, CaseSlaManager>();
+builder.Services.AddScoped<CaseQueryService>();
+builder.Services.AddScoped<ICaseQueryService>(serviceProvider =>
+    serviceProvider.GetRequiredService<CaseQueryService>());
+builder.Services.AddScoped<ICaseSlaQueryService>(serviceProvider =>
+    serviceProvider.GetRequiredService<CaseQueryService>());
+builder.Services.AddSingleton<ICaseSlaPolicy, ConfiguredCaseSlaPolicy>();
 builder.Services.AddScoped<ICaseTimelineService, CaseTimelineService>();
 builder.Services.AddScoped<ICaseTimelineQueryService, CaseTimelineQueryService>();
 builder.Services.AddScoped<IUserDirectory, UserDirectory>();
@@ -162,6 +168,13 @@ builder.Services.AddOptions<MadarDatabaseStartupOptions>()
         "Madar:DatabaseStartup:DelaySeconds must be between 0 and 30.")
     .ValidateOnStart();
 
+builder.Services.AddOptions<MadarSlaOptions>()
+    .Bind(builder.Configuration.GetSection(MadarSlaOptions.SectionName))
+    .Validate(
+        options => !options.Enabled || options.Durations.All(IsValidSlaDuration),
+        "Enabled Madar SLA requires positive bounded durations for low, medium, high, and critical priorities.")
+    .ValidateOnStart();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -214,5 +227,10 @@ static bool IsBootstrapValue(string? value) =>
 
 static bool IsBootstrapPassword(string? value) =>
     !string.IsNullOrWhiteSpace(value) && value.Length >= 12;
+
+static bool IsValidSlaDuration(TimeSpan? value) =>
+    value.HasValue
+    && value.Value > TimeSpan.Zero
+    && value.Value <= TimeSpan.FromDays(365);
 
 public partial class Program;
