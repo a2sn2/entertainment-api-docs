@@ -1,4 +1,5 @@
 using Madar.Domain.Cases;
+using Madar.Domain.Organization;
 using Madar.Infrastructure.Auditing;
 using Madar.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
@@ -17,6 +18,10 @@ public sealed class MadarDbContext(
 
     public DbSet<CaseApproval> CaseApprovals => Set<CaseApproval>();
 
+    public DbSet<Department> Departments => Set<Department>();
+
+    public DbSet<DepartmentMembership> DepartmentMemberships => Set<DepartmentMembership>();
+
     public DbSet<MadarAuditRecord> AuditEvents => Set<MadarAuditRecord>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -24,6 +29,7 @@ public sealed class MadarDbContext(
         base.OnModelCreating(builder);
 
         ConfigureIdentity(builder);
+        ConfigureOrganization(builder);
         ConfigureCases(builder);
         ConfigureComments(builder);
         ConfigureApprovals(builder);
@@ -53,6 +59,58 @@ public sealed class MadarDbContext(
             .ToTable("RoleClaims", "identity");
         builder.Entity<IdentityUserToken<Guid>>()
             .ToTable("UserTokens", "identity");
+    }
+
+    private static void ConfigureOrganization(ModelBuilder builder)
+    {
+        builder.Entity<Department>(entity =>
+        {
+            entity.ToTable("Departments", "madar");
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Code)
+                .HasMaxLength(60)
+                .IsRequired();
+            entity.Property(item => item.Name)
+                .HasMaxLength(120)
+                .IsRequired();
+            entity.Property(item => item.IsActive)
+                .IsRequired();
+            entity.Property(item => item.CreatedUtc)
+                .IsRequired();
+            entity.Property(item => item.RowVersion)
+                .IsRowVersion()
+                .IsConcurrencyToken();
+
+            entity.HasIndex(item => item.Code)
+                .IsUnique();
+        });
+
+        builder.Entity<DepartmentMembership>(entity =>
+        {
+            entity.ToTable("DepartmentMemberships", "madar");
+            entity.HasKey(item => new
+            {
+                item.DepartmentId,
+                item.UserId
+            });
+            entity.Property(item => item.JoinedUtc)
+                .IsRequired();
+
+            entity.HasIndex(item => new
+            {
+                item.UserId,
+                item.DepartmentId
+            });
+
+            entity.HasOne<Department>()
+                .WithMany()
+                .HasForeignKey(item => item.DepartmentId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<MadarUser>()
+                .WithMany()
+                .HasForeignKey(item => item.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
     }
 
     private static void ConfigureCases(ModelBuilder builder)
@@ -88,6 +146,12 @@ public sealed class MadarDbContext(
             });
             entity.HasIndex(item => new
             {
+                item.DepartmentId,
+                item.Status,
+                item.UpdatedUtc
+            });
+            entity.HasIndex(item => new
+            {
                 item.AssignedToUserId,
                 item.Status,
                 item.UpdatedUtc
@@ -108,6 +172,10 @@ public sealed class MadarDbContext(
             entity.HasOne<MadarUser>()
                 .WithMany()
                 .HasForeignKey(item => item.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Department>()
+                .WithMany()
+                .HasForeignKey(item => item.DepartmentId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<MadarUser>()
                 .WithMany()
