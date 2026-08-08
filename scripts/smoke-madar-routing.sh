@@ -110,3 +110,5 @@ timeline="$(curl --fail --silent --show-error \
 python3 -c 'import json,sys; department_id=sys.argv[1]; operator_id=sys.argv[2]; items=json.load(sys.stdin); routed=[item for item in items if item["action"] == "madar.case.routed"]; claimed=[item for item in items if item["action"] == "madar.case.claimed"]; assert len(routed) == 1; assert len(claimed) == 1; assert routed[0]["attributes"] == {"departmentId":department_id}; assert claimed[0]["attributes"] == {"departmentId":department_id,"claimantUserId":operator_id}' "$department_id" "$operator_id" <<< "$timeline"
 
 echo "Madar department route + queue + claim SQL workflow passed for case $case_id in department $department_id"
+
+bash scripts/smoke-madar-department-admin.sh
