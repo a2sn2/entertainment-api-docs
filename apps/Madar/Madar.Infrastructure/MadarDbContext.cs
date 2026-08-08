@@ -77,6 +77,8 @@ public sealed class MadarDbContext(
                 .IsRequired();
             entity.Property(item => item.CreatedUtc)
                 .IsRequired();
+            entity.Property(item => item.UpdatedUtc)
+                .IsRequired();
             entity.Property(item => item.RowVersion)
                 .IsRowVersion()
                 .IsConcurrencyToken();

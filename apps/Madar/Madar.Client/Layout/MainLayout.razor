@@ -15,6 +15,11 @@
         <AuthorizeView>
             <Authorized Context="auth">
                 <MudButton Href="/cases" Variant="Variant.Text">الحالات</MudButton>
+                <AuthorizeView Roles="Administrator">
+                    <Authorized>
+                        <MudButton Href="/admin/departments" Variant="Variant.Text">إدارة الأقسام</MudButton>
+                    </Authorized>
+                </AuthorizeView>
                 <MudText Typo="Typo.body2" Class="mx-3">@auth.User.Identity?.Name</MudText>
                 <MudButton Variant="Variant.Outlined" OnClick="LogoutAsync">تسجيل الخروج</MudButton>
             </Authorized>

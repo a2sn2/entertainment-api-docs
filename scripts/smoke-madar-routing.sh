@@ -110,3 +110,21 @@ timeline="$(curl --fail --silent --show-error \
 python3 -c 'import json,sys; department_id=sys.argv[1]; operator_id=sys.argv[2]; items=json.load(sys.stdin); routed=[item for item in items if item["action"] == "madar.case.routed"]; claimed=[item for item in items if item["action"] == "madar.case.claimed"]; assert len(routed) == 1; assert len(claimed) == 1; assert routed[0]["attributes"] == {"departmentId":department_id}; assert claimed[0]["attributes"] == {"departmentId":department_id,"claimantUserId":operator_id}' "$department_id" "$operator_id" <<< "$timeline"
 
 echo "Madar department route + queue + claim SQL workflow passed for case $case_id in department $department_id"
+
+# The preceding Madar suites intentionally exercise the real per-user write limiter.
+# Restart only the API process before the independent administration suite so its
+# deterministic assertions are not coupled to permits consumed by earlier suites.
+docker compose -f deploy/madar-compose.yml restart madar-api >/dev/null
+for attempt in {1..60}; do
+  if curl --fail --silent "$base_url/health/ready" >/dev/null; then
+    break
+  fi
+  if [ "$attempt" -eq 60 ]; then
+    echo "Madar did not become ready after resetting the in-memory rate limiter." >&2
+    docker compose -f deploy/madar-compose.yml ps >&2
+    exit 1
+  fi
+  sleep 2
+done
+
+bash scripts/smoke-madar-department-admin.sh
