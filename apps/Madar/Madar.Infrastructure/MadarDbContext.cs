@@ -15,6 +15,8 @@ public sealed class MadarDbContext(
 
     public DbSet<CaseComment> CaseComments => Set<CaseComment>();
 
+    public DbSet<CaseApproval> CaseApprovals => Set<CaseApproval>();
+
     public DbSet<MadarAuditRecord> AuditEvents => Set<MadarAuditRecord>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -24,6 +26,7 @@ public sealed class MadarDbContext(
         ConfigureIdentity(builder);
         ConfigureCases(builder);
         ConfigureComments(builder);
+        ConfigureApprovals(builder);
         ConfigureAudit(builder);
     }
 
@@ -142,6 +145,47 @@ public sealed class MadarDbContext(
             entity.HasOne<MadarUser>()
                 .WithMany()
                 .HasForeignKey(item => item.AuthorUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+    }
+
+    private static void ConfigureApprovals(ModelBuilder builder)
+    {
+        builder.Entity<CaseApproval>(entity =>
+        {
+            entity.ToTable("CaseApprovals", "madar");
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Status)
+                .HasMaxLength(20)
+                .IsRequired();
+            entity.Property(item => item.RequestedUtc)
+                .IsRequired();
+            entity.Property(item => item.DecisionNotes)
+                .HasMaxLength(1000);
+            entity.Property(item => item.RowVersion)
+                .IsRowVersion()
+                .IsConcurrencyToken();
+
+            entity.HasIndex(item => new
+            {
+                item.CaseId,
+                item.RequestedUtc,
+                item.Id
+            });
+            entity.HasIndex(item => item.RequestedByUserId);
+            entity.HasIndex(item => item.ReviewedByUserId);
+
+            entity.HasOne<Case>()
+                .WithMany()
+                .HasForeignKey(item => item.CaseId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<MadarUser>()
+                .WithMany()
+                .HasForeignKey(item => item.RequestedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<MadarUser>()
+                .WithMany()
+                .HasForeignKey(item => item.ReviewedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }
