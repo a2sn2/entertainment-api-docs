@@ -92,6 +92,12 @@ public sealed class MadarDbContext(
                 item.Priority,
                 item.CreatedUtc
             });
+            entity.HasIndex(item => new
+            {
+                item.SlaBreachedUtc,
+                item.ResolvedUtc,
+                item.SlaTargetUtc
+            });
 
             entity.HasOne<MadarUser>()
                 .WithMany()
