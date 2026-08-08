@@ -29,4 +29,18 @@ public sealed class UserDirectory(UserManager<MadarUser> userManager) : IUserDir
         return user is not null
             && await userManager.IsInRoleAsync(user, MadarRoles.Operator);
     }
+
+    public async Task<string?> GetNotificationDestinationAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        if (userId == Guid.Empty)
+            return null;
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var user = await userManager.FindByIdAsync(userId.ToString("D"));
+        return string.IsNullOrWhiteSpace(user?.Email)
+            ? null
+            : user.Email.Trim();
+    }
 }
