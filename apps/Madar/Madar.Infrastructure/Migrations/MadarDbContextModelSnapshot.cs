@@ -163,6 +163,32 @@ public sealed class MadarDbContextModelSnapshot : ModelSnapshot
             entity.ToTable("Cases", "madar");
         });
 
+        modelBuilder.Entity("Madar.Domain.Cases.CaseComment", entity =>
+        {
+            entity.Property<Guid>("Id")
+                .ValueGeneratedNever()
+                .HasColumnType("uniqueidentifier");
+            entity.Property<Guid>("AuthorUserId")
+                .HasColumnType("uniqueidentifier");
+            entity.Property<string>("Body")
+                .IsRequired()
+                .HasMaxLength(2000)
+                .HasColumnType("nvarchar(2000)");
+            entity.Property<Guid>("CaseId")
+                .HasColumnType("uniqueidentifier");
+            entity.Property<DateTimeOffset>("CreatedUtc")
+                .HasColumnType("datetimeoffset");
+            entity.Property<byte[]>("RowVersion")
+                .IsConcurrencyToken()
+                .IsRequired()
+                .ValueGeneratedOnAddOrUpdate()
+                .HasColumnType("rowversion");
+            entity.HasKey("Id");
+            entity.HasIndex("AuthorUserId");
+            entity.HasIndex("CaseId", "CreatedUtc", "Id");
+            entity.ToTable("CaseComments", "madar");
+        });
+
         modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", entity =>
         {
             entity.Property<Guid>("Id")
@@ -263,6 +289,21 @@ public sealed class MadarDbContextModelSnapshot : ModelSnapshot
                 .WithMany()
                 .HasForeignKey("CreatedByUserId")
                 .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired();
+        });
+
+        modelBuilder.Entity("Madar.Domain.Cases.CaseComment", entity =>
+        {
+            entity.HasOne("Madar.Infrastructure.Identity.MadarUser", null)
+                .WithMany()
+                .HasForeignKey("AuthorUserId")
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired();
+
+            entity.HasOne("Madar.Domain.Cases.Case", null)
+                .WithMany()
+                .HasForeignKey("CaseId")
+                .OnDelete(DeleteBehavior.Cascade)
                 .IsRequired();
         });
 

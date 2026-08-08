@@ -1,5 +1,6 @@
 @page "/cases/{CaseId:guid}"
 @attribute [Authorize]
+@using Madar.Client.Components
 @inject MadarApiClient ApiClient
 
 <PageTitle>تفاصيل الحالة | مدار</PageTitle>
@@ -146,6 +147,8 @@ else if (_case is not null)
                 <MudAlert Severity="Severity.Info">يجب إسناد الحالة قبل بدء المعالجة.</MudAlert>
             }
         </MudPaper>
+
+        <CaseCommentsPanel CaseId="CaseId" />
 
         <MudPaper Elevation="0" Outlined="true" Class="pa-6">
             <MudText Typo="Typo.h5" GutterBottom="true">السجل الزمني</MudText>
@@ -322,6 +325,7 @@ else if (_case is not null)
         "madar.case.assigned" => "إسناد الحالة",
         "madar.case.transitioned" => "تغيير الحالة",
         "madar.case.sla-breached" => "تجاوز SLA وتصعيد الحالة",
+        "madar.case.comment-added" => "إضافة تعليق",
         _ => value
     };
 

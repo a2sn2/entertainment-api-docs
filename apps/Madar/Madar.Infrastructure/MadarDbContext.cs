@@ -13,6 +13,8 @@ public sealed class MadarDbContext(
 {
     public DbSet<Case> Cases => Set<Case>();
 
+    public DbSet<CaseComment> CaseComments => Set<CaseComment>();
+
     public DbSet<MadarAuditRecord> AuditEvents => Set<MadarAuditRecord>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -21,6 +23,7 @@ public sealed class MadarDbContext(
 
         ConfigureIdentity(builder);
         ConfigureCases(builder);
+        ConfigureComments(builder);
         ConfigureAudit(builder);
     }
 
@@ -106,6 +109,39 @@ public sealed class MadarDbContext(
             entity.HasOne<MadarUser>()
                 .WithMany()
                 .HasForeignKey(item => item.AssignedToUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+    }
+
+    private static void ConfigureComments(ModelBuilder builder)
+    {
+        builder.Entity<CaseComment>(entity =>
+        {
+            entity.ToTable("CaseComments", "madar");
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Body)
+                .HasMaxLength(2000)
+                .IsRequired();
+            entity.Property(item => item.CreatedUtc)
+                .IsRequired();
+            entity.Property(item => item.RowVersion)
+                .IsRowVersion()
+                .IsConcurrencyToken();
+
+            entity.HasIndex(item => new
+            {
+                item.CaseId,
+                item.CreatedUtc,
+                item.Id
+            });
+
+            entity.HasOne<Case>()
+                .WithMany()
+                .HasForeignKey(item => item.CaseId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<MadarUser>()
+                .WithMany()
+                .HasForeignKey(item => item.AuthorUserId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }

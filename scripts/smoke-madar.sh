@@ -141,6 +141,23 @@ operator_cases="$(curl --fail --silent --show-error \
   "$base_url/api/cases")"
 python3 -c 'import json,sys; case_id=sys.argv[1]; items=json.load(sys.stdin); assert any(item["id"] == case_id for item in items), "Assigned case is not visible to operator"' "$case_id" <<< "$operator_cases"
 
+comment_body='Operator follow-up comment: internal smoke marker 8f6f0b28.'
+comment_payload="$(python3 -c 'import json,sys; print(json.dumps({"body":sys.argv[1]}))' "$comment_body")"
+comment_json="$(curl --fail --silent --show-error \
+  -c "$operator_cookie" \
+  -b "$operator_cookie" \
+  -H 'Content-Type: application/json' \
+  -H "X-CSRF-TOKEN: $operator_token" \
+  -d "$comment_payload" \
+  "$base_url/api/cases/$case_id/comments")"
+comment_id="$(python3 -c 'import json,sys; item=json.load(sys.stdin); print(item["id"])' <<< "$comment_json")"
+python3 -c 'import json,sys; expected=sys.argv[1]; case_id=sys.argv[2]; item=json.load(sys.stdin); assert item["body"] == expected; assert item["caseId"] == case_id; assert item["authorDisplayName"]' "$comment_body" "$case_id" <<< "$comment_json"
+
+comments_json="$(curl --fail --silent --show-error \
+  -b "$operator_cookie" \
+  "$base_url/api/cases/$case_id/comments")"
+python3 -c 'import json,sys; comment_id=sys.argv[1]; expected=sys.argv[2]; items=json.load(sys.stdin); matches=[item for item in items if item["id"] == comment_id]; assert len(matches) == 1; assert matches[0]["body"] == expected; assert matches[0]["authorDisplayName"]' "$comment_id" "$comment_body" <<< "$comments_json"
+
 in_progress_json="$(curl --fail --silent --show-error \
   -c "$operator_cookie" \
   -b "$operator_cookie" \
@@ -175,7 +192,7 @@ test "$closed_status" = "closed"
 timeline_json="$(curl --fail --silent --show-error \
   -b "$admin_cookie" \
   "$base_url/api/cases/$case_id/timeline")"
-python3 -c 'import json,sys; items=json.load(sys.stdin); actions=[item["action"] for item in items]; assert len(items) >= 5, f"Expected at least 5 audit events, got {len(items)}"; assert "madar.case.created" in actions; assert "madar.case.assigned" in actions; assert actions.count("madar.case.transitioned") >= 3; assert "madar.case.sla-breached" not in actions' <<< "$timeline_json"
+python3 -c 'import json,sys; marker=sys.argv[1]; items=json.load(sys.stdin); actions=[item["action"] for item in items]; assert len(items) >= 6, f"Expected at least 6 audit events, got {len(items)}"; assert "madar.case.created" in actions; assert "madar.case.assigned" in actions; assert actions.count("madar.case.transitioned") >= 3; assert actions.count("madar.case.comment-added") == 1; assert "madar.case.sla-breached" not in actions; serialized=json.dumps(items); assert marker not in serialized, "Comment body leaked into audit timeline"' "$comment_body" <<< "$timeline_json"
 
 final_case="$(curl --fail --silent --show-error \
   -b "$admin_cookie" \
@@ -183,4 +200,9 @@ final_case="$(curl --fail --silent --show-error \
 final_status="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])' <<< "$final_case")"
 test "$final_status" = "closed"
 
-echo "Madar readiness + SLA + SQL/auth/case/audit smoke workflows passed for cases $sla_case_id and $case_id"
+comments_after_close="$(curl --fail --silent --show-error \
+  -b "$operator_cookie" \
+  "$base_url/api/cases/$case_id/comments")"
+python3 -c 'import json,sys; comment_id=sys.argv[1]; items=json.load(sys.stdin); assert any(item["id"] == comment_id for item in items), "Comment history disappeared after case close"' "$comment_id" <<< "$comments_after_close"
+
+echo "Madar readiness + SLA + comments + SQL/auth/case/audit smoke workflows passed for cases $sla_case_id and $case_id"
