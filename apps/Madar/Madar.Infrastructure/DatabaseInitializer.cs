@@ -3,6 +3,7 @@ using Madar.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Madar.Infrastructure;
@@ -36,26 +37,77 @@ public static class DatabaseInitializer
         MadarRoles.Administrator
     ];
 
+    private static readonly Action<ILogger, int, int, Exception?> DatabaseRetry =
+        LoggerMessage.Define<int, int>(
+            LogLevel.Warning,
+            new EventId(4101, nameof(DatabaseRetry)),
+            "Madar database startup attempt {Attempt}/{Maximum} failed. Retrying.");
+
+    private static readonly Action<ILogger, int, Exception?> DatabaseReady =
+        LoggerMessage.Define<int>(
+            LogLevel.Information,
+            new EventId(4102, nameof(DatabaseReady)),
+            "Madar database startup completed on attempt {Attempt}.");
+
     public static async Task InitializeAsync(
         IServiceProvider services,
         CancellationToken cancellationToken = default)
     {
         await using var scope = services.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<MadarDbContext>();
-        await dbContext.Database.MigrateAsync(cancellationToken);
+        var scoped = scope.ServiceProvider;
+        var dbContext = scoped.GetRequiredService<MadarDbContext>();
+        var startup = scoped
+            .GetRequiredService<IOptions<MadarDatabaseStartupOptions>>()
+            .Value;
+        var logger = scoped.GetRequiredService<ILogger<MadarDbContext>>();
 
-        var roleManager = scope.ServiceProvider
-            .GetRequiredService<RoleManager<IdentityRole<Guid>>>();
-        foreach (var role in Roles)
-            await EnsureRoleAsync(roleManager, role);
+        await DatabaseStartupRetry.ExecuteAsync(
+            async (attempt, token) =>
+            {
+                if (startup.ApplyMigrationsOnStartup)
+                {
+                    await dbContext.Database.MigrateAsync(token);
+                }
+                else
+                {
+                    if (!await dbContext.Database.CanConnectAsync(token))
+                    {
+                        throw new InvalidOperationException(
+                            "Madar database is not reachable.");
+                    }
 
-        var options = scope.ServiceProvider
+                    var pending = await dbContext.Database
+                        .GetPendingMigrationsAsync(token);
+                    if (pending.Any())
+                    {
+                        throw new InvalidOperationException(
+                            "Madar database has pending migrations while startup migration application is disabled.");
+                    }
+                }
+
+                DatabaseReady(logger, attempt, null);
+            },
+            startup.MigrationAttempts,
+            TimeSpan.FromSeconds(startup.DelaySeconds),
+            (attempt, maximum, exception) =>
+                DatabaseRetry(logger, attempt, maximum, exception),
+            cancellationToken);
+
+        if (startup.SeedRolesOnStartup)
+        {
+            var roleManager = scoped
+                .GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+            foreach (var role in Roles)
+                await EnsureRoleAsync(roleManager, role);
+        }
+
+        var options = scoped
             .GetRequiredService<IOptions<MadarBootstrapOptions>>()
             .Value;
         if (!options.Enabled)
             return;
 
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<MadarUser>>();
+        var userManager = scoped.GetRequiredService<UserManager<MadarUser>>();
         await EnsureUserAsync(
             userManager,
             options.AdministratorEmail!,
