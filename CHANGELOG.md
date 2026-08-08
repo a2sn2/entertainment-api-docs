@@ -68,6 +68,7 @@ All notable repository and package changes are documented here.
 - `.gitignore` now covers a broader set of generated, local-data, certificate/private-key, backup, package, test, and tool artifacts while preserving explicit environment-template exceptions.
 - The Windows `doctor` command now verifies that a .NET 8 SDK exists and reports visible SQL Server services, local port listeners, Git state, Docker readiness, and application health to make first-run failures diagnosable.
 - Visual Studio guidance now distinguishes its launch-profile ports from root-manager ports and uses a password placeholder instead of publishing a reusable example administrator credential.
+- GitHub workflow dependencies now use the Dependabot-proposed immutable revisions for `actions/checkout` v7.0.1, `actions/setup-dotnet` v6.0.0, and `actions/upload-artifact` v7.0.1 instead of revisions that trigger the hosted-runner Node.js 20 deprecation path.
 
 ### Fixed
 
