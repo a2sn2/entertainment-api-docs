@@ -382,4 +382,4 @@ When Madar reveals a missing capability, first decide whether the behavior is pr
 - #82 — v0.5 notifications: complete.
 - #84 — v0.6 department queues/routing: complete.
 - #86 — v0.7 department administration: complete.
-- #88 — v0.8 controlled transfer/reassignment: implementation complete; merge closure pending.
+- #88 — v0.8 controlled transfer/reassignment: complete.
