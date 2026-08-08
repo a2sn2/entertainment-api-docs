@@ -19,7 +19,7 @@ REQUIRED_SITE_FILES = {
     "portal-manifest.json",
     "favicon.svg",
 }
-REQUIRED_GROUPS = {"overview", "core", "workbench", "athar", "docs", "operations"}
+REQUIRED_GROUPS = {"overview", "core", "workbench", "athar", "madar", "docs", "operations"}
 ALLOWED_KINDS = {"ui", "api", "package", "document", "guide", "automation", "tool"}
 ALLOWED_RUNTIMES = {
     "static",
@@ -33,6 +33,7 @@ ALLOWED_RUNTIMES = {
 RAZOR_APPLICATIONS = {
     "workbench": ROOT / "samples/FoundationKit.Workbench.Client/Pages",
     "athar": ROOT / "examples/Athar/Athar.Client/Pages",
+    "madar": ROOT / "apps/Madar/Madar.Client/Pages",
 }
 PAGE_PATTERN = re.compile(r'^\s*@page\s+"([^"]+)"', re.MULTILINE)
 
@@ -138,7 +139,7 @@ def main() -> None:
         if page["kind"] == "ui":
             app = page.get("app")
             if app not in RAZOR_APPLICATIONS:
-                fail(f"UI page '{page_id}' must identify app as workbench or athar")
+                fail(f"UI page '{page_id}' must identify a known app")
             route_key = (app, page["route"])
             if route_key in ui_route_keys:
                 fail(f"duplicate UI route for {app}: {page['route']}")
