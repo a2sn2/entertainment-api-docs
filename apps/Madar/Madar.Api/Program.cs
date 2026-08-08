@@ -237,6 +237,7 @@ await DatabaseInitializer.InitializeAsync(
     app.Lifetime.ApplicationStopping);
 
 app.MapMadarEndpoints();
+app.MapMadarDepartmentEndpoints();
 app.MapMadarCaseCommentEndpoints();
 app.MapMadarCaseApprovalEndpoints();
 app.MapFallbackToFile("index.html");
