@@ -37,6 +37,21 @@ login() {
     "$base_url/api/auth/login"
 }
 
+reset_madar_api() {
+  docker compose -f deploy/madar-compose.yml restart madar-api >/dev/null
+  for attempt in {1..60}; do
+    if curl --fail --silent "$base_url/health/ready" >/dev/null; then
+      return 0
+    fi
+    if [ "$attempt" -eq 60 ]; then
+      echo "Madar did not become ready after resetting the in-memory rate limiter." >&2
+      docker compose -f deploy/madar-compose.yml ps >&2
+      exit 1
+    fi
+    sleep 2
+  done
+}
+
 admin_login="$(login "$admin_cookie" "$MADAR_ADMIN_EMAIL" "$MADAR_ADMIN_PASSWORD")"
 python3 -c 'import json,sys; item=json.load(sys.stdin); assert item["isAuthenticated"] is True; assert "Administrator" in item["roles"]' <<< "$admin_login"
 admin_token="$(csrf_token "$admin_cookie")"
@@ -111,20 +126,11 @@ python3 -c 'import json,sys; department_id=sys.argv[1]; operator_id=sys.argv[2];
 
 echo "Madar department route + queue + claim SQL workflow passed for case $case_id in department $department_id"
 
-# The preceding Madar suites intentionally exercise the real per-user write limiter.
-# Restart only the API process before the independent administration suite so its
-# deterministic assertions are not coupled to permits consumed by earlier suites.
-docker compose -f deploy/madar-compose.yml restart madar-api >/dev/null
-for attempt in {1..60}; do
-  if curl --fail --silent "$base_url/health/ready" >/dev/null; then
-    break
-  fi
-  if [ "$attempt" -eq 60 ]; then
-    echo "Madar did not become ready after resetting the in-memory rate limiter." >&2
-    docker compose -f deploy/madar-compose.yml ps >&2
-    exit 1
-  fi
-  sleep 2
-done
-
+# Keep independent SQL suites deterministic while preserving the production limiter.
+reset_madar_api
 bash scripts/smoke-madar-department-admin.sh
+
+# Department administration consumes real write permits too; isolate the v0.8
+# transfer/reassignment proof rather than weakening the application rate limit.
+reset_madar_api
+bash scripts/smoke-madar-transfer.sh
