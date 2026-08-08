@@ -39,6 +39,7 @@ public sealed class CaseManager(
     ICaseQueryService queryService,
     IRepository<Case, Guid> caseRepository,
     IUserDirectory userDirectory,
+    ICaseSlaPolicy slaPolicy,
     IUnitOfWork unitOfWork,
     IAuditRecorder auditRecorder,
     IClock clock) : ICaseManager
@@ -52,28 +53,43 @@ public sealed class CaseManager(
         if (!TryGetCurrentUserId(out var userId))
             return Result<CaseDto>.Failure(CaseApplicationErrors.AuthenticationRequired);
 
+        var createdUtc = clock.UtcNow;
+        var slaDuration = slaPolicy.ResolveDuration(request.Priority);
+        var slaTargetUtc = slaDuration.HasValue
+            ? createdUtc.Add(slaDuration.Value)
+            : (DateTimeOffset?)null;
+
         var creation = Case.Create(
             userId,
             request.Title,
             request.Description,
             request.CaseType,
             request.Priority,
-            clock.UtcNow);
+            createdUtc,
+            slaTargetUtc);
 
         if (creation.IsFailure)
             return Result<CaseDto>.Failure(creation.Error);
 
         await caseRepository.AddAsync(creation.Value, cancellationToken);
+
+        var attributes = new Dictionary<string, string>
+        {
+            ["caseType"] = creation.Value.CaseType,
+            ["priority"] = creation.Value.Priority
+        };
+        if (creation.Value.SlaTargetUtc.HasValue)
+        {
+            attributes["slaTargetUtc"] = creation.Value.SlaTargetUtc.Value
+                .ToString("O", System.Globalization.CultureInfo.InvariantCulture);
+        }
+
         await auditRecorder.RecordAsync(
             new AuditRequest(
                 "madar.case.created",
                 nameof(Case),
                 creation.Value.Id.ToString("D"),
-                Attributes: new Dictionary<string, string>
-                {
-                    ["caseType"] = creation.Value.CaseType,
-                    ["priority"] = creation.Value.Priority
-                }),
+                Attributes: attributes),
             cancellationToken);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
@@ -171,6 +187,7 @@ public sealed class CaseManager(
             return Result<CaseDto>.Failure(CaseApplicationErrors.CaseNotFound);
 
         var trigger = request.Trigger?.Trim().ToLowerInvariant() ?? string.Empty;
+        var changedUtc = clock.UtcNow;
         Result transition;
 
         switch (trigger)
@@ -184,15 +201,15 @@ public sealed class CaseManager(
                 }
 
                 transition = trigger == CaseTriggers.StartProgress
-                    ? item.StartProgress(userId, clock.UtcNow)
-                    : item.Resolve(userId, clock.UtcNow);
+                    ? item.StartProgress(userId, changedUtc)
+                    : item.Resolve(userId, changedUtc);
                 break;
 
             case CaseTriggers.Close:
                 if (!authorization.HasPermission(MadarPermissions.CloseCases))
                     return Result<CaseDto>.Failure(CaseApplicationErrors.CloseForbidden);
 
-                transition = item.Close(userId, clock.UtcNow);
+                transition = item.Close(userId, changedUtc);
                 break;
 
             default:
@@ -201,6 +218,9 @@ public sealed class CaseManager(
 
         if (transition.IsFailure)
             return Result<CaseDto>.Failure(transition.Error);
+
+        if (trigger == CaseTriggers.Resolve && item.EvaluateSla(changedUtc))
+            await RecordSlaBreachAsync(item, changedUtc, cancellationToken);
 
         await auditRecorder.RecordAsync(
             new AuditRequest(
@@ -216,6 +236,29 @@ public sealed class CaseManager(
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return await ReloadAsync(item.Id, cancellationToken);
+    }
+
+    private async Task RecordSlaBreachAsync(
+        Case item,
+        DateTimeOffset evaluatedUtc,
+        CancellationToken cancellationToken)
+    {
+        await auditRecorder.RecordAsync(
+            new AuditRequest(
+                "madar.case.sla-breached",
+                nameof(Case),
+                item.Id.ToString("D"),
+                Attributes: new Dictionary<string, string>
+                {
+                    ["priority"] = item.Priority,
+                    ["slaTargetUtc"] = item.SlaTargetUtc!.Value.ToString(
+                        "O",
+                        System.Globalization.CultureInfo.InvariantCulture),
+                    ["escalatedUtc"] = evaluatedUtc.ToString(
+                        "O",
+                        System.Globalization.CultureInfo.InvariantCulture)
+                }),
+            cancellationToken);
     }
 
     private bool TryGetCurrentUserId(out Guid userId)
