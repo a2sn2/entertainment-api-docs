@@ -22,7 +22,7 @@ Representative case types include:
 
 Madar owns its business model and product behavior. Reusable capabilities are consumed from FoundationKit when their contracts fit the product. Madar-specific concepts must not be moved into FoundationKit merely to avoid local code.
 
-Planned product projects:
+Runtime projects follow the repository's canonical product structure from `docs/ADDING-A-PROJECT-AR.md`:
 
 ```text
 apps/Madar/
@@ -31,7 +31,9 @@ apps/Madar/
 ├── Madar.Infrastructure
 ├── Madar.Contracts
 ├── Madar.Api
-├── Madar.Client
+└── Madar.Client
+
+tests/
 └── Madar.Tests
 ```
 
@@ -39,21 +41,21 @@ The intended dependency direction is:
 
 ```text
 Madar.Domain
-    ↓
-Madar.Application
-    ↓
+    ↑
+Madar.Application ← Madar.Contracts
+    ↑
 Madar.Infrastructure
-    ↓
-Madar.Api
+    ↑
+Madar.Api ← Madar.Client hosting
 
-Madar.Client → Madar.Contracts / HTTP API
+Madar.Client → Madar.Contracts + FoundationKit.Blazor
 ```
 
-Infrastructure dependencies must not leak into Domain. UI concerns must not become domain rules. EF Core migrations are the schema source of truth.
+Infrastructure dependencies must not leak into Domain. Client must not reference Infrastructure or a DbContext. EF Core migrations are the schema source of truth.
 
 ## FoundationKit capabilities expected to be reused
 
-The first implementation is expected to evaluate and reuse the existing FoundationKit packages where appropriate, especially:
+The first implementation will evaluate and reuse existing FoundationKit packages only where their current contracts fit Madar, especially:
 
 - Domain;
 - Application;
