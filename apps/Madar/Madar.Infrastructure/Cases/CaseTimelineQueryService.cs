@@ -34,8 +34,7 @@ public sealed class CaseTimelineQueryService(MadarDbContext dbContext)
             .ToArray();
     }
 
-    private static IReadOnlyDictionary<string, string> DeserializeAttributes(
-        string value) =>
+    private static Dictionary<string, string> DeserializeAttributes(string value) =>
         JsonSerializer.Deserialize<Dictionary<string, string>>(value)
         ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 }
