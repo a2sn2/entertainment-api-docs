@@ -1,14 +1,21 @@
 using Madar.Application.Security;
-using Microsoft.EntityFrameworkCore;
+using Madar.Contracts.Security;
+using Microsoft.AspNetCore.Identity;
 
 namespace Madar.Infrastructure.Identity;
 
-public sealed class UserDirectory(MadarDbContext dbContext) : IUserDirectory
+public sealed class UserDirectory(UserManager<MadarUser> userManager) : IUserDirectory
 {
-    public Task<bool> ExistsAsync(
+    public async Task<bool> IsAssignableOperatorAsync(
         Guid userId,
-        CancellationToken cancellationToken = default) =>
-        userId != Guid.Empty
-            ? dbContext.Users.AnyAsync(user => user.Id == userId, cancellationToken)
-            : Task.FromResult(false);
+        CancellationToken cancellationToken = default)
+    {
+        if (userId == Guid.Empty)
+            return false;
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var user = await userManager.FindByIdAsync(userId.ToString("D"));
+        return user is not null
+            && await userManager.IsInRoleAsync(user, MadarRoles.Operator);
+    }
 }
