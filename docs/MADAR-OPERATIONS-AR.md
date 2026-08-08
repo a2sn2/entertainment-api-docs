@@ -12,7 +12,16 @@ Madar.Client + Madar.Api
       SQL Server
 ```
 
-ويُدار عبر:
+يدعم مدير المستودع الموحد أوامر مدار الأساسية:
+
+```powershell
+.\foundationkit.ps1 start  -Target Madar -Mode Docker
+.\foundationkit.ps1 status -Target Madar
+.\foundationkit.ps1 logs   -Target Madar
+.\foundationkit.ps1 stop   -Target Madar
+```
+
+ويمكن استخدام المشغّل المتخصص مباشرةً عند الحاجة:
 
 ```powershell
 .\scripts\madar-product.ps1 start
@@ -21,13 +30,20 @@ Madar.Client + Madar.Api
 .\scripts\madar-product.ps1 stop
 ```
 
+`Madar` لا يملك مسار Native موحدًا في هذه المرحلة. لذلك:
+
+- `-Target Madar -Mode Native` مرفوض بوضوح؛
+- `-Target All -Mode Auto` يشمل Madar إذا كان Docker جاهزًا؛
+- `-Target All -Mode Native` يحافظ على مسار Athar/Workbench الأصلي ويعرض تنبيهًا بأن Madar تم تجاوزه لأنه Docker-only؛
+- `doctor` يفحص `/health/ready` على المنفذ `8100` ويعرض حالة Madar مع بقية التطبيقات.
+
 المشغّل ينشئ عند أول تشغيل ملفًا محليًا فقط داخل:
 
 ```text
 .local/madar-product.env
 ```
 
-ويولّد كلمات مرور تطوير عشوائية بدل تضمين كلمات مرور قابلة لإعادة الاستخدام في المستودع. على Windows يحاول تقييد ACL للملف على حساب Windows الحالي، ويفشل التشغيل إذا تعذر تطبيق الحماية.
+ويولّد كلمات مرور تطوير عشوائية بدل تضمين كلمات مرور قابلة لإعادة الاستخدام في المستودع. على Windows يقيّد ACL للملف على حساب Windows الحالي، ويرفض الاستمرار إذا تعذر تطبيق الحماية.
 
 لا ترفع `.local/` إلى Git.
 
@@ -36,7 +52,7 @@ Madar.Client + Madar.Api
 من جذر المستودع:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\madar-product.ps1 start
+powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 start -Target Madar -Mode Docker
 ```
 
 بعد نجاح التشغيل:
@@ -63,7 +79,7 @@ Operator:      operator@madar.local
 .\scripts\madar-product.ps1 start -Reset
 ```
 
-استخدم `-Reset` فقط عندما تقصد تغيير بيانات الدخول المحلية. إذا كانت قاعدة بيانات Docker القديمة ما زالت موجودة، فإعادة توليد كلمات المرور لا تعيد كتابة PasswordHash لمستخدم موجود تلقائيًا؛ للحذف الكامل استخدم `docker compose down --volumes` ثم أعد التشغيل.
+استخدم `-Reset` فقط عندما تقصد تغيير بيانات الدخول المحلية. إذا كانت قاعدة بيانات Docker القديمة ما زالت موجودة، فإعادة توليد كلمات المرور لا تعيد كتابة PasswordHash لمستخدم موجود تلقائيًا؛ عند الحاجة إلى حذف بيانات التطوير أيضًا أوقف stack ثم احذف volume صراحةً وأعد التشغيل.
 
 ## الفرق بين Live و Ready
 
@@ -73,9 +89,7 @@ Operator:      operator@madar.local
 GET /health/live
 ```
 
-يعني أن عملية ASP.NET Core تعمل وتستطيع الرد على HTTP.
-
-الاستجابة لا تثبت أن SQL Server أو الـschema جاهزان.
+يعني أن عملية ASP.NET Core تعمل وتستطيع الرد على HTTP. هذه الاستجابة لا تثبت أن SQL Server أو الـschema جاهزان.
 
 ### Ready
 
@@ -134,22 +148,17 @@ DelaySeconds:      0..30
 ApplyMigrationsOnStartup = false
 ```
 
-فلن يعتبر startup ناجحًا إلا إذا:
-
-- قاعدة البيانات قابلة للاتصال؛ و
-- لا توجد migrations معلقة.
-
-هذا يسمح ببيئات تتطلب تنفيذ migrations بخطوة نشر مستقلة، دون أن يدّعي التطبيق أنه Ready بينما schema أقدم من الكود.
+فلن يعتبر startup ناجحًا إلا إذا كانت قاعدة البيانات قابلة للاتصال ولا توجد migrations معلقة. هذا يسمح ببيئات تتطلب تنفيذ migrations بخطوة نشر مستقلة، دون أن يدّعي التطبيق أنه Ready بينما schema أقدم من الكود.
 
 ## الحالة والسجلات والإيقاف
 
 ### الحالة
 
 ```powershell
-.\scripts\madar-product.ps1 status
+.\foundationkit.ps1 status -Target Madar
 ```
 
-يعرض أحد الأوضاع عمليًا:
+يعرض عمليًا أحد الأوضاع:
 
 ```text
 STOPPED or unreachable
@@ -160,7 +169,7 @@ READY
 ### السجلات
 
 ```powershell
-.\scripts\madar-product.ps1 logs
+.\foundationkit.ps1 logs -Target Madar
 ```
 
 يعرض آخر سجلات Compose. لا تنسخ أسرار `.local/madar-product.env` إلى تقارير الأعطال.
@@ -168,21 +177,24 @@ READY
 ### الإيقاف
 
 ```powershell
-.\scripts\madar-product.ps1 stop
+.\foundationkit.ps1 stop -Target Madar
 ```
 
-يوقف Compose بدون حذف volume تلقائيًا.
+يوقف Compose بدون حذف volume تلقائيًا. المشروع المحلي يستخدم اسم Compose ثابتًا:
 
-لإزالة بيانات التطوير أيضًا:
+```text
+madar-product
+```
+
+ولحذف بيانات التطوير يدويًا، نفّذ ذلك فقط عندما يكون فقد البيانات مقصودًا:
 
 ```powershell
-$env:MADAR_SQL_PASSWORD = '<local value>'
-$env:MADAR_ADMIN_EMAIL = 'admin@madar.local'
-$env:MADAR_ADMIN_PASSWORD = '<local value>'
-$env:MADAR_OPERATOR_EMAIL = 'operator@madar.local'
-$env:MADAR_OPERATOR_PASSWORD = '<local value>'
-docker compose -f deploy/madar-compose.yml down --volumes --remove-orphans
+docker compose --project-name madar-product -f deploy/madar-compose.yml down --volumes --remove-orphans
 ```
+
+قد يحتاج Compose إلى قيم المتغيرات المطلوبة عند قراءة الملف؛ المسار الطبيعي الموصى به هو استخدام المشغّل ثم تنفيذ الحذف المقصود ضمن جلسة تطوير مضبوطة.
+
+مدير المستودع لا يعرّض `reset -Target Madar` عمدًا في v0.1.1 حتى لا يتحول حذف قاعدة البيانات إلى إجراء غير مقصود ضمن `-Target All`.
 
 ## التحقق الآلي
 
@@ -219,7 +231,26 @@ anonymous rejection
 → persisted audit timeline
 ```
 
-كما أن retry logic الخاص ببداية قاعدة البيانات له اختبارات آلية مستقلة داخل `Madar.Tests`.
+كما أن retry logic الخاص ببداية قاعدة البيانات له اختبارات آلية مستقلة داخل `Madar.Tests`، وWindows Launcher Check يتحقق من أن `foundationkit.ps1` ما زال صالحًا على Windows PowerShell 5.1 بعد إضافة Madar.
+
+## Atlas / Pages
+
+Atlas يحتوي قسمًا مستقلًا لـMadar ويستخرج مسارات Blazor الحقيقية من:
+
+```text
+apps/Madar/Madar.Client/Pages
+```
+
+ويتحقق آليًا من المسارات الحالية:
+
+```text
+/
+/login
+/cases
+/cases/{CaseId:guid}
+```
+
+كما يوثق Swagger وCSRF وLive/Ready ودليل التشغيل الحالي. هذا يمنع بقاء صفحة أو route حقيقي خارج خريطة المستودع دون اكتشافه في CI.
 
 ## ما الذي لا تثبته هذه الأدلة؟
 
