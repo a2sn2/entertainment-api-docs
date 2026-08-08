@@ -115,6 +115,35 @@ public sealed class MadarApiClient(HttpClient httpClient)
             request,
             cancellationToken);
 
+    public Task<ApiResult<CaseApprovalDto[]>> ListCaseApprovalsAsync(
+        Guid caseId,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<CaseApprovalDto[]>(
+            new HttpRequestMessage(
+                HttpMethod.Get,
+                CaseApprovalRoutes.ForCase(caseId)),
+            cancellationToken);
+
+    public Task<ApiResult<CaseApprovalDto>> RequestCaseApprovalAsync(
+        Guid caseId,
+        CancellationToken cancellationToken = default) =>
+        SendProtectedAsync<CaseApprovalDto>(
+            HttpMethod.Post,
+            CaseApprovalRoutes.ForCase(caseId),
+            new RequestCaseApprovalRequest(),
+            cancellationToken);
+
+    public Task<ApiResult<CaseApprovalDto>> DecideCaseApprovalAsync(
+        Guid caseId,
+        Guid approvalId,
+        DecideCaseApprovalRequest request,
+        CancellationToken cancellationToken = default) =>
+        SendProtectedAsync<CaseApprovalDto>(
+            HttpMethod.Post,
+            CaseApprovalRoutes.Decision(caseId, approvalId),
+            request,
+            cancellationToken);
+
     public Task<ApiResult<CaseTimelineEntryDto[]>> GetTimelineAsync(
         Guid caseId,
         CancellationToken cancellationToken = default) =>
