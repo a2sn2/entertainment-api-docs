@@ -114,6 +114,8 @@ public sealed class CapabilityModelTests
             capability => capability.Id == FoundationCapabilityIds.FeatureManagement);
         var localization = FoundationCapabilityCatalog.All.Single(
             capability => capability.Id == FoundationCapabilityIds.Localization);
+        var caching = FoundationCapabilityCatalog.All.Single(
+            capability => capability.Id == FoundationCapabilityIds.Caching);
         var files = FoundationCapabilityCatalog.All.Single(
             capability => capability.Id == FoundationCapabilityIds.Files);
         var kernel = FoundationCapabilityCatalog.All.Single(
@@ -125,6 +127,7 @@ public sealed class CapabilityModelTests
         Assert.Equal(CapabilityMaturity.ReferenceOnly, settings.Maturity);
         Assert.Equal(CapabilityMaturity.ReferenceOnly, featureManagement.Maturity);
         Assert.Equal(CapabilityMaturity.ReferenceOnly, localization.Maturity);
+        Assert.Equal(CapabilityMaturity.ReferenceOnly, caching.Maturity);
         Assert.Equal(CapabilityMaturity.Planned, files.Maturity);
         Assert.Equal(CapabilityMaturity.Stable, kernel.Maturity);
     }
