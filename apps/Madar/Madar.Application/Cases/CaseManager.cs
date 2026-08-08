@@ -3,6 +3,7 @@ using FoundationKit.Application.Persistence;
 using FoundationKit.Application.Results;
 using FoundationKit.Auditing;
 using FoundationKit.Authorization;
+using Madar.Application.Organization;
 using Madar.Application.Security;
 using Madar.Contracts.Cases;
 using Madar.Domain.Cases;
@@ -39,6 +40,7 @@ public sealed class CaseManager(
     ICaseQueryService queryService,
     IRepository<Case, Guid> caseRepository,
     IUserDirectory userDirectory,
+    IDepartmentDirectory departmentDirectory,
     ICaseSlaPolicy slaPolicy,
     IUnitOfWork unitOfWork,
     IAuditRecorder auditRecorder,
@@ -154,6 +156,15 @@ public sealed class CaseManager(
         var item = await caseRepository.GetByIdAsync(caseId, cancellationToken);
         if (item is null)
             return Result<CaseDto>.Failure(CaseApplicationErrors.CaseNotFound);
+
+        if (item.DepartmentId.HasValue
+            && !await departmentDirectory.IsMemberAsync(
+                item.DepartmentId.Value,
+                request.AssigneeUserId,
+                cancellationToken))
+        {
+            return Result<CaseDto>.Failure(CaseRoutingErrors.AssigneeOutsideDepartment);
+        }
 
         var assignment = item.Assign(request.AssigneeUserId, userId, clock.UtcNow);
         if (assignment.IsFailure)
