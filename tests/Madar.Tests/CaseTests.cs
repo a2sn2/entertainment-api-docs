@@ -1,4 +1,5 @@
 using Madar.Domain.Cases;
+using Xunit;
 
 namespace Madar.Tests;
 
