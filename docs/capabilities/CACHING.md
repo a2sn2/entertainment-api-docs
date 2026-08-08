@@ -43,12 +43,12 @@ This eviction policy is reference-provider behavior, not a requirement that ever
 
 Workbench's existing `CatalogService` is the first runtime consumer. The service now:
 
-1. asks `ICacheStore` for `workbench/catalog/embedded-json`;
+1. asks `ICacheStore` for `workbench/catalog/embedded-v1`;
 2. on a hit, parses the cached bytes and returns the same cloned JSON root contract;
 3. on a miss, reads the existing embedded `foundationkit.catalog.json` resource;
 4. parses the bytes, caches a defensive snapshot for 15 minutes, and returns the same contract.
 
-The Workbench host registers `InMemoryCacheStore` with explicit entry/value/TTL limits. The catalog remains an embedded repository artifact and cache is only an acceleration layer, never the source of truth.
+The Workbench host registers `InMemoryCacheStore` with explicit entry/value/TTL limits. `CatalogCachingTests` proves that two consecutive service reads produce two cache gets but only one cache set, while the SQL integration smoke flow calls `/api/catalog` twice before exercising the existing user/admin workflow. The catalog remains an embedded repository artifact and cache is only an acceleration layer, never the source of truth.
 
 No database migration, schema, authentication, authorization, or Athar runtime change is introduced by Caching v1.
 
