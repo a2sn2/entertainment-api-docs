@@ -139,8 +139,11 @@ public sealed class CaseRoutingManager(
         if (!TryGetCurrentUserId(out var userId))
             return Result<CaseDto>.Failure(CaseApplicationErrors.AuthenticationRequired);
 
-        if (!await userDirectory.IsAssignableOperatorAsync(userId, cancellationToken))
+        if (!authorization.HasPermission(MadarPermissions.ClaimCases)
+            || !await userDirectory.IsAssignableOperatorAsync(userId, cancellationToken))
+        {
             return Result<CaseDto>.Failure(CaseRoutingErrors.ClaimForbidden);
+        }
 
         var item = await caseRepository.GetByIdAsync(caseId, cancellationToken);
         if (item is null)
