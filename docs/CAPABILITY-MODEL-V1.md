@@ -4,7 +4,7 @@
 
 FoundationKit is evolving from a reusable core into a **composable system-building foundation**. The design goal is not to place every feature inside the kernel. The goal is to keep a small, stable kernel and expose reusable capabilities that a project can opt into deliberately.
 
-The model in this document is the first machine-oriented contract for that direction.
+The model in this document is the machine-oriented contract for that direction.
 
 ## Core rules
 
@@ -12,7 +12,7 @@ The model in this document is the first machine-oriented contract for that direc
 2. **Everything beyond the kernel is opt-in.** A project should be able to use FoundationKit without taking identity, workflow, files, multi-tenancy, AI, or another unrelated concern.
 3. **Capabilities declare dependencies.** Selecting `approvals`, for example, can pull the workflow/audit/authorization contracts it requires.
 4. **Providers are separate from capabilities.** SQL Server, Redis, SMTP, cloud services, search engines, message brokers, and AI vendors are adapters rather than business-core dependencies.
-5. **Tooling consumes the same graph.** Future CLI and Workbench composers must use the same capability IDs and dependency rules instead of maintaining a second hidden model.
+5. **Tooling consumes the same graph.** CLI and future visual composition must use the same capability IDs and dependency rules instead of maintaining a second hidden model.
 6. **Maturity is explicit.** A capability listed in the catalog is not automatically implemented or production-ready.
 7. **Profiles are starting points, not frameworks inside the framework.** A project can start from a profile, include more capabilities, and remove independent capabilities.
 8. **A required dependency cannot be excluded.** Composition must fail rather than silently generate an invalid project.
@@ -32,7 +32,7 @@ The model in this document is the first machine-oriented contract for that direc
 |---|---|
 | `Stable` | Reusable FoundationKit contract/implementation is part of the current supported core. |
 | `Preview` | Reusable direction exists but is still being hardened or broadened. |
-| `ReferenceOnly` | A real reusable boundary or package is implemented and/or proven by a reference consumer, but adoption, compatibility, provider, or production evidence is still too limited for `Preview` or `Stable`. |
+| `ReferenceOnly` | A real reusable boundary, package, provider adapter, or tooling surface is implemented/proven, but adoption, compatibility, provider, or production evidence is still too limited for `Preview` or `Stable`. |
 | `Planned` | Defined in the capability graph so dependencies and future composition remain coherent; implementation must not be claimed yet. |
 
 This distinction is mandatory. A profile containing a planned capability describes a **target system composition**, not a claim that the feature can already be generated. `ReferenceOnly` likewise does not mean production approval; it means the stated reference-level surface is real and must be described without implying broader unimplemented behavior.
@@ -108,7 +108,7 @@ This distinction is mandatory. A profile containing a planned capability describ
 - `tooling-cli`
 - `tooling-workbench`
 
-The catalog will grow only when a capability has a clear boundary, dependency model, ownership, tests, and documentation.
+The catalog grows only when a capability has a clear boundary, dependency model, ownership, tests, and documentation.
 
 ## Profiles
 
@@ -194,7 +194,7 @@ The resolver returns dependencies before dependants and rejects unknown IDs or c
 
 ## Project manifest direction
 
-A future project composer will consume a manifest shaped like this:
+The current Composer consumes a manifest shaped like this for validation/explanation:
 
 ```json
 {
@@ -206,19 +206,19 @@ A future project composer will consume a manifest shaped like this:
 }
 ```
 
-The same manifest must eventually drive:
+Today that manifest drives capability/profile resolution, strict validation, maturity checks, and dependency explanation. It does **not** generate projects yet.
 
-- CLI generation;
-- Workbench visual composition;
-- package/project selection;
+Future generation may use the same manifest for:
+
+- project/package selection;
 - provider wiring;
 - generated architecture documentation;
-- capability/maturity warnings;
-- tests that prove the generated composition is valid.
+- visual Workbench composition;
+- golden-template tests proving generated projects build/test.
 
 ## Implementation sequence
 
-The capability catalog is not permission to create dozens of empty packages. Extraction should be vertical, consumer-driven, and evidence-driven.
+The capability catalog is not permission to create dozens of empty packages. Extraction is vertical, consumer-driven, and evidence-driven.
 
 Current sequence status:
 
@@ -231,11 +231,11 @@ Current sequence status:
 7. Settings v1 and Feature Management v1 — **extracted as reusable packages with Workbench runtime evidence; both remain `ReferenceOnly`**.
 8. Localization v1 — **extracted as `FoundationKit.Localization` with Workbench runtime proof for canonical culture resolution, RTL/LTR directionality, and opaque time-zone identity; maturity remains `ReferenceOnly`**.
 9. Caching v1 — **extracted as `FoundationKit.Caching` with bounded byte-cache contracts, a BCL-only in-memory reference provider, and Workbench catalog-read consumer evidence; maturity remains `ReferenceOnly`**.
-10. Issue #64 — **the autonomous package-extraction sequence now reaches its consumer/policy stop boundary; the next repository-only step is a consistency sweep**.
+10. Repository consistency sweep — **implementation aligns Composer maturity, 17-package human metadata/Atlas/README, unified packaging, and drift-prevention checks; final merge still requires exact-head verification**.
 11. Files/Documents, Jobs/Messaging, Organization/Multi-Tenancy, Search/Reporting/Privacy/Retention, and finance building blocks — **remain planned until consumer evidence and/or required product semantics justify extraction**.
 12. Idempotency and Concurrency — **retain current Athar reference behavior, but no separate reusable package is claimed yet**.
 13. Provider-family expansion — **planned beyond the current SQL Server reference behavior and SMTP provider v1**.
-14. CLI and visual Workbench composer expansion — **planned beyond current reference tooling; existing Composer reference tooling must be described separately from the unimplemented interactive `foundationkit new` direction**.
+14. Composer expansion — **current `capabilities`, `profiles`, `validate`, `validate --require-stable`, and `explain` surface is `ReferenceOnly`; interactive `foundationkit new`, project generation, provider wiring generation, and visual composition remain planned**.
 15. AI abstractions — **planned only after provider-neutral boundaries and observability rules are established**.
 
 Advanced approvals such as sequential, parallel, quorum, delegation, escalation, and dynamic approver routing remain future work even though the narrow v1 capability is implemented. Notification templates, preferences, queues, retry orchestration, delivery history, and additional channels likewise remain future work beyond the reference v1 boundary. The extracted SMTP provider is a narrow transport adapter; it does not imply those higher-level notification capabilities.
