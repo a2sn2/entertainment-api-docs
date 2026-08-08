@@ -764,12 +764,57 @@ function Invoke-Pack {
     Write-Host "Packages: $(Join-Path $ArtifactsDirectory 'packages')" -ForegroundColor Green
 }
 
+function Test-LocalHealthEndpoint {
+    param(
+        [Parameter(Mandatory)][string]$Url,
+        [int]$Attempts = 2,
+        [int]$TimeoutSeconds = 3
+    )
+
+    for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+        try {
+            Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec $TimeoutSeconds | Out-Null
+            return $true
+        }
+        catch {
+            if ($attempt -lt $Attempts) {
+                Start-Sleep -Milliseconds 250
+            }
+        }
+    }
+
+    return $false
+}
+
+function Get-TrackedProcessId {
+    param([string]$PidFile)
+
+    if ([string]::IsNullOrWhiteSpace($PidFile) -or -not (Test-Path $PidFile)) {
+        return $null
+    }
+
+    $pidText = (Get-Content $PidFile -Raw).Trim()
+    $processId = 0
+    if (-not [int]::TryParse($pidText, [ref]$processId)) {
+        return $null
+    }
+
+    try {
+        Get-Process -Id $processId -ErrorAction Stop | Out-Null
+        return $processId
+    }
+    catch {
+        return $null
+    }
+}
+
 function Invoke-Doctor {
     Write-Section "FoundationKit doctor"
 
     $required = @("git", "dotnet", "powershell")
     $optional = @("docker", "cloudflared", "python", "node", "sqlcmd")
     $failed = $false
+    $portOwners = @{}
 
     foreach ($name in $required) {
         if (Test-Command $name) {
@@ -831,6 +876,7 @@ function Invoke-Doctor {
                     Write-Host "[PASS] Port $port is available." -ForegroundColor Green
                 }
                 else {
+                    $portOwners[$port] = [int]$listener.OwningProcess
                     Write-Host "[INFO] Port $port is already listening (PID $($listener.OwningProcess))." -ForegroundColor DarkYellow
                 }
             }
@@ -848,17 +894,30 @@ function Invoke-Doctor {
         }
     }
 
+    $atharPidFile = Join-Path $LocalDirectory "athar-native.pid"
     foreach ($health in @(
-        @{ Name = "Athar"; Url = "http://localhost:8090/health/ready" },
-        @{ Name = "Workbench Native"; Url = "$WorkbenchNativeUrl/api/health" },
-        @{ Name = "Workbench Docker"; Url = "$WorkbenchDockerUrl/api/health" })) {
-        try {
-            Invoke-RestMethod -Uri $health.Url -TimeoutSec 2 | Out-Null
+        @{ Name = "Athar"; Url = "http://127.0.0.1:8090/health/ready"; Port = 8090; PidFile = $atharPidFile },
+        @{ Name = "Workbench Native"; Url = "http://127.0.0.1:5057/api/health"; Port = 5057; PidFile = $WorkbenchPidFile },
+        @{ Name = "Workbench Docker"; Url = "http://127.0.0.1:8080/api/health"; Port = 8080; PidFile = $null })) {
+        $isHealthy = Test-LocalHealthEndpoint -Url $health.Url
+        if ($isHealthy) {
             Write-Host "[RUNNING] $($health.Name): $($health.Url)" -ForegroundColor Green
+            continue
         }
-        catch {
-            Write-Host "[STOPPED] $($health.Name)" -ForegroundColor DarkGray
+
+        $trackedProcessId = Get-TrackedProcessId -PidFile $health.PidFile
+        if ($null -ne $trackedProcessId) {
+            Write-Host "[DEGRADED] $($health.Name): process PID $trackedProcessId is running, but health did not respond at $($health.Url)." -ForegroundColor Yellow
+            continue
         }
+
+        if ($portOwners.ContainsKey([int]$health.Port)) {
+            $listenerPid = $portOwners[[int]$health.Port]
+            Write-Host "[LISTENING] $($health.Name): port $($health.Port) is owned by PID $listenerPid, but health did not respond at $($health.Url)." -ForegroundColor Yellow
+            continue
+        }
+
+        Write-Host "[STOPPED] $($health.Name)" -ForegroundColor DarkGray
     }
 
     if ($failed) {
