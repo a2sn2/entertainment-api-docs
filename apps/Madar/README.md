@@ -1,6 +1,6 @@
 # Madar
 
-> Status: **v0.1–v0.5 are implemented and repository-verified; v0.6 department queues/routing is in development**. Repository evidence demonstrates the implemented product behavior for the exact verified commit; it is not Production Approval or an external security certification.
+> Status: **v0.1–v0.6 are implemented and repository-verified; v0.7 department administration is in development**. Repository evidence demonstrates the implemented product behavior for the exact verified commit; it is not Production Approval or an external security certification.
 
 Madar is an operational case-management and orchestration product built on FoundationKit. It is intentionally separate from the reusable FoundationKit packages, the Workbench architecture sample, and the Athar reference product.
 
@@ -52,7 +52,8 @@ v0.2   SLA deadlines + first breach/escalation evidence
 v0.3   Append-only case comments
 v0.4   Maker-checker approval gate for sensitive case resolution
 v0.5   Bounded operational notifications
-v0.6   Department queues + routing + operator claim flow   ← current
+v0.6   Department queues + routing + operator claim flow
+v0.7   Department administration + safe Operator membership   ← current
 ```
 
 The deterministic lifecycle remains:
@@ -73,9 +74,9 @@ assigned
 in-progress → resolved → closed
 ```
 
-## v0.6 department routing model
+## Department routing model
 
-Madar currently owns:
+Madar owns:
 
 ```text
 Department
@@ -84,6 +85,7 @@ Department
 ├── Name
 ├── IsActive
 ├── CreatedUtc
+├── UpdatedUtc
 └── RowVersion
 
 DepartmentMembership
@@ -103,6 +105,33 @@ An Operator can read a department queue only when the user is an active member o
 If a routed case is assigned directly, the assignee must be an Operator member of the routed department. Unrouted direct assignment remains supported for compatibility with the previous product flow.
 
 See [`../../docs/MADAR-DEPARTMENT-ROUTING-AR.md`](../../docs/MADAR-DEPARTMENT-ROUTING-AR.md).
+
+## v0.7 department administration
+
+v0.7 makes the proven v0.6 department model operationally manageable instead of depending on bootstrap-only organization data.
+
+The product permission is:
+
+```text
+madar.departments.manage
+```
+
+and is granted only to `Administrator` in the current role map.
+
+Department codes are normalized and immutable after creation. Administrators may rename departments and change active state. Deactivation fails closed while any non-closed case still belongs to the department, preventing operational work from disappearing behind an inactive department.
+
+Membership administration is intentionally narrower than generic user/role management. An added member must already exist and hold the `Operator` role. Duplicate membership returns a deterministic conflict. Removal is blocked while the Operator still owns any non-closed assigned case in that department.
+
+Administration audit actions contain bounded operational identifiers only:
+
+```text
+madar.department.created
+madar.department.updated
+madar.department.member-added
+madar.department.member-removed
+```
+
+See [`../../docs/MADAR-DEPARTMENT-ADMINISTRATION-AR.md`](../../docs/MADAR-DEPARTMENT-ADMINISTRATION-AR.md).
 
 ## Existing SLA behavior
 
@@ -145,7 +174,7 @@ Madar currently reuses:
 - `FoundationKit.Approvals` — generic approval eligibility/decision semantics;
 - `FoundationKit.Notifications` and `.Smtp` — bounded notification contract/current provider.
 
-Madar does **not** introduce `FoundationKit.Organization` in v0.6. Department semantics are product-owned until another independent product demonstrates a sufficiently general organization contract.
+Madar does **not** introduce `FoundationKit.Organization` in v0.7. Department routing and administration remain product-owned until another independent product demonstrates a sufficiently general organization contract.
 
 ## Authentication and authorization
 
@@ -156,7 +185,7 @@ Madar uses ASP.NET Core Identity with secure cookie authentication, anti-CSRF va
 | `Requester` | create cases and see cases they created |
 | `Operator` | see assigned cases, see member department queues, claim queued cases, progress own assignments |
 | `Supervisor` | read all cases, route/assign/progress/close, evaluate SLA, make approval decisions |
-| `Administrator` | receives all currently defined Madar permissions |
+| `Administrator` | receives all currently defined Madar permissions, including department/membership administration |
 
 Application code makes fine-grained authorization decisions. Infrastructure does not infer permissions merely from a user ID.
 
@@ -182,9 +211,10 @@ Current migrations include:
 20260808143000_AddCaseComments
 20260808155000_AddCaseApprovals
 20260808173000_AddDepartmentRouting
+20260808180000_AddDepartmentAdministration
 ```
 
-The routing migration adds the two organization tables plus nullable case `DepartmentId`/`RoutedUtc`, FK constraints, and queue/membership indexes.
+The routing migration adds the two organization tables plus nullable case `DepartmentId`/`RoutedUtc`, FK constraints, and queue/membership indexes. The v0.7 migration adds non-null `Departments.UpdatedUtc`, backfilled from `CreatedUtc` for existing records, while retaining SQL rowversion concurrency.
 
 ## Bootstrap and local run
 
@@ -203,14 +233,14 @@ The specialized launcher remains:
 .\scripts\madar-product.ps1 start
 ```
 
-When bootstrap is enabled, Madar seeds Administrator and Operator users. v0.6 additionally ensures one deterministic development/CI department:
+When bootstrap is enabled, Madar seeds Administrator and Operator users. It also ensures one deterministic development/CI department:
 
 ```text
 Code: operations
 Name: العمليات
 ```
 
-and attaches the seeded Operator to it. This is test/development topology, not a production organization policy.
+and attaches the seeded Operator to it. This is test/development topology, not a production organization policy. v0.7 adds the administration flow for creating and managing additional product-owned departments.
 
 Read [`../../docs/MADAR-OPERATIONS-AR.md`](../../docs/MADAR-OPERATIONS-AR.md) for the runbook.
 
@@ -238,6 +268,13 @@ POST /api/cases/sla/evaluate
 GET  /api/departments
 GET  /api/departments/{departmentId}/queue
 
+GET    /api/admin/departments
+POST   /api/admin/departments
+PUT    /api/admin/departments/{departmentId}
+GET    /api/admin/departments/{departmentId}/members
+POST   /api/admin/departments/{departmentId}/members
+DELETE /api/admin/departments/{departmentId}/members/{userId}
+
 GET/POST /api/cases/{caseId}/comments
 GET/POST /api/cases/{caseId}/approvals
 POST     /api/cases/{caseId}/approvals/{approvalId}/decision
@@ -252,21 +289,22 @@ All writes use the normal anti-CSRF/write-rate-limit path. Application handlers 
 /login                    cookie-authentication login
 /cases                    cases + department queue + create + SLA evaluation
 /cases/{CaseId:guid}      details + route/claim/assign + lifecycle + collaboration + audit
+/admin/departments        Administrator department + Operator membership management
 ```
 
-No separate organization-administration route is introduced in v0.6.
+The administration route is role-gated in the client and remains permission-gated again in the Application layer.
 
 ## Automated verification
 
 The repository gate is expected to cover:
 
 - Release solution build with warnings as errors;
-- Madar domain/application routing and membership tests;
+- Madar domain/application routing, department administration, and membership tests;
 - migration/snapshot/readiness correctness;
-- Swagger coverage for route, claim, and queue endpoints;
+- authenticated API/Swagger surface for routing and department administration;
 - existing Workbench and Athar regressions;
-- existing Madar v0.1–v0.5 SQL/E2E flow;
-- dedicated Madar SQL route → queue → claim → persisted audit proof;
+- existing Madar v0.1–v0.6 SQL/E2E flows;
+- dedicated Madar SQL administration proof covering create → membership → guarded deactivation/removal → close → cleanup → persisted audit metadata;
 - Security Scan and CodeQL;
 - unchanged reusable 17 NuGet + 17 symbol package output.
 
@@ -276,9 +314,10 @@ Exact evidence belongs to the exact PR head that produced it. A previous green r
 
 - production organization tree / branch/team hierarchy;
 - multi-tenancy;
+- arbitrary product user/role administration;
+- transfer/reassignment workflow and rich transfer history;
 - multiple queues per department;
 - skill-based, round-robin, capacity, presence, or automatic routing;
-- department administration UI;
 - reusable `FoundationKit.Organization` extraction;
 - routing-specific business-hours/SLA policy;
 - durable notification outbox/retries/background scheduler;
@@ -298,4 +337,5 @@ When Madar reveals a missing capability, first decide whether the behavior is pr
 - #78 — v0.3 comments: complete.
 - #80 — v0.4 approvals: complete.
 - #82 — v0.5 notifications: complete.
-- #84 — v0.6 department queues/routing: current work.
+- #84 — v0.6 department queues/routing: complete.
+- #86 — v0.7 department administration: current work.
