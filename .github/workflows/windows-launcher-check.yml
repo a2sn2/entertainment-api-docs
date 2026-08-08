@@ -91,6 +91,63 @@ jobs:
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File ".\foundationkit.ps1" doctor
 
+      - name: Verify doctor does not misreport tracked listeners as stopped
+        shell: powershell
+        run: |
+          $listenerScript = Join-Path $env:RUNNER_TEMP "foundationkit-doctor-listener.ps1"
+          @'
+          $listeners = @(
+              [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 5057),
+              [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 8090)
+          )
+
+          try {
+              foreach ($listener in $listeners) {
+                  $listener.Start()
+              }
+              Start-Sleep -Seconds 45
+          }
+          finally {
+              foreach ($listener in $listeners) {
+                  $listener.Stop()
+              }
+          }
+          '@ | Set-Content -Path $listenerScript -Encoding ASCII
+
+          $stub = Start-Process `
+              -FilePath "powershell.exe" `
+              -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $listenerScript) `
+              -PassThru
+
+          try {
+              New-Item -ItemType Directory -Force -Path ".local" | Out-Null
+              [System.IO.File]::WriteAllText(".local\athar-native.pid", $stub.Id.ToString())
+              [System.IO.File]::WriteAllText(".local\workbench-native.pid", $stub.Id.ToString())
+              Start-Sleep -Seconds 1
+
+              $doctorOutput = (& powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\foundationkit.ps1" doctor 2>&1 | Out-String)
+              Write-Host $doctorOutput
+
+              if ($doctorOutput -match "\[STOPPED\] Athar") {
+                  throw "Doctor falsely reported tracked Athar listener as stopped."
+              }
+              if ($doctorOutput -match "\[STOPPED\] Workbench Native") {
+                  throw "Doctor falsely reported tracked Workbench listener as stopped."
+              }
+              if ($doctorOutput -notmatch "\[DEGRADED\] Athar") {
+                  throw "Doctor did not distinguish Athar process/listener state from health readiness."
+              }
+              if ($doctorOutput -notmatch "\[DEGRADED\] Workbench Native") {
+                  throw "Doctor did not distinguish Workbench process/listener state from health readiness."
+              }
+          }
+          finally {
+              Stop-Process -Id $stub.Id -Force -ErrorAction SilentlyContinue
+              Remove-Item ".local\athar-native.pid" -Force -ErrorAction SilentlyContinue
+              Remove-Item ".local\workbench-native.pid" -Force -ErrorAction SilentlyContinue
+              Remove-Item $listenerScript -Force -ErrorAction SilentlyContinue
+          }
+
       - name: Smoke test Athar Native status command
         shell: powershell
         run: |
