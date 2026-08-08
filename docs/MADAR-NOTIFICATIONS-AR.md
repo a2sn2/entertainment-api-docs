@@ -49,7 +49,18 @@ Madar:Notifications:Smtp:Password
 Madar:Notifications:Smtp:FromAddress
 ```
 
-القيمة الافتراضية للمنفذ هي `587` و`EnableSsl=true`.
+وفي `deploy/madar-compose.yml` تقابلها المتغيرات الاختيارية:
+
+```text
+MADAR_SMTP_HOST
+MADAR_SMTP_PORT
+MADAR_SMTP_ENABLE_SSL
+MADAR_SMTP_USERNAME
+MADAR_SMTP_PASSWORD
+MADAR_SMTP_FROM_ADDRESS
+```
+
+القيمة الافتراضية للمنفذ هي `587` و`EnableSsl=true`، بينما Host وFromAddress يبقيان فارغين افتراضيًا في بيئة التطوير/CI حتى لا يجري اتصال SMTP خارجي.
 
 إذا كان `Host` أو `FromAddress` فارغًا، يعتبر المزود غير مهيأ ويرجع:
 
