@@ -69,7 +69,7 @@ else if (_case is not null)
 
         <AuthorizeView Roles="Supervisor,Administrator">
             <Authorized>
-                @if (_case.Status == "new")
+                @if (_case.Status == "new" && !_case.DepartmentId.HasValue)
                 {
                     <MudPaper Elevation="0" Outlined="true" Class="pa-6">
                         <MudText Typo="Typo.h5" GutterBottom="true">توجيه الحالة</MudText>
