@@ -6,6 +6,27 @@ namespace Madar.Tests;
 public sealed class CaseTransferDomainTests
 {
     [Fact]
+    public void Route_AlreadyRoutedCase_IsRejectedSoTransferRemainsExplicit()
+    {
+        var now = Utc(8);
+        var sourceDepartment = Guid.NewGuid();
+        var targetDepartment = Guid.NewGuid();
+        var supervisor = Guid.NewGuid();
+        var @case = CreateCase(now);
+        Assert.True(@case.RouteToDepartment(sourceDepartment, supervisor, now.AddMinutes(1)).IsSuccess);
+
+        var result = @case.RouteToDepartment(
+            targetDepartment,
+            supervisor,
+            now.AddMinutes(2));
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(CaseErrors.InvalidRoutingState, result.Error);
+        Assert.Equal(sourceDepartment, @case.DepartmentId);
+        Assert.Equal(now.AddMinutes(1), @case.RoutedUtc);
+    }
+
+    [Fact]
     public void Transfer_InProgressCase_MovesToNewQueueAndPreservesSlaEvidence()
     {
         var now = Utc(8);
