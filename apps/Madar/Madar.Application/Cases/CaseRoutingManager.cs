@@ -25,6 +25,16 @@ public interface ICaseRoutingManager
         RouteCaseRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<Result<CaseDto>> TransferAsync(
+        Guid caseId,
+        TransferCaseRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<Result<CaseDto>> ReassignAsync(
+        Guid caseId,
+        ReassignCaseRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<Result<CaseDto>> ClaimAsync(
         Guid caseId,
         CancellationToken cancellationToken = default);
@@ -39,7 +49,8 @@ public sealed class CaseRoutingManager(
     IDepartmentDirectory departmentDirectory,
     IUnitOfWork unitOfWork,
     IAuditRecorder auditRecorder,
-    IClock clock) : ICaseRoutingManager
+    IClock clock,
+    ICaseNotificationCoordinator? notificationCoordinator = null) : ICaseRoutingManager
 {
     public async Task<Result<IReadOnlyList<DepartmentDto>>> ListDepartmentsAsync(
         CancellationToken cancellationToken = default)
@@ -100,10 +111,10 @@ public sealed class CaseRoutingManager(
         if (!authorization.HasPermission(MadarPermissions.RouteCases))
             return Result<CaseDto>.Failure(CaseRoutingErrors.RouteForbidden);
 
-        var department = await departmentDirectory.GetAsync(
+        var department = await GetActiveDepartmentAsync(
             request.DepartmentId,
             cancellationToken);
-        if (department is null || !department.IsActive)
+        if (department is null)
             return Result<CaseDto>.Failure(CaseRoutingErrors.DepartmentNotFound);
 
         var item = await caseRepository.GetByIdAsync(caseId, cancellationToken);
@@ -129,6 +140,142 @@ public sealed class CaseRoutingManager(
             cancellationToken);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+        return await ReloadAsync(item.Id, cancellationToken);
+    }
+
+    public async Task<Result<CaseDto>> TransferAsync(
+        Guid caseId,
+        TransferCaseRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (!TryGetCurrentUserId(out var userId))
+            return Result<CaseDto>.Failure(CaseApplicationErrors.AuthenticationRequired);
+
+        if (!authorization.HasPermission(MadarPermissions.TransferCases))
+            return Result<CaseDto>.Failure(CaseRoutingErrors.TransferForbidden);
+
+        var department = await GetActiveDepartmentAsync(
+            request.DepartmentId,
+            cancellationToken);
+        if (department is null)
+            return Result<CaseDto>.Failure(CaseRoutingErrors.DepartmentNotFound);
+
+        var item = await caseRepository.GetByIdAsync(caseId, cancellationToken);
+        if (item is null)
+            return Result<CaseDto>.Failure(CaseApplicationErrors.CaseNotFound);
+
+        var previousDepartmentId = item.DepartmentId;
+        var previousAssigneeUserId = item.AssignedToUserId;
+        var previousStatus = item.Status;
+        var transferred = item.TransferToDepartment(
+            department.Id,
+            userId,
+            clock.UtcNow);
+        if (transferred.IsFailure)
+            return Result<CaseDto>.Failure(transferred.Error);
+
+        var attributes = new Dictionary<string, string>
+        {
+            ["fromDepartmentId"] = previousDepartmentId!.Value.ToString("D"),
+            ["toDepartmentId"] = department.Id.ToString("D"),
+            ["previousStatus"] = previousStatus
+        };
+        if (previousAssigneeUserId.HasValue)
+        {
+            attributes["previousAssigneeUserId"] =
+                previousAssigneeUserId.Value.ToString("D");
+        }
+
+        await auditRecorder.RecordAsync(
+            new AuditRequest(
+                "madar.case.transferred",
+                nameof(Case),
+                item.Id.ToString("D"),
+                Attributes: attributes),
+            cancellationToken);
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+        return await ReloadAsync(item.Id, cancellationToken);
+    }
+
+    public async Task<Result<CaseDto>> ReassignAsync(
+        Guid caseId,
+        ReassignCaseRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (!TryGetCurrentUserId(out var userId))
+            return Result<CaseDto>.Failure(CaseApplicationErrors.AuthenticationRequired);
+
+        if (!authorization.HasPermission(MadarPermissions.ReassignCases))
+            return Result<CaseDto>.Failure(CaseRoutingErrors.ReassignmentForbidden);
+
+        if (!await userDirectory.IsAssignableOperatorAsync(
+                request.AssigneeUserId,
+                cancellationToken))
+        {
+            return Result<CaseDto>.Failure(CaseApplicationErrors.AssigneeNotEligible);
+        }
+
+        var item = await caseRepository.GetByIdAsync(caseId, cancellationToken);
+        if (item is null)
+            return Result<CaseDto>.Failure(CaseApplicationErrors.CaseNotFound);
+
+        if (item.DepartmentId.HasValue)
+        {
+            var department = await GetActiveDepartmentAsync(
+                item.DepartmentId.Value,
+                cancellationToken);
+            if (department is null)
+                return Result<CaseDto>.Failure(CaseRoutingErrors.DepartmentNotFound);
+
+            if (!await departmentDirectory.IsMemberAsync(
+                    item.DepartmentId.Value,
+                    request.AssigneeUserId,
+                    cancellationToken))
+            {
+                return Result<CaseDto>.Failure(CaseRoutingErrors.AssigneeOutsideDepartment);
+            }
+        }
+
+        var previousAssigneeUserId = item.AssignedToUserId;
+        var reassigned = item.Reassign(
+            request.AssigneeUserId,
+            userId,
+            clock.UtcNow);
+        if (reassigned.IsFailure)
+            return Result<CaseDto>.Failure(reassigned.Error);
+
+        var attributes = new Dictionary<string, string>
+        {
+            ["previousAssigneeUserId"] = previousAssigneeUserId!.Value.ToString("D"),
+            ["assigneeUserId"] = request.AssigneeUserId.ToString("D"),
+            ["status"] = item.Status
+        };
+        if (item.DepartmentId.HasValue)
+            attributes["departmentId"] = item.DepartmentId.Value.ToString("D");
+
+        await auditRecorder.RecordAsync(
+            new AuditRequest(
+                "madar.case.reassigned",
+                nameof(Case),
+                item.Id.ToString("D"),
+                Attributes: attributes),
+            cancellationToken);
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        if (notificationCoordinator is not null)
+        {
+            await notificationCoordinator.NotifyAssignmentAsync(
+                item.Id,
+                request.AssigneeUserId,
+                cancellationToken);
+        }
+
         return await ReloadAsync(item.Id, cancellationToken);
     }
 
@@ -180,6 +327,18 @@ public sealed class CaseRoutingManager(
         return await ReloadAsync(item.Id, cancellationToken);
     }
 
+    private async Task<DepartmentDto?> GetActiveDepartmentAsync(
+        Guid departmentId,
+        CancellationToken cancellationToken)
+    {
+        var department = await departmentDirectory.GetAsync(
+            departmentId,
+            cancellationToken);
+        return department is { IsActive: true }
+            ? department
+            : null;
+    }
+
     private bool TryGetCurrentUserId(out Guid userId)
     {
         userId = currentUser.UserId ?? Guid.Empty;
@@ -210,6 +369,14 @@ public static class CaseRoutingErrors
     public static readonly Error RouteForbidden = Error.Forbidden(
         "Madar.Case.RouteForbidden",
         "لا تملك صلاحية توجيه الحالات إلى الأقسام.");
+
+    public static readonly Error TransferForbidden = Error.Forbidden(
+        "Madar.Case.TransferForbidden",
+        "لا تملك صلاحية نقل الحالات بين الأقسام.");
+
+    public static readonly Error ReassignmentForbidden = Error.Forbidden(
+        "Madar.Case.ReassignmentForbidden",
+        "لا تملك صلاحية إعادة إسناد الحالات.");
 
     public static readonly Error CaseNotRouted = Error.Conflict(
         "Madar.Case.NotRouted",
