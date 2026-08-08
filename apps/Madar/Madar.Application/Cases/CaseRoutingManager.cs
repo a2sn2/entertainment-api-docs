@@ -270,7 +270,7 @@ public sealed class CaseRoutingManager(
 
         if (notificationCoordinator is not null)
         {
-            await notificationCoordinator.NotifyAssignmentAsync(
+            await notificationCoordinator.NotifyReassignmentAsync(
                 item.Id,
                 request.AssigneeUserId,
                 cancellationToken);
