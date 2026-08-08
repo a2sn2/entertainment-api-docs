@@ -163,6 +163,40 @@ public sealed class MadarDbContextModelSnapshot : ModelSnapshot
             entity.ToTable("Cases", "madar");
         });
 
+        modelBuilder.Entity("Madar.Domain.Cases.CaseApproval", entity =>
+        {
+            entity.Property<Guid>("Id")
+                .ValueGeneratedNever()
+                .HasColumnType("uniqueidentifier");
+            entity.Property<Guid>("CaseId")
+                .HasColumnType("uniqueidentifier");
+            entity.Property<string>("DecisionNotes")
+                .HasMaxLength(1000)
+                .HasColumnType("nvarchar(1000)");
+            entity.Property<DateTimeOffset?>("DecidedUtc")
+                .HasColumnType("datetimeoffset");
+            entity.Property<Guid?>("ReviewedByUserId")
+                .HasColumnType("uniqueidentifier");
+            entity.Property<Guid>("RequestedByUserId")
+                .HasColumnType("uniqueidentifier");
+            entity.Property<DateTimeOffset>("RequestedUtc")
+                .HasColumnType("datetimeoffset");
+            entity.Property<byte[]>("RowVersion")
+                .IsConcurrencyToken()
+                .IsRequired()
+                .ValueGeneratedOnAddOrUpdate()
+                .HasColumnType("rowversion");
+            entity.Property<string>("Status")
+                .IsRequired()
+                .HasMaxLength(20)
+                .HasColumnType("nvarchar(20)");
+            entity.HasKey("Id");
+            entity.HasIndex("CaseId", "RequestedUtc", "Id");
+            entity.HasIndex("RequestedByUserId");
+            entity.HasIndex("ReviewedByUserId");
+            entity.ToTable("CaseApprovals", "madar");
+        });
+
         modelBuilder.Entity("Madar.Domain.Cases.CaseComment", entity =>
         {
             entity.Property<Guid>("Id")
@@ -290,6 +324,26 @@ public sealed class MadarDbContextModelSnapshot : ModelSnapshot
                 .HasForeignKey("CreatedByUserId")
                 .OnDelete(DeleteBehavior.Restrict)
                 .IsRequired();
+        });
+
+        modelBuilder.Entity("Madar.Domain.Cases.CaseApproval", entity =>
+        {
+            entity.HasOne("Madar.Domain.Cases.Case", null)
+                .WithMany()
+                .HasForeignKey("CaseId")
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired();
+
+            entity.HasOne("Madar.Infrastructure.Identity.MadarUser", null)
+                .WithMany()
+                .HasForeignKey("RequestedByUserId")
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired();
+
+            entity.HasOne("Madar.Infrastructure.Identity.MadarUser", null)
+                .WithMany()
+                .HasForeignKey("ReviewedByUserId")
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity("Madar.Domain.Cases.CaseComment", entity =>
