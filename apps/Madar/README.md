@@ -179,7 +179,7 @@ Current migrations include:
 ```text
 20260808093000_InitialMadar
 20260808110000_AddMadarSla
-20260808140000_AddCaseComments
+20260808143000_AddCaseComments
 20260808155000_AddCaseApprovals
 20260808173000_AddDepartmentRouting
 ```
