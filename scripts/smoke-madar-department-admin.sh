@@ -5,13 +5,11 @@ base_url="${MADAR_BASE_URL:-http://localhost:8100}"
 : "${MADAR_ADMIN_EMAIL:?MADAR_ADMIN_EMAIL is required}"
 : "${MADAR_ADMIN_PASSWORD:?MADAR_ADMIN_PASSWORD is required}"
 : "${MADAR_OPERATOR_EMAIL:?MADAR_OPERATOR_EMAIL is required}"
-: "${MADAR_OPERATOR_PASSWORD:?MADAR_OPERATOR_PASSWORD is required}"
 : "${MADAR_SQL_PASSWORD:?MADAR_SQL_PASSWORD is required}"
 
 workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
-admin_cookie="$workdir/admin.cookies"
-operator_cookie="$workdir/operator.cookies"
+admin_cookie="${MADAR_ADMIN_COOKIE_FILE:-$workdir/admin.cookies}"
 
 csrf_token() {
   local cookie_file="$1"
@@ -50,12 +48,21 @@ expect_status() {
   fi
 }
 
-admin_login="$(login "$admin_cookie" "$MADAR_ADMIN_EMAIL" "$MADAR_ADMIN_PASSWORD")"
-python3 -c 'import json,sys; item=json.load(sys.stdin); assert item["isAuthenticated"] is True; assert "Administrator" in item["roles"]' <<< "$admin_login"
-admin_token="$(csrf_token "$admin_cookie")"
+if [ -n "${MADAR_ADMIN_COOKIE_FILE:-}" ] \
+  && [ -n "${MADAR_ADMIN_CSRF_TOKEN:-}" ] \
+  && [ -n "${MADAR_OPERATOR_ID:-}" ]; then
+  admin_token="$MADAR_ADMIN_CSRF_TOKEN"
+  operator_id="$MADAR_OPERATOR_ID"
+else
+  admin_login="$(login "$admin_cookie" "$MADAR_ADMIN_EMAIL" "$MADAR_ADMIN_PASSWORD")"
+  python3 -c 'import json,sys; item=json.load(sys.stdin); assert item["isAuthenticated"] is True; assert "Administrator" in item["roles"]' <<< "$admin_login"
+  admin_token="$(csrf_token "$admin_cookie")"
 
-operator_login="$(login "$operator_cookie" "$MADAR_OPERATOR_EMAIL" "$MADAR_OPERATOR_PASSWORD")"
-operator_id="$(python3 -c 'import json,sys; item=json.load(sys.stdin); assert item["isAuthenticated"] is True; assert "Operator" in item["roles"]; print(item["userId"])' <<< "$operator_login")"
+  operators_json="$(curl --fail --silent --show-error \
+    -b "$admin_cookie" \
+    "$base_url/api/users/operators")"
+  operator_id="$(python3 -c 'import json,sys; expected=sys.argv[1].lower(); items=json.load(sys.stdin); matches=[item for item in items if (item.get("email") or "").lower() == expected]; assert len(matches) == 1, matches; print(matches[0]["userId"])' "$MADAR_OPERATOR_EMAIL" <<< "$operators_json")"
+fi
 
 department_code="support-admin-$(date +%s)-$RANDOM"
 create_department_payload="$(python3 -c 'import json,sys; print(json.dumps({"code":sys.argv[1],"name":"الدعم التشغيلي"}))' "$department_code")"
