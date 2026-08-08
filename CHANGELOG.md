@@ -22,8 +22,12 @@ All notable repository and package changes are documented here.
 - Arabic production-readiness gate and new-project guide.
 - Reserved `apps/` boundary for future real products.
 - Madar product foundation under `apps/Madar` as the first real application consumer, with Domain, Application, Infrastructure, Contracts, API, Blazor Client, and `tests/Madar.Tests` projects.
-- Madar's first product-owned `Case` aggregate with bounded case types/priorities, assignment events, and the deterministic `new -> assigned -> in-progress -> resolved -> closed` lifecycle using `FoundationKit.Workflow`.
-- Madar case contracts, application persistence/query ports, minimal API/Blazor host shells, and initial domain lifecycle tests; SQL persistence, authentication runtime wiring, SLA/escalation, and full case UI remain subsequent vertical-slice work.
+- Madar's product-owned `Case` aggregate with bounded case types/priorities, assignment events, SQL Server `rowversion`, and the deterministic `new -> assigned -> in-progress -> resolved -> closed` lifecycle using `FoundationKit.Workflow`.
+- Madar v0.1 runtime composition with ASP.NET Core Identity cookies, product roles/permissions, anti-CSRF write protection, FoundationKit rate-limit partitions, `CaseManager` orchestration, SQL Server persistence/migrations, and FoundationKit repository/unit-of-work reuse.
+- Madar SQL-backed audit sink and authorized case timeline using `FoundationKit.Auditing`, preserving actor/correlation/action/attributes without moving product persistence into the reusable capability.
+- Madar API surface for authentication, current user, operator discovery, case create/list/view/assign/transition, and case audit timeline, plus an Arabic Blazor login/case-list/create/details/lifecycle/timeline experience.
+- Madar non-root Docker topology and SQL/auth/case/audit smoke workflow; pull-request CI now publishes Madar and verifies the complete first vertical slice against a real SQL Server container.
+- Madar Application authorization tests covering create/audit, assignment permission and operator eligibility, assignee-owned progression, denied cross-operator progression, and scoped versus privileged case listing.
 - `FoundationKit Atlas`, a creative Arabic GitHub Pages portal that documents every Workbench and Athar Blazor route, core package, API surface, document, and operational proof.
 - Pages manifest validation that compares documented UI routes with the actual Razor `@page` declarations.
 - Detailed Arabic Visual Studio 2026 guide for SQL Server, User Secrets, startup projects, user/admin workflows, and troubleshooting.
@@ -60,8 +64,10 @@ All notable repository and package changes are documented here.
 
 - The repository now distinguishes reusable core, architecture Workbench, the Athar reference product, real applications beginning with Madar, and a dedicated static documentation portal.
 - `FoundationKit.sln` and the normal solution build/test surface now include Madar while reusable package output remains seventeen NuGet packages plus seventeen symbol packages.
+- Madar's first slice now uses FoundationKit `IRepository<Case, Guid>`, `EfRepository`, `IUnitOfWork`, `EfUnitOfWork`, authorization evaluation, auditing, and workflow boundaries instead of introducing duplicate product-level infrastructure abstractions.
+- Madar case visibility is decided in the Application layer: ordinary users query created/assigned cases while privileged roles may select the all-cases query; Infrastructure does not infer authorization from a user identifier.
+- CI publishes and tests Workbench, Athar, and Madar, with the SQL integration job now exercising Madar authentication, migration, case assignment/lifecycle, Blazor/API surface, and persisted audit timeline in addition to existing Workbench/Athar checks.
 - `FoundationKit.sln`, repository verification, CI, documentation, and package versions now include Athar.
-- CI publishes and tests both the Workbench and Athar against real SQL Server containers.
 - GitHub Pages now deploys the standalone Arabic repository atlas instead of presenting one product client as the entire repository.
 - Reusable package output increases to seventeen NuGet packages plus seventeen symbol packages after adding Caching to the Localization, Settings/Feature Management, and earlier reusable capability family.
 - Capability extraction guidance requires a concrete consumer and a reusable independent boundary before creating a new package; Files/Documents, Jobs, Messaging, Idempotency, Concurrency, Organization, Multi-Tenancy, Search, Reporting, Privacy, Retention, Money, and Numbering remain Planned/ReferenceOnly where current evidence is product-specific or incomplete.
