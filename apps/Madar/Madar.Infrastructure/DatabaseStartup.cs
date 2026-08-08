@@ -40,9 +40,17 @@ internal static class DatabaseStartupRetry
                 await operation(attempt, cancellationToken).ConfigureAwait(false);
                 return;
             }
-            catch (Exception exception) when (attempt < attempts)
+            catch (OperationCanceledException)
+                when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
             {
                 lastError = exception;
+                if (attempt >= attempts)
+                    break;
+
                 onRetry?.Invoke(attempt, attempts, exception);
                 await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
@@ -71,6 +79,11 @@ public sealed class MadarReadinessProbe(MadarDbContext dbContext) : IMadarReadin
             var pending = await dbContext.Database
                 .GetPendingMigrationsAsync(cancellationToken);
             return !pending.Any();
+        }
+        catch (OperationCanceledException)
+            when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch
         {
