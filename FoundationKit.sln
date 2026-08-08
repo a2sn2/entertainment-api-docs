@@ -64,6 +64,20 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoundationKit.Localization"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FoundationKit.Caching", "src\FoundationKit.Caching\FoundationKit.Caching.csproj", "{A8B2F5D3-6E11-4D8A-9A71-100000000031}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Madar.Domain", "apps\Madar\Madar.Domain\Madar.Domain.csproj", "{A8B2F5D3-6E11-4D8A-9A71-100000000032}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Madar.Contracts", "apps\Madar\Madar.Contracts\Madar.Contracts.csproj", "{A8B2F5D3-6E11-4D8A-9A71-100000000033}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Madar.Application", "apps\Madar\Madar.Application\Madar.Application.csproj", "{A8B2F5D3-6E11-4D8A-9A71-100000000034}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Madar.Infrastructure", "apps\Madar\Madar.Infrastructure\Madar.Infrastructure.csproj", "{A8B2F5D3-6E11-4D8A-9A71-100000000035}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Madar.Api", "apps\Madar\Madar.Api\Madar.Api.csproj", "{A8B2F5D3-6E11-4D8A-9A71-100000000036}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Madar.Client", "apps\Madar\Madar.Client\Madar.Client.csproj", "{A8B2F5D3-6E11-4D8A-9A71-100000000037}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Madar.Tests", "tests\Madar.Tests\Madar.Tests.csproj", "{A8B2F5D3-6E11-4D8A-9A71-100000000038}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -194,6 +208,34 @@ Global
 		{A8B2F5D3-6E11-4D8A-9A71-100000000031}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A8B2F5D3-6E11-4D8A-9A71-100000000031}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A8B2F5D3-6E11-4D8A-9A71-100000000031}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000032}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000032}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000032}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000032}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000033}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000033}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000033}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000033}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000034}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000034}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000034}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000034}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000035}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000035}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000035}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000035}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000036}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000036}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000036}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000036}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000037}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000037}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000037}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000037}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000038}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000038}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000038}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A8B2F5D3-6E11-4D8A-9A71-100000000038}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

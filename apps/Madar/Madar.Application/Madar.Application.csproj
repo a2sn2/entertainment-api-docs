@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Madar.Application</RootNamespace>
+    <AssemblyName>Madar.Application</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Madar.Domain\Madar.Domain.csproj" />
+    <ProjectReference Include="..\Madar.Contracts\Madar.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\src\FoundationKit.Application\FoundationKit.Application.csproj" />
+    <ProjectReference Include="..\..\..\src\FoundationKit.Authorization\FoundationKit.Authorization.csproj" />
+    <ProjectReference Include="..\..\..\src\FoundationKit.Auditing\FoundationKit.Auditing.csproj" />
+  </ItemGroup>
+</Project>

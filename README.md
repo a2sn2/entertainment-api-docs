@@ -2,16 +2,17 @@
 
 **FoundationKit** is a composable .NET foundation for building business systems without turning the reusable core into one giant application.
 
-The repository separates four concerns deliberately:
+The repository separates reusable foundation code from its consumers deliberately:
 
 ```text
 Reusable FoundationKit packages
         ↓
 Optional capabilities and provider adapters
         ↓
-Workbench — executable architecture/reference consumer
-        ↓
-Athar — complete Arabic product/reference implementation
+Consumers
+├── Workbench — executable architecture/reference consumer
+├── Athar — complete Arabic reference product
+└── Madar — first real product under apps/ (in development)
 ```
 
 The current reusable output is **17 NuGet packages + 17 symbol packages**. Package existence does not mean every capability is `Stable`; maturity is tracked explicitly in the capability model.
@@ -27,11 +28,11 @@ foundationkit-dotnet/
 ├─ src/                         reusable FoundationKit packages
 ├─ samples/                     FoundationKit Workbench
 ├─ examples/Athar/              complete Arabic reference product
-├─ apps/                        reserved for future real products
+├─ apps/Madar/                  first real product, currently in development
 ├─ tools/
 │  ├─ FoundationKit.CatalogGenerator
 │  └─ FoundationKit.Composer
-├─ tests/                       core, Workbench, and Athar tests
+├─ tests/                       core, Workbench, Athar, and Madar tests
 ├─ catalog/                     human and machine capability catalogs
 ├─ docs/                        architecture, capability, security, and runbooks
 ├─ deploy/                      Docker Compose definitions
@@ -189,6 +190,22 @@ Read [`examples/Athar/README.md`](examples/Athar/README.md).
 
 ---
 
+## Madar
+
+`apps/Madar` is the first real product developed under the repository's `apps/` boundary. It is an operational case-management and orchestration product intended to validate FoundationKit against a product domain that is materially different from Athar.
+
+The current Madar foundation includes six runtime projects plus `tests/Madar.Tests`, a product-owned `Case` aggregate, bounded case types and priorities, and a deterministic lifecycle built with `FoundationKit.Workflow`:
+
+```text
+new → assigned → in-progress → resolved → closed
+```
+
+The current API and Blazor projects are foundation shells. Authentication/authorization runtime wiring, Madar SQL Server persistence and migrations, case endpoints/UI, audit persistence, SLA/escalation, search/reporting, documents, external channels, and multi-tenancy are **not** claimed as implemented yet.
+
+Read [`apps/Madar/README.md`](apps/Madar/README.md) and track the initial product slice in GitHub issue #71.
+
+---
+
 ## FoundationKit Composer v1
 
 The current Composer is **real reference tooling**, but it does **not** generate a project yet.
@@ -330,7 +347,7 @@ Workbench migrations live under:
 samples/FoundationKit.Workbench/Infrastructure/Migrations/
 ```
 
-Athar migrations live under its product infrastructure project.
+Athar migrations live under its product infrastructure project. Madar will own its migrations under its product infrastructure project when SQL persistence is implemented.
 
 **EF migrations are the schema source of truth.** Documentation must not be treated as a substitute for migration/model inspection.
 
@@ -379,7 +396,7 @@ Pull-request CI verifies the repository as one system, including applicable stag
 - CycloneDX dependency SBOM generation;
 - Release build with analyzers;
 - generated capability/catalog drift checks;
-- unit and architecture tests;
+- unit and architecture tests, including Madar when its projects are present in the solution;
 - Workbench and Athar publish;
 - all reusable NuGet + symbol packages;
 - artifact SHA-256 evidence;
@@ -388,6 +405,8 @@ Pull-request CI verifies the repository as one system, including applicable stag
 - Trivy repository/container scanning;
 - black-box negative security tests;
 - CodeQL for C# and JavaScript/TypeScript.
+
+Madar SQL/E2E verification will be added when its persistence and runtime vertical slice are implemented; the current foundation does not claim those checks yet.
 
 Exact evidence belongs to the pull request/head that produced it. A green historical run is not proof for a newer security- or behavior-relevant head.
 
@@ -438,7 +457,7 @@ The following areas need a real product/provider decision or stronger consumer e
 - project generation and visual composition;
 - AI abstractions after real provider-neutral consumer requirements exist.
 
-That stop rule is intentional: FoundationKit should be broadly useful without silently embedding one company's hierarchy, one product's policy, or one vendor's infrastructure.
+That stop rule is intentional: FoundationKit should be broadly useful without silently embedding one company's hierarchy, one product's policy, or one vendor's infrastructure. Madar is now one of the concrete product consumers that can provide evidence for future extraction decisions.
 
 ---
 
@@ -460,6 +479,7 @@ Start here:
 12. [`docs/ADDING-A-PROJECT-AR.md`](docs/ADDING-A-PROJECT-AR.md)
 13. [`docs/PRODUCTION-READINESS-AR.md`](docs/PRODUCTION-READINESS-AR.md)
 14. [`examples/Athar/README.md`](examples/Athar/README.md)
+15. [`apps/Madar/README.md`](apps/Madar/README.md)
 
 The GitHub Pages Atlas is generated from `site/portal-manifest.json` and provides a navigable view of the same repository surfaces.
 
