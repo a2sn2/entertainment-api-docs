@@ -14,6 +14,10 @@ public interface ICaseQueryService
 
     Task<IReadOnlyList<CaseDto>> ListAllAsync(
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<CaseDto>> ListDepartmentQueueAsync(
+        Guid departmentId,
+        CancellationToken cancellationToken = default);
 }
 
 public interface ICaseSlaQueryService

@@ -2,7 +2,32 @@
 
 This product changelog records Madar-specific behavior. Repository-wide reusable FoundationKit changes remain documented in the root `CHANGELOG.md`.
 
-## [Unreleased] — v0.5 operational case notifications
+## [Unreleased] — v0.6 department queues and routing
+
+### Added
+
+- Product-owned `Department` and `DepartmentMembership` models with SQL Server persistence, bounded codes/names, active state, membership indexes, and rowversion on departments.
+- Nullable `DepartmentId` and `RoutedUtc` case routing state so historical/unrouted cases remain valid.
+- Supervisor/Administrator routing of a new unassigned case to an active department without changing its lifecycle state from `new`.
+- Membership-scoped department queue reads, with existing broad-read authority allowing Supervisor/Administrator visibility across active departments.
+- Operator claim flow that requires both the Operator claim permission and active department membership, then reuses the existing Case assignment workflow to move `new → assigned`.
+- Routed direct-assignment defense: an Operator must belong to the routed department; legacy unrouted direct assignment remains supported.
+- `madar.case.routed` and `madar.case.claimed` audit evidence with bounded department/user identifiers only.
+- Deterministic local/CI bootstrap `operations` department with the seeded Operator as a member.
+- Arabic case-details routing/claim controls and a membership-aware department queue embedded in the existing cases page.
+- Unit coverage for domain routing, membership-scoped queue reads, claim behavior, and routed assignment restrictions.
+
+### Deliberately deferred
+
+- reusable `FoundationKit.Organization` extraction until independent product evidence exists;
+- organization trees, branches, teams, multiple queues per department, or multi-tenancy;
+- skill/round-robin/load/capacity/presence based automatic routing;
+- department-administration UI;
+- routing-history aggregate beyond bounded audit evidence;
+- queue-specific SLA/business-hours policy;
+- WhatsApp/email ingestion and files/documents.
+
+## [v0.5] — operational case notifications
 
 ### Added
 

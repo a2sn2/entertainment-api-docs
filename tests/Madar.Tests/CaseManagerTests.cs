@@ -3,8 +3,10 @@ using FoundationKit.Application.Persistence;
 using FoundationKit.Auditing;
 using FoundationKit.Authorization;
 using Madar.Application.Cases;
+using Madar.Application.Organization;
 using Madar.Application.Security;
 using Madar.Contracts.Cases;
+using Madar.Contracts.Organization;
 using Madar.Contracts.Security;
 using Madar.Domain.Cases;
 using Xunit;
@@ -28,6 +30,8 @@ public sealed class CaseManagerTests
         Assert.True(result.IsSuccess);
         Assert.Equal(CaseStatuses.New, result.Value.Status);
         Assert.Equal(currentUser.UserId, result.Value.CreatedByUserId);
+        Assert.Null(result.Value.DepartmentId);
+        Assert.Null(result.Value.RoutedUtc);
         Assert.Null(result.Value.SlaTargetUtc);
         Assert.Equal(CaseSlaStates.NotApplicable, result.Value.SlaState);
         Assert.Single(fixture.Repository.Items);
@@ -102,6 +106,29 @@ public sealed class CaseManagerTests
         Assert.Contains(
             fixture.AuditSink.Events,
             auditEvent => auditEvent.Action == "madar.case.assigned");
+    }
+
+    [Fact]
+    public async Task Assign_RoutedCase_RejectsOperatorOutsideDepartment()
+    {
+        var supervisor = TestCurrentUser.Authenticated(MadarRoles.Supervisor);
+        var assignee = Guid.NewGuid();
+        var departmentId = Guid.NewGuid();
+        var fixture = CreateFixture(supervisor, [assignee]);
+        var item = CreateCase(Guid.NewGuid(), fixture.Clock.UtcNow);
+        Assert.True(item.RouteToDepartment(
+            departmentId,
+            supervisor.UserId!.Value,
+            fixture.Clock.UtcNow).IsSuccess);
+        fixture.Repository.Seed(item);
+
+        var result = await fixture.Manager.AssignAsync(
+            item.Id,
+            new AssignCaseRequest(assignee));
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(CaseRoutingErrors.AssigneeOutsideDepartment, result.Error);
+        Assert.Equal(CaseStatuses.New, item.Status);
     }
 
     [Fact]
@@ -213,9 +240,11 @@ public sealed class CaseManagerTests
         TestCurrentUser currentUser,
         IEnumerable<Guid>? knownUsers = null,
         FakeCaseRepository? repository = null,
-        ICaseSlaPolicy? slaPolicy = null)
+        ICaseSlaPolicy? slaPolicy = null,
+        FakeDepartmentDirectory? departmentDirectory = null)
     {
         repository ??= new FakeCaseRepository();
+        departmentDirectory ??= new FakeDepartmentDirectory();
         var clock = new TestClock
         {
             UtcNow = Utc(9)
@@ -239,6 +268,7 @@ public sealed class CaseManagerTests
                 queryService,
                 repository,
                 userDirectory,
+                departmentDirectory,
                 slaPolicy ?? new FixedCaseSlaPolicy(null),
                 unitOfWork,
                 auditRecorder,
@@ -385,6 +415,19 @@ public sealed class CaseManagerTests
             Task.FromResult<IReadOnlyList<CaseDto>>(
                 repository.Items.Values.Select(ToDto).ToArray());
 
+        public Task<IReadOnlyList<CaseDto>> ListDepartmentQueueAsync(
+            Guid departmentId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<CaseDto>>(
+                repository.Items.Values
+                    .Where(item =>
+                        item.DepartmentId == departmentId
+                        && item.Status == CaseStatuses.New
+                        && item.AssignedToUserId is null)
+                    .OrderBy(item => item.CreatedUtc)
+                    .Select(ToDto)
+                    .ToArray());
+
         private CaseDto ToDto(Case item) =>
             new(
                 item.Id,
@@ -394,6 +437,8 @@ public sealed class CaseManagerTests
                 item.CaseType,
                 item.Priority,
                 item.Status,
+                item.DepartmentId,
+                item.RoutedUtc,
                 item.AssignedToUserId,
                 item.CreatedUtc,
                 item.UpdatedUtc,
@@ -413,6 +458,42 @@ public sealed class CaseManagerTests
             Guid userId,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(_users.Contains(userId));
+    }
+
+    private sealed class FakeDepartmentDirectory : IDepartmentDirectory
+    {
+        private readonly Dictionary<Guid, DepartmentDto> _departments = [];
+        private readonly HashSet<(Guid DepartmentId, Guid UserId)> _memberships = [];
+
+        public void Add(DepartmentDto department) =>
+            _departments[department.Id] = department;
+
+        public void AddMember(Guid departmentId, Guid userId) =>
+            _memberships.Add((departmentId, userId));
+
+        public Task<DepartmentDto?> GetAsync(
+            Guid departmentId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(_departments.GetValueOrDefault(departmentId));
+
+        public Task<IReadOnlyList<DepartmentDto>> ListActiveAsync(
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<DepartmentDto>>(
+                _departments.Values.Where(item => item.IsActive).ToArray());
+
+        public Task<IReadOnlyList<DepartmentDto>> ListForUserAsync(
+            Guid userId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<DepartmentDto>>(
+                _departments.Values
+                    .Where(item => item.IsActive && _memberships.Contains((item.Id, userId)))
+                    .ToArray());
+
+        public Task<bool> IsMemberAsync(
+            Guid departmentId,
+            Guid userId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(_memberships.Contains((departmentId, userId)));
     }
 
     private sealed class FixedCaseSlaPolicy(TimeSpan? duration) : ICaseSlaPolicy

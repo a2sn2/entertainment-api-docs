@@ -49,6 +49,24 @@ public sealed class CaseQueryService(
         return items.Select(item => ToDto(item, evaluatedUtc)).ToArray();
     }
 
+    public async Task<IReadOnlyList<CaseDto>> ListDepartmentQueueAsync(
+        Guid departmentId,
+        CancellationToken cancellationToken = default)
+    {
+        var items = await dbContext.Cases
+            .AsNoTracking()
+            .Where(item =>
+                item.DepartmentId == departmentId
+                && item.Status == CaseStatuses.New
+                && item.AssignedToUserId == null)
+            .OrderBy(item => item.CreatedUtc)
+            .ThenBy(item => item.Id)
+            .ToListAsync(cancellationToken);
+
+        var evaluatedUtc = clock.UtcNow;
+        return items.Select(item => ToDto(item, evaluatedUtc)).ToArray();
+    }
+
     public async Task<IReadOnlyList<Guid>> ListDueCaseIdsAsync(
         DateTimeOffset evaluatedUtc,
         int limit,
@@ -75,6 +93,8 @@ public sealed class CaseQueryService(
             item.CaseType,
             item.Priority,
             item.Status,
+            item.DepartmentId,
+            item.RoutedUtc,
             item.AssignedToUserId,
             item.CreatedUtc,
             item.UpdatedUtc,

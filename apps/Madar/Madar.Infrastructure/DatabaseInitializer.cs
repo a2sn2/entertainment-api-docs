@@ -1,4 +1,5 @@
 using Madar.Contracts.Security;
+using Madar.Domain.Organization;
 using Madar.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -29,6 +30,9 @@ public sealed class MadarBootstrapOptions
 
 public static class DatabaseInitializer
 {
+    private const string BootstrapDepartmentCode = "operations";
+    private const string BootstrapDepartmentName = "العمليات";
+
     private static readonly string[] Roles =
     [
         MadarRoles.Requester,
@@ -115,12 +119,17 @@ public static class DatabaseInitializer
             options.AdministratorDisplayName!,
             MadarRoles.Administrator,
             cancellationToken);
-        await EnsureUserAsync(
+        var operatorUser = await EnsureUserAsync(
             userManager,
             options.OperatorEmail!,
             options.OperatorPassword!,
             options.OperatorDisplayName!,
             MadarRoles.Operator,
+            cancellationToken);
+
+        await EnsureBootstrapDepartmentAsync(
+            dbContext,
+            operatorUser.Id,
             cancellationToken);
     }
 
@@ -135,7 +144,7 @@ public static class DatabaseInitializer
         EnsureSucceeded(result, $"create role '{role}'");
     }
 
-    private static async Task EnsureUserAsync(
+    private static async Task<MadarUser> EnsureUserAsync(
         UserManager<MadarUser> userManager,
         string email,
         string password,
@@ -167,6 +176,56 @@ public static class DatabaseInitializer
             var addRole = await userManager.AddToRoleAsync(user, role);
             EnsureSucceeded(addRole, $"assign bootstrap role '{role}'");
         }
+
+        return user;
+    }
+
+    private static async Task EnsureBootstrapDepartmentAsync(
+        MadarDbContext dbContext,
+        Guid operatorUserId,
+        CancellationToken cancellationToken)
+    {
+        var department = await dbContext.Departments
+            .SingleOrDefaultAsync(
+                item => item.Code == BootstrapDepartmentCode,
+                cancellationToken);
+        if (department is null)
+        {
+            var created = Department.Create(
+                BootstrapDepartmentCode,
+                BootstrapDepartmentName,
+                DateTimeOffset.UtcNow);
+            if (created.IsFailure)
+            {
+                throw new InvalidOperationException(
+                    $"Madar bootstrap department is invalid: {created.Error.Code}");
+            }
+
+            department = created.Value;
+            dbContext.Departments.Add(department);
+        }
+
+        var membershipExists = await dbContext.DepartmentMemberships
+            .AnyAsync(
+                item => item.DepartmentId == department.Id
+                    && item.UserId == operatorUserId,
+                cancellationToken);
+        if (!membershipExists)
+        {
+            var membership = DepartmentMembership.Create(
+                department.Id,
+                operatorUserId,
+                DateTimeOffset.UtcNow);
+            if (membership.IsFailure)
+            {
+                throw new InvalidOperationException(
+                    $"Madar bootstrap department membership is invalid: {membership.Error.Code}");
+            }
+
+            dbContext.DepartmentMemberships.Add(membership.Value);
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private static void EnsureSucceeded(IdentityResult result, string operation)
