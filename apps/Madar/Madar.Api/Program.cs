@@ -39,6 +39,8 @@ builder.Services.AddScoped<IAuthorizationEvaluator, RolePermissionAuthorizationE
 
 builder.Services.AddScoped<ICaseManager, CaseManager>();
 builder.Services.AddScoped<ICaseQueryService, CaseQueryService>();
+builder.Services.AddScoped<ICaseTimelineService, CaseTimelineService>();
+builder.Services.AddScoped<ICaseTimelineQueryService, CaseTimelineQueryService>();
 builder.Services.AddScoped<IUserDirectory, UserDirectory>();
 builder.Services.AddScoped<IRepository<Case, Guid>, EfRepository<Case, Guid, MadarDbContext>>();
 builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork<MadarDbContext>>();
