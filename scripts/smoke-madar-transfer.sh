@@ -136,8 +136,13 @@ persisted="$(docker compose -f deploy/madar-compose.yml exec -T madar-sqlserver 
   -h -1 -W -s '|' -Q "SET NOCOUNT ON; SELECT [Status], CONVERT(varchar(36), [DepartmentId]), CONVERT(varchar(36), [AssignedToUserId]) FROM [madar].[Cases] WHERE [Id] = '$case_id';")"
 PERSISTED="$persisted" TARGET="$target_department_id" ADMIN="$admin_id" python3 - <<'PY'
 import os
+from uuid import UUID
+
 parts = [part.strip() for part in os.environ['PERSISTED'].strip().split('|')]
-assert parts == ['assigned', os.environ['TARGET'], os.environ['ADMIN']], parts
+assert len(parts) == 3, parts
+assert parts[0] == 'assigned', parts
+assert UUID(parts[1]) == UUID(os.environ['TARGET']), parts
+assert UUID(parts[2]) == UUID(os.environ['ADMIN']), parts
 PY
 
 echo "Madar reassignment + transfer SQL workflow passed for case $case_id from $source_department_id to $target_department_id"
