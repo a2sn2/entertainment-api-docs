@@ -1,6 +1,6 @@
 # Madar
 
-> Status: **v0.1 first vertical slice implemented and repository-verified**. Madar now has a working authentication → case lifecycle → SQL Server → audit timeline path, but this is not a claim of production approval or completion of the broader product roadmap.
+> Status: **v0.1 first vertical slice implemented and repository-verified; v0.1.1 operational readiness closure in progress**. Madar has a working authentication → case lifecycle → SQL Server → audit timeline path plus bounded readiness/startup retry and repository operational integration. This is not a claim of production approval or completion of the broader product roadmap.
 
 Madar is an operational case-management and orchestration product built on FoundationKit. It is intentionally separate from the reusable FoundationKit packages, the Workbench architecture sample, and the Athar reference product.
 
@@ -55,7 +55,7 @@ Infrastructure dependencies do not enter Domain. The Blazor client does not refe
 
 ## Implemented v0.1 vertical slice
 
-The first end-to-end product path is now implemented:
+The first end-to-end product path is implemented:
 
 ```text
 Authenticate
@@ -107,7 +107,7 @@ The current slice reuses existing FoundationKit capabilities rather than creatin
 - `FoundationKit.Auditing` for bounded audit events, context, recorder, and sink contracts;
 - `FoundationKit.Workflow` for lifecycle transition resolution.
 
-ASP.NET Core Identity, SQL Server schema, audit persistence, case query rules, API endpoints, and the Blazor product experience remain Madar-owned adapters and behavior.
+ASP.NET Core Identity, SQL Server schema, audit persistence, case query rules, API endpoints, readiness policy, and the Blazor product experience remain Madar-owned adapters and behavior.
 
 ## Authentication and authorization
 
@@ -126,7 +126,7 @@ The Application layer makes the authorization decision before selecting the quer
 
 Assignment also validates that the selected assignee is an Identity user holding the `Operator` role.
 
-## SQL Server and audit persistence
+## SQL Server, startup, and audit persistence
 
 `MadarDbContext` is an `IdentityDbContext<MadarUser, IdentityRole<Guid>, Guid>` and owns three schemas:
 
@@ -146,12 +146,24 @@ Case writes and FoundationKit audit records share the same Madar DbContext/unit-
 
 The case timeline reads those persisted audit records through an authorized Application service.
 
+Madar v0.1.1 adds a bounded startup policy:
+
+```text
+Madar:DatabaseStartup:ApplyMigrationsOnStartup
+Madar:DatabaseStartup:SeedRolesOnStartup
+Madar:DatabaseStartup:MigrationAttempts
+Madar:DatabaseStartup:DelaySeconds
+```
+
+Startup retries transient database failures within configured bounds. When automatic migration application is disabled, startup instead verifies connectivity and rejects a schema with pending migrations.
+
 ## API surface
 
-The first slice exposes:
+The current slice exposes:
 
 ```text
 GET  /health/live
+GET  /health/ready
 GET  /api/security/antiforgery
 POST /api/auth/login
 POST /api/auth/logout
@@ -166,6 +178,8 @@ POST /api/cases/{caseId}/assignment
 POST /api/cases/{caseId}/transition
 ```
 
+`/health/live` proves only that the ASP.NET Core process is alive. `/health/ready` verifies SQL connectivity and that no EF migration remains pending, returning bounded `503` Problem Details without exposing connection strings or infrastructure details.
+
 Swagger is enabled in Development. Case write endpoints require authentication, anti-CSRF validation, and the write rate-limit policy; the Application layer applies the finer product permission/ownership rules.
 
 ## Blazor UI
@@ -173,54 +187,72 @@ Swagger is enabled in Development. Case write endpoints require authentication, 
 The current client includes:
 
 ```text
-/                 product landing page
-/login            cookie-authentication login
-/cases            visible-case list + create form
-/cases/{caseId}   details + assignment + lifecycle actions + audit timeline
+/                         product landing page
+/login                    cookie-authentication login
+/cases                    visible-case list + create form
+/cases/{CaseId:guid}      details + assignment + lifecycle actions + audit timeline
 ```
 
 The client uses a typed `MadarApiClient`, same-origin cookies, anti-CSRF tokens for protected writes, and an `AuthenticationStateProvider` backed by `/api/auth/me`.
 
-## Local Docker run
+Atlas verifies these routes directly from the Razor `@page` declarations and documents the associated API/readiness/operations surfaces.
+
+## Local run
 
 The repository includes a development/test topology in `deploy/madar-compose.yml`. It requires explicit temporary credentials; no reusable passwords are committed.
 
-Example PowerShell setup:
+The preferred Windows entry point is the unified manager:
 
 ```powershell
-$env:MADAR_SQL_PASSWORD = '<strong temporary SQL password>'
-$env:MADAR_ADMIN_EMAIL = 'admin@madar.local'
-$env:MADAR_ADMIN_PASSWORD = '<strong temporary administrator password>'
-$env:MADAR_OPERATOR_EMAIL = 'operator@madar.local'
-$env:MADAR_OPERATOR_PASSWORD = '<strong temporary operator password>'
-
-docker compose -f deploy/madar-compose.yml up --build -d
+.\foundationkit.ps1 start  -Target Madar -Mode Docker
+.\foundationkit.ps1 status -Target Madar
+.\foundationkit.ps1 logs   -Target Madar
+.\foundationkit.ps1 stop   -Target Madar
 ```
+
+The specialized launcher remains available:
+
+```powershell
+.\scripts\madar-product.ps1 start
+.\scripts\madar-product.ps1 status
+.\scripts\madar-product.ps1 logs
+.\scripts\madar-product.ps1 stop
+```
+
+It generates local development credentials under:
+
+```text
+.local/madar-product.env
+```
+
+and restricts that file to the current Windows account through ACLs. Environment values used to invoke Compose are restored after each command.
 
 Then open:
 
 ```text
 http://localhost:8100/
 http://localhost:8100/swagger
+http://localhost:8100/health/live
+http://localhost:8100/health/ready
 ```
 
-Stop and remove the development database volume with:
+The local Compose project name is `madar-product`. Stop preserves the SQL volume. Destructive `reset -Target Madar` is intentionally not exposed by the unified manager in v0.1.1.
 
-```powershell
-docker compose -f deploy/madar-compose.yml down --volumes --remove-orphans
-```
+`Madar` currently has a Docker operational path only. `-Target All -Mode Native` preserves the existing Athar/Workbench native workflow and reports that Madar was skipped; `-Target All -Mode Auto` includes Madar when Docker is ready.
 
-The compose file deliberately enables bootstrap users for this isolated development/test topology. Production identity provisioning, secrets, migration execution, and deployment controls require separate environment-specific decisions.
+Read [`../../docs/MADAR-OPERATIONS-AR.md`](../../docs/MADAR-OPERATIONS-AR.md) for the detailed runbook.
 
 ## Automated verification
 
-Pull-request CI now treats Madar as an executable product consumer rather than only a compile-time shell. The repository gate covers:
+Pull-request CI treats Madar as an executable product consumer. The repository gate covers:
 
 - Release solution build with warnings as errors;
 - Madar domain and Application authorization/audit tests;
+- database startup retry unit tests;
 - Madar publish output;
 - non-root Madar container policy;
 - SQL Server migration/startup;
+- liveness and database-backed readiness;
 - anonymous authorization boundary;
 - administrator login with anti-CSRF protection;
 - case creation and SQL persistence;
@@ -230,14 +262,17 @@ Pull-request CI now treats Madar as an executable product consumer rather than o
 - administrator close;
 - persisted audit timeline;
 - final closed-case read;
+- Atlas route/source verification including Madar;
+- Windows PowerShell 5.1 parsing and unified-manager diagnostics;
+- Trivy HIGH/CRITICAL fixable-vulnerability gate for the Madar image plus complete SARIF evidence;
 - preservation of the 17 reusable NuGet + 17 symbol-package invariant;
 - repository security and CodeQL workflows.
 
 Exact evidence belongs to the specific PR/head that produced it; a previous green run is not proof for later behavior-relevant changes.
 
-## Deliberately deferred after v0.1
+## Deliberately deferred after v0.1.1
 
-The working first slice does **not** mean the broader Madar roadmap is complete. These remain deferred until a concrete product requirement justifies them:
+The working first slice and operational closure do **not** mean the broader Madar roadmap is complete. These remain deferred until a concrete product requirement justifies them:
 
 - configurable workflow designer;
 - SLA policies, breach tracking, and escalation rules;
@@ -278,4 +313,5 @@ Those remain deployment- and organization-specific controls.
 
 ## Tracking
 
-The first product slice is tracked by GitHub issue **#71 — Madar v0.1: establish product foundation and first case vertical slice**. Broader roadmap capabilities should be tracked separately rather than silently expanding the v0.1 boundary.
+- GitHub issue **#71 — Madar v0.1: establish product foundation and first case vertical slice** is complete.
+- GitHub issue **#74 — Madar v0.1.1: operational integration and readiness closure** tracks the current operational closure before SLA/escalation work begins.

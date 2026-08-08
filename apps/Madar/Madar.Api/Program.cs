@@ -44,6 +44,7 @@ builder.Services.AddScoped<ICaseTimelineQueryService, CaseTimelineQueryService>(
 builder.Services.AddScoped<IUserDirectory, UserDirectory>();
 builder.Services.AddScoped<IRepository<Case, Guid>, EfRepository<Case, Guid, MadarDbContext>>();
 builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork<MadarDbContext>>();
+builder.Services.AddScoped<IMadarReadinessProbe, MadarReadinessProbe>();
 builder.Services.AddSingleton<IClock, SystemClock>();
 
 builder.Services.AddScoped<IAuditSink, SqlAuditSink>();
@@ -149,6 +150,16 @@ builder.Services.AddOptions<MadarBootstrapOptions>()
             && IsBootstrapPassword(options.OperatorPassword)
             && IsBootstrapValue(options.OperatorDisplayName)),
         "Enabled Madar bootstrap requires administrator/operator email, display name, and strong password values.")
+    .ValidateOnStart();
+
+builder.Services.AddOptions<MadarDatabaseStartupOptions>()
+    .Bind(builder.Configuration.GetSection(MadarDatabaseStartupOptions.SectionName))
+    .Validate(
+        options => options.MigrationAttempts is >= 1 and <= 300,
+        "Madar:DatabaseStartup:MigrationAttempts must be between 1 and 300.")
+    .Validate(
+        options => options.DelaySeconds is >= 0 and <= 30,
+        "Madar:DatabaseStartup:DelaySeconds must be between 0 and 30.")
     .ValidateOnStart();
 
 builder.Services.AddEndpointsApiExplorer();

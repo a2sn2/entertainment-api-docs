@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
   "title": "FoundationKit Atlas",
-  "subtitle": "خريطة عربية تفاعلية للكور والقدرات والأمثلة والمنتج المرجعي",
+  "subtitle": "خريطة عربية تفاعلية للكور والقدرات والأمثلة والمنتجات الفعلية",
   "repository": "a2sn2/foundationkit-dotnet",
-  "notice": "هذه البوابة توثيق ومعاينة ثابتة. التشغيل الحقيقي للواجهات وواجهات API وقاعدة البيانات يتم محليًا أو على بيئة مستضافة تدعم ASP.NET Core وSQL Server.",
+  "notice": "هذه البوابة توثيق ومعاينة ثابتة. التشغيل الحقيقي للواجهات وواجهات API وقواعد البيانات يتم محليًا أو على بيئة مستضافة تدعم ASP.NET Core وSQL Server.",
   "groups": [
     {
       "id": "overview",
       "title": "الصورة الكاملة",
       "icon": "◎",
-      "summary": "ابدأ من هنا لفهم الكور القابل لإعادة الاستخدام والقدرات الاختيارية وWorkbench التعليمي ومنصة أثَر كمنتج عربي كامل."
+      "summary": "ابدأ من هنا لفهم الكور القابل لإعادة الاستخدام والقدرات الاختيارية وWorkbench التعليمي ومنصة أثَر المرجعية ومنتج مدار الفعلي."
     },
     {
       "id": "core",
@@ -27,13 +27,19 @@
       "id": "athar",
       "title": "منصة أثَر",
       "icon": "أ",
-      "summary": "منتج عربي كامل لإدارة المبادرات المجتمعية من التسجيل والإرسال إلى قرار الإدارة وسجل التدقيق."
+      "summary": "منتج عربي مرجعي كامل لإدارة المبادرات المجتمعية من التسجيل والإرسال إلى قرار الإدارة وسجل التدقيق."
+    },
+    {
+      "id": "madar",
+      "title": "مدار",
+      "icon": "م",
+      "summary": "أول منتج فعلي تحت apps/: إدارة حالات تشغيلية بهوية وصلاحيات وإسناد ودورة حالة وسجل تدقيق على SQL Server."
     },
     {
       "id": "docs",
       "title": "الأدلة والوثائق",
       "icon": "≡",
-      "summary": "ترتيب قراءة واضح للمعمارية والقدرات والتشغيل والأمان وإضافة مشروع جديد."
+      "summary": "ترتيب قراءة واضح للمعمارية والقدرات والتشغيل والأمان وإضافة مشروع جديد وتشغيل مدار."
     },
     {
       "id": "operations",
@@ -52,14 +58,14 @@
       "source": "README.md",
       "kind": "guide",
       "runtime": "static",
-      "benefit": "تلخص الفرق بين الكور العام والقدرات الاختيارية والمثال المعماري والمنتج المرجعي المكتمل.",
+      "benefit": "تلخص الفرق بين الكور العام والقدرات الاختيارية والمثال المعماري والمنتج المرجعي والمنتج الفعلي مدار.",
       "details": [
         "src يحتوي 17 حزمة قابلة لإعادة الاستخدام.",
         "samples يحتوي Workbench لفهم المسارات وإثبات بعض القدرات.",
-        "examples/Athar يحتوي المنتج العربي الكامل.",
-        "apps محجوز للمنتجات الفعلية القادمة."
+        "examples/Athar يحتوي المنتج العربي المرجعي الكامل.",
+        "apps/Madar يحتوي أول منتج فعلي يستهلك FoundationKit."
       ],
-      "flow": ["FoundationKit Core", "Optional Capabilities", "Workbench", "Athar", "Future Apps"],
+      "flow": ["FoundationKit Core", "Optional Capabilities", "Workbench", "Athar", "Madar"],
       "preview": "overview"
     },
     {
@@ -496,6 +502,126 @@
       "preview": "health"
     },
     {
+      "id": "madar-home",
+      "group": "madar",
+      "app": "madar",
+      "title": "الرئيسية",
+      "label": "Home",
+      "route": "/",
+      "source": "apps/Madar/Madar.Client/Pages/Home.razor",
+      "kind": "ui",
+      "runtime": "local",
+      "benefit": "تقدم مدار كمنتج لإدارة الحالات التشغيلية وتربط المستخدم مباشرة بالدخول وقائمة الحالات.",
+      "details": ["Product entry", "Case lifecycle", "Authenticated navigation"],
+      "flow": ["Home", "Login", "Cases", "Case Timeline"],
+      "preview": "overview"
+    },
+    {
+      "id": "madar-login",
+      "group": "madar",
+      "app": "madar",
+      "title": "تسجيل الدخول",
+      "label": "/login",
+      "route": "/login",
+      "source": "apps/Madar/Madar.Client/Pages/Login.razor",
+      "kind": "ui",
+      "runtime": "local-write",
+      "benefit": "يسجل المستخدم التشغيلي الدخول عبر ASP.NET Core Identity وCookie آمنة مع CSRF وقفل محاولات.",
+      "details": ["Identity", "Secure Cookie", "CSRF", "Lockout", "Role-backed session"],
+      "flow": ["Credentials", "Auth API", "Identity", "Secure Session"],
+      "preview": "athar-account"
+    },
+    {
+      "id": "madar-cases",
+      "group": "madar",
+      "app": "madar",
+      "title": "الحالات التشغيلية",
+      "label": "/cases",
+      "route": "/cases",
+      "source": "apps/Madar/Madar.Client/Pages/Cases.razor",
+      "kind": "ui",
+      "runtime": "local-write",
+      "benefit": "يعرض الحالات وفق نطاق صلاحية المستخدم ويتيح إنشاء حالة جديدة بنوع وأولوية ووصف مضبوطين.",
+      "details": ["Scoped listing", "Create Case", "Case type", "Priority", "SQL persistence"],
+      "flow": ["User", "CaseManager", "Repository", "SQL Server"],
+      "preview": "workbench-user"
+    },
+    {
+      "id": "madar-case-details",
+      "group": "madar",
+      "app": "madar",
+      "title": "تفاصيل الحالة وسجلها",
+      "label": "/cases/{CaseId}",
+      "route": "/cases/{CaseId:guid}",
+      "source": "apps/Madar/Madar.Client/Pages/CaseDetails.razor",
+      "kind": "ui",
+      "runtime": "local-write",
+      "benefit": "يجمع الإسناد ودورة new → assigned → in-progress → resolved → closed مع السجل الزمني المأخوذ من Audit persistence.",
+      "details": ["Operator assignment", "Workflow transitions", "Role authorization", "Audit timeline", "RowVersion conflicts"],
+      "flow": ["Assign", "Start", "Resolve", "Close", "Audit Timeline"],
+      "preview": "workbench-admin"
+    },
+    {
+      "id": "madar-swagger",
+      "group": "madar",
+      "app": "madar",
+      "title": "Swagger الخاص بمدار",
+      "label": "/swagger",
+      "route": "/swagger",
+      "source": "apps/Madar/Madar.Api/Program.cs",
+      "kind": "api",
+      "runtime": "local",
+      "benefit": "يوثق Auth وCases وOperator directory وTimeline وHealth endpoints للشريحة التشغيلية الحالية.",
+      "details": ["LoginMadarUser", "CreateMadarCase", "AssignMadarCase", "TransitionMadarCase", "GetMadarCaseTimeline"],
+      "flow": ["OpenAPI", "Endpoint", "Contracts", "Application"],
+      "preview": "api"
+    },
+    {
+      "id": "madar-antiforgery",
+      "group": "madar",
+      "app": "madar",
+      "title": "رمز حماية الكتابة",
+      "label": "/api/security/antiforgery",
+      "route": "/api/security/antiforgery",
+      "source": "apps/Madar/Madar.Api/Endpoints.cs",
+      "kind": "api",
+      "runtime": "local",
+      "benefit": "ينشئ CSRF token مرتبطًا بالجلسة لجميع عمليات تسجيل الدخول والكتابة المحمية في مدار.",
+      "details": ["X-CSRF-TOKEN", "Cookie-bound token", "Protected writes"],
+      "flow": ["GET Token", "Cookie", "Write Request", "Validation"],
+      "preview": "security"
+    },
+    {
+      "id": "madar-health-live",
+      "group": "madar",
+      "app": "madar",
+      "title": "Madar Liveness",
+      "label": "/health/live",
+      "route": "/health/live",
+      "source": "apps/Madar/Madar.Api/Endpoints.cs",
+      "kind": "api",
+      "runtime": "local",
+      "benefit": "يثبت أن عملية Madar API حية دون ربط liveness بتوفر SQL Server.",
+      "details": ["Process alive", "Container liveness"],
+      "flow": ["Probe", "Madar API Process"],
+      "preview": "health"
+    },
+    {
+      "id": "madar-health-ready",
+      "group": "madar",
+      "app": "madar",
+      "title": "Madar Readiness",
+      "label": "/health/ready",
+      "route": "/health/ready",
+      "source": "apps/Madar/Madar.Api/Endpoints.cs",
+      "kind": "api",
+      "runtime": "local",
+      "benefit": "لا يعلن الجاهزية إلا عند نجاح اتصال SQL Server وعدم وجود migrations معلقة، من دون كشف تفاصيل البنية التحتية.",
+      "details": ["Database connectivity", "Pending migration check", "Bounded 503 response", "No connection-string disclosure"],
+      "flow": ["Probe", "Madar API", "MadarDbContext", "SQL Server"],
+      "preview": "health"
+    },
+    {
       "id": "docs-features",
       "group": "docs",
       "title": "قدرات الكور",
@@ -566,6 +692,34 @@
       "preview": "document"
     },
     {
+      "id": "docs-madar",
+      "group": "docs",
+      "title": "دليل منتج مدار",
+      "label": "Madar README",
+      "route": "apps/Madar/README.md",
+      "source": "apps/Madar/README.md",
+      "kind": "document",
+      "runtime": "static",
+      "benefit": "يوثق حدود المنتج الفعلي الأول، الشريحة الرأسية، إعادة استخدام FoundationKit، وما بقي خارج النطاق.",
+      "details": ["Product boundary", "Case vertical slice", "FoundationKit reuse", "Deferred capabilities"],
+      "flow": ["Product", "Application", "Infrastructure", "API + Blazor"],
+      "preview": "document"
+    },
+    {
+      "id": "docs-madar-operations",
+      "group": "docs",
+      "title": "تشغيل مدار والجاهزية",
+      "label": "MADAR-OPERATIONS-AR.md",
+      "route": "docs/MADAR-OPERATIONS-AR.md",
+      "source": "docs/MADAR-OPERATIONS-AR.md",
+      "kind": "document",
+      "runtime": "static",
+      "benefit": "يشرح مسار Docker المحلي، الأسرار المحلية، liveness/readiness، retry للمهاجرات، والسجلات وحدود الجاهزية الإنتاجية.",
+      "details": ["Local launcher", "Protected credentials", "Readiness", "Migration retry", "Troubleshooting"],
+      "flow": ["Configure", "Start", "Ready", "Operate", "Stop"],
+      "preview": "document"
+    },
+    {
       "id": "docs-add-project",
       "group": "docs",
       "title": "إضافة مشروع جديد",
@@ -616,8 +770,8 @@
       "source": ".github/workflows/ci.yml",
       "kind": "automation",
       "runtime": "github",
-      "benefit": "يبني الحل ويشغّل الاختبارات وينشر التطبيقين مؤقتًا ثم يختبر Workbench وأثَر مع SQL Server حقيقي ويغلف الحزم العامة.",
-      "details": ["Restore", "Build", "Tests", "Publish", "17+17 Pack", "SQL integration"],
+      "benefit": "يبني الحل ويشغّل الاختبارات وينشر Workbench وأثَر ومدار مؤقتًا ثم يختبرها مع SQL Server حقيقي ويغلف الحزم العامة.",
+      "details": ["Restore", "Build", "Tests", "Publish three consumers", "17+17 Pack", "SQL integration"],
       "flow": ["Commit", "Build", "Tests", "Docker SQL", "Result"],
       "preview": "pipeline"
     },
@@ -658,8 +812,8 @@
       "source": "deploy/",
       "kind": "tool",
       "runtime": "local",
-      "benefit": "يشغّل كل تطبيق مع SQL Server مستقل ويزيل اختلاف إعدادات الأجهزة من اختبار المسار الكامل.",
-      "details": ["Workbench stack", "Athar stack", "Temporary credentials", "Persistent volumes"],
+      "benefit": "يشغّل Workbench وأثَر ومدار مع SQL Server مستقل لكل مسار ويقلل اختلاف إعدادات الأجهزة في اختبار المسارات الكاملة.",
+      "details": ["Workbench stack", "Athar stack", "Madar stack", "Temporary credentials", "Persistent volumes"],
       "flow": ["Compose", "SQL Server", "ASP.NET Core", "Smoke Test"],
       "preview": "tool"
     },
@@ -672,8 +826,8 @@
       "source": "tests/",
       "kind": "tool",
       "runtime": "local-and-ci",
-      "benefit": "تثبت قواعد الكور ودورة Workbench وقواعد مبادرة أثَر وحالة ViewModel بدل الاعتماد على الفحص اليدوي فقط.",
-      "details": ["FoundationKit.Tests", "Workbench.Tests", "Athar.Tests", "Smoke scripts"],
+      "benefit": "تثبت قواعد الكور ودورة Workbench وقواعد مبادرة أثَر ودورة حالات مدار ومنطق الجاهزية بدل الاعتماد على الفحص اليدوي فقط.",
+      "details": ["FoundationKit.Tests", "Workbench.Tests", "Athar.Tests", "Madar.Tests", "Smoke scripts"],
       "flow": ["Rule", "Test", "Regression Gate"],
       "preview": "tool"
     }

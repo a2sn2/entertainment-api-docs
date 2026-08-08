@@ -5,6 +5,7 @@ using Madar.Application.Cases;
 using Madar.Application.Security;
 using Madar.Contracts.Cases;
 using Madar.Contracts.Security;
+using Madar.Infrastructure;
 using Madar.Infrastructure.Identity;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Identity;
@@ -23,6 +24,29 @@ public static class MadarEndpoints
             }))
             .WithTags("Health")
             .WithName("MadarLive");
+
+        endpoints.MapGet(
+                "/health/ready",
+                async (
+                    IMadarReadinessProbe readiness,
+                    CancellationToken cancellationToken) =>
+                {
+                    var ready = await readiness.IsReadyAsync(cancellationToken);
+                    return ready
+                        ? Results.Ok(new
+                        {
+                            status = "ready",
+                            service = "madar-api"
+                        })
+                        : Results.Problem(
+                            statusCode: StatusCodes.Status503ServiceUnavailable,
+                            title: "ServiceNotReady",
+                            detail: "Madar is not ready to serve database-backed requests yet.");
+                })
+            .WithTags("Health")
+            .WithName("MadarReady")
+            .Produces(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         endpoints.MapGet(
                 MadarSecurityRoutes.Antiforgery,

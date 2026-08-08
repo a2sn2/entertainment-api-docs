@@ -28,6 +28,12 @@ All notable repository and package changes are documented here.
 - Madar API surface for authentication, current user, operator discovery, case create/list/view/assign/transition, and case audit timeline, plus an Arabic Blazor login/case-list/create/details/lifecycle/timeline experience.
 - Madar non-root Docker topology and SQL/auth/case/audit smoke workflow; pull-request CI now publishes Madar and verifies the complete first vertical slice against a real SQL Server container.
 - Madar Application authorization tests covering create/audit, assignment permission and operator eligibility, assignee-owned progression, denied cross-operator progression, and scoped versus privileged case listing.
+- Madar v0.1.1 database-backed `/health/ready` endpoint that verifies SQL connectivity and pending EF migrations without exposing connection strings or infrastructure details.
+- Madar bounded database-startup policy and retry implementation, including migration-or-schema-validation modes plus direct retry/cancellation tests.
+- Madar protected local Docker launcher with generated development credentials, fixed Compose project identity, bounded readiness wait, environment restoration, status/log/stop commands, and fail-closed Windows ACL protection.
+- Madar as a first-class target in the unified Windows repository manager for start/status/logs/stop/open/LAN/doctor behavior while preserving the established Athar/Workbench Native `All` path.
+- Madar Atlas/Pages group documenting all four current Blazor routes plus Swagger, anti-CSRF, liveness, readiness, product documentation, and operations guidance; route verification now reads actual Madar Razor `@page` declarations.
+- Explicit Madar container Trivy gate for fixable HIGH/CRITICAL findings plus complete SARIF evidence uploaded to GitHub code scanning.
 - `FoundationKit Atlas`, a creative Arabic GitHub Pages portal that documents every Workbench and Athar Blazor route, core package, API surface, document, and operational proof.
 - Pages manifest validation that compares documented UI routes with the actual Razor `@page` declarations.
 - Detailed Arabic Visual Studio 2026 guide for SQL Server, User Secrets, startup projects, user/admin workflows, and troubleshooting.
@@ -66,7 +72,9 @@ All notable repository and package changes are documented here.
 - `FoundationKit.sln` and the normal solution build/test surface now include Madar while reusable package output remains seventeen NuGet packages plus seventeen symbol packages.
 - Madar's first slice now uses FoundationKit `IRepository<Case, Guid>`, `EfRepository`, `IUnitOfWork`, `EfUnitOfWork`, authorization evaluation, auditing, and workflow boundaries instead of introducing duplicate product-level infrastructure abstractions.
 - Madar case visibility is decided in the Application layer: ordinary users query created/assigned cases while privileged roles may select the all-cases query; Infrastructure does not infer authorization from a user identifier.
-- CI publishes and tests Workbench, Athar, and Madar, with the SQL integration job now exercising Madar authentication, migration, case assignment/lifecycle, Blazor/API surface, and persisted audit timeline in addition to existing Workbench/Athar checks.
+- CI publishes and tests Workbench, Athar, and Madar, with the SQL integration job now exercising Madar authentication, migration, readiness, case assignment/lifecycle, Blazor/API surface, and persisted audit timeline in addition to existing Workbench/Athar checks.
+- The Windows `doctor` surface and port diagnostics now include Madar readiness on `8100` and its SQL container host port `14335`; `All` retains backwards-compatible Native semantics while including Madar when the Docker operational path is available.
+- FoundationKit Atlas now distinguishes Madar as the first real `apps/` product and verifies its live Razor routes alongside Workbench and Athar.
 - `FoundationKit.sln`, repository verification, CI, documentation, and package versions now include Athar.
 - GitHub Pages now deploys the standalone Arabic repository atlas instead of presenting one product client as the entire repository.
 - Reusable package output increases to seventeen NuGet packages plus seventeen symbol packages after adding Caching to the Localization, Settings/Feature Management, and earlier reusable capability family.
@@ -85,6 +93,8 @@ All notable repository and package changes are documented here.
 - Workbench local `.local/workbench-product.env` credentials are now ACL-restricted to the current Windows account, matching the existing Athar local-secret posture.
 - Athar Native startup now restores every process-level environment variable used for child launch after the application process is spawned, preventing the calling PowerShell session from retaining the local connection string or administrator password.
 - `foundationkit.ps1 doctor` now probes explicit IPv4 loopback health endpoints with a bounded retry and distinguishes tracked/listening-but-unhealthy runtimes from truly stopped applications, preventing false `[STOPPED]` diagnostics observed during local dual-runtime testing.
+- Madar local startup no longer reports a successful handoff when readiness never arrives; it fails after a bounded wait and prints Compose diagnostics while preserving secrets outside the process environment after invocation.
+- Madar local log/stop operations now provide the required Compose substitutions even when only inspecting or shutting down an existing stack, avoiding configuration-parse failures caused by required development variables.
 
 ## [0.1.0] - 2026-08-06
 

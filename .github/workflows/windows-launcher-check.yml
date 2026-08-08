@@ -5,6 +5,7 @@ on:
     paths:
       - "foundationkit.ps1"
       - "scripts/athar-product.ps1"
+      - "scripts/madar-product.ps1"
       - "scripts/expose-athar-tunnel.ps1"
       - "START-ATHAR.cmd"
       - "STOP-ATHAR.cmd"
@@ -15,6 +16,7 @@ on:
     paths:
       - "foundationkit.ps1"
       - "scripts/athar-product.ps1"
+      - "scripts/madar-product.ps1"
       - "scripts/expose-athar-tunnel.ps1"
       - "START-ATHAR.cmd"
       - "STOP-ATHAR.cmd"
@@ -45,6 +47,7 @@ jobs:
           $paths = @(
             "foundationkit.ps1",
             "scripts/athar-product.ps1",
+            "scripts/madar-product.ps1",
             "scripts/expose-athar-tunnel.ps1"
           )
 
@@ -62,6 +65,7 @@ jobs:
           $paths = @(
             "foundationkit.ps1",
             "scripts/athar-product.ps1",
+            "scripts/madar-product.ps1",
             "scripts/expose-athar-tunnel.ps1"
           )
 
@@ -152,3 +156,20 @@ jobs:
         shell: powershell
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File ".\scripts\athar-product.ps1" -Action Status -Mode Native
+
+      - name: Smoke test Madar status command without Docker startup
+        shell: powershell
+        run: |
+          $output = (& powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\madar-product.ps1" status 2>&1 | Out-String)
+          Write-Host $output
+          if ($output -notmatch "Madar: STOPPED or unreachable") {
+            throw "Madar status smoke did not report the expected bounded stopped state."
+          }
+
+      - name: Verify unified Madar target is discoverable
+        shell: powershell
+        run: |
+          $help = (& powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\foundationkit.ps1" help 2>&1 | Out-String)
+          if ($help -notmatch "Athar\|Workbench\|Madar\|All\|Repository") {
+            throw "Unified help does not expose the Madar target."
+          }

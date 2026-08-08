@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   repository-and-container:
-    name: Trivy repository and Athar container
+    name: Trivy repository, Athar, and Madar containers
     runs-on: ubuntu-latest
 
     steps:
@@ -48,9 +48,6 @@ jobs:
           image-ref: foundationkit-athar:${{ github.sha }}
           vuln-type: os,library
           severity: HIGH,CRITICAL
-          # Block vulnerabilities for which the upstream/vendor has a fixed package.
-          # Unfixed base-image findings remain visible in SARIF below instead of
-          # permanently disabling the release gate for issues we cannot patch here.
           ignore-unfixed: true
           exit-code: "1"
           format: table
@@ -68,12 +65,50 @@ jobs:
           format: sarif
           output: trivy-athar.sarif
 
-      - name: Upload Trivy SARIF to code scanning
+      - name: Upload Athar Trivy SARIF to code scanning
         if: always() && hashFiles('trivy-athar.sarif') != ''
         uses: github/codeql-action/upload-sarif@7d9249f5a57288b8a472ddd9cc3ece1921f7dc38
         with:
           sarif_file: trivy-athar.sarif
           category: trivy-athar-container
+
+      - name: Build Madar image for scanning
+        run: >-
+          docker build
+          --file apps/Madar/Madar.Api/Dockerfile
+          --tag foundationkit-madar:${{ github.sha }}
+          .
+
+      - name: Madar image fixable vulnerability gate
+        uses: aquasecurity/trivy-action@2736533278103862a861f4a35ebac3e97854d956
+        with:
+          scan-type: image
+          image-ref: foundationkit-madar:${{ github.sha }}
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table
+
+      - name: Produce complete Madar image SARIF evidence
+        if: always()
+        uses: aquasecurity/trivy-action@2736533278103862a861f4a35ebac3e97854d956
+        with:
+          scan-type: image
+          image-ref: foundationkit-madar:${{ github.sha }}
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "0"
+          format: sarif
+          output: trivy-madar.sarif
+
+      - name: Upload Madar Trivy SARIF to code scanning
+        if: always() && hashFiles('trivy-madar.sarif') != ''
+        uses: github/codeql-action/upload-sarif@7d9249f5a57288b8a472ddd9cc3ece1921f7dc38
+        with:
+          sarif_file: trivy-madar.sarif
+          category: trivy-madar-container
 
   athar-negative-security:
     name: Athar black-box negative security tests
