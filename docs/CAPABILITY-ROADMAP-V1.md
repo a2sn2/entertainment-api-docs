@@ -77,7 +77,7 @@ No capability is promoted merely because a class or empty package exists.
 - [ ] Webhooks with signing/replay/retry contracts.
 - [ ] Idempotency reusable package extraction beyond current Athar reference behavior.
 - [ ] Optimistic concurrency reusable package extraction beyond current Athar reference behavior.
-- [ ] Caching abstraction.
+- [x] Caching v1: bounded byte-cache contracts, explicit TTL/hit/miss/remove semantics, bounded in-memory reference provider, and Workbench catalog-read consumer proof.
 - [ ] External HTTP integration resilience conventions.
 
 ## Phase G — Search, reporting, privacy, finance
@@ -163,15 +163,16 @@ The repository currently has extracted reusable/reference packages for:
 - SMTP notification provider v1 (`FoundationKit.Notifications.Smtp`);
 - Settings v1 (`FoundationKit.Settings`);
 - Feature Management v1 (`FoundationKit.FeatureManagement`);
-- Localization v1 (`FoundationKit.Localization`).
+- Localization v1 (`FoundationKit.Localization`);
+- Caching v1 (`FoundationKit.Caching`).
 
-Athar provides current consumer evidence for the security, identity, authorization, workflow, narrow approval, notification, and SMTP-provider surfaces. Workbench provides runtime consumer evidence for Settings, Feature Management, and Localization. The capability maturity values remain conservative and do not imply production certification.
+Athar provides current consumer evidence for the security, identity, authorization, workflow, narrow approval, notification, and SMTP-provider surfaces. Workbench provides runtime consumer evidence for Settings, Feature Management, Localization, and the Caching-backed embedded catalog read path. The capability maturity values remain conservative and do not imply production certification.
 
 ## Current continuation boundary
 
 Issue #64 continues the consumer-driven extraction cycle for general-purpose system capabilities while preserving the same stop rule: no empty package and no invented organizational/product policy.
 
-The next candidate that can be implemented without owner policy is **Caching v1**. A bounded provider-neutral key/value/TTL contract with an in-memory reference store can be proven against an existing Workbench read path without choosing Redis, distributed-consistency policy, or a production cache provider.
+After Caching v1, there is **no additional reusable package candidate currently justified by both a provider-neutral boundary and a real independent consumer**. The next autonomous repository step is a consistency sweep across tooling maturity, package counts, generated metadata, and human documentation. Further runtime capability extraction should wait for real product semantics or provider decisions rather than inventing them.
 
 The following items remain **not ready for package extraction** until a concrete consumer proves their semantics:
 
@@ -181,5 +182,6 @@ The following items remain **not ready for package extraction** until a concrete
 - **Idempotency** — Athar has owner-scoped `ClientRequestId` lookup plus a unique database constraint, but no reusable reservation/store/replay contract is proven yet.
 - **Concurrency** — Athar has SQL Server `rowversion` plus 409 conflict handling, but no reusable public precondition/token contract is proven yet.
 - **Organization / Multi-Tenancy** — the reusable core must not invent hierarchy, tenant identity, or isolation topology before a product requires them.
+- **Search / Reporting / Privacy / Retention / Money / Numbering** — reusable semantics are not yet proven by a real reference consumer.
 
-Provider/vendor choices, legal retention, rollout targeting policy, tenancy topology, and business organization semantics remain explicit owner/organization decisions rather than defaults embedded into FoundationKit.
+Provider/vendor choices, legal retention, rollout targeting policy, tenancy topology, business organization semantics, distributed-cache consistency, and cache data-classification policy remain explicit owner/organization decisions rather than defaults embedded into FoundationKit.
