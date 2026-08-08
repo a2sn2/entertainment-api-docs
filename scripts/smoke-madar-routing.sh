@@ -111,4 +111,7 @@ python3 -c 'import json,sys; department_id=sys.argv[1]; operator_id=sys.argv[2];
 
 echo "Madar department route + queue + claim SQL workflow passed for case $case_id in department $department_id"
 
-bash scripts/smoke-madar-department-admin.sh
+MADAR_ADMIN_COOKIE_FILE="$admin_cookie" \
+MADAR_ADMIN_CSRF_TOKEN="$admin_token" \
+MADAR_OPERATOR_ID="$operator_id" \
+  bash scripts/smoke-madar-department-admin.sh
