@@ -171,6 +171,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseExceptionHandler();
+app.UseMiddleware<DatabaseExceptionMiddleware>();
 app.UseFoundationRequestPipeline();
 app.UseRateLimiter();
 app.UseBlazorFrameworkFiles();
