@@ -190,8 +190,12 @@ public sealed class Case : AggregateRoot<Guid>
         if (routedByUserId == Guid.Empty)
             return Result.Failure(CaseErrors.InvalidActor);
 
-        if (Status != CaseStatuses.New || AssignedToUserId.HasValue)
+        if (Status != CaseStatuses.New
+            || AssignedToUserId.HasValue
+            || DepartmentId.HasValue)
+        {
             return Result.Failure(CaseErrors.InvalidRoutingState);
+        }
 
         DepartmentId = departmentId;
         RoutedUtc = routedUtc;
@@ -241,6 +245,94 @@ public sealed class Case : AggregateRoot<Guid>
             Status,
             assignedByUserId,
             assignedUtc));
+
+        return Result.Success();
+    }
+
+    public Result Reassign(
+        Guid assigneeUserId,
+        Guid reassignedByUserId,
+        DateTimeOffset reassignedUtc)
+    {
+        if (assigneeUserId == Guid.Empty)
+            return Result.Failure(CaseErrors.InvalidAssignee);
+
+        if (reassignedByUserId == Guid.Empty)
+            return Result.Failure(CaseErrors.InvalidActor);
+
+        if (Status is not (CaseStatuses.Assigned or CaseStatuses.InProgress)
+            || !AssignedToUserId.HasValue)
+        {
+            return Result.Failure(CaseErrors.InvalidReassignmentState);
+        }
+
+        if (AssignedToUserId.Value == assigneeUserId)
+            return Result.Failure(CaseErrors.SameAssignee);
+
+        var previousAssigneeUserId = AssignedToUserId.Value;
+        AssignedToUserId = assigneeUserId;
+        UpdatedUtc = reassignedUtc;
+
+        RaiseDomainEvent(new CaseReassigned(
+            Id,
+            DepartmentId,
+            previousAssigneeUserId,
+            assigneeUserId,
+            Status,
+            reassignedByUserId,
+            reassignedUtc));
+
+        return Result.Success();
+    }
+
+    public Result TransferToDepartment(
+        Guid departmentId,
+        Guid transferredByUserId,
+        DateTimeOffset transferredUtc)
+    {
+        if (departmentId == Guid.Empty)
+            return Result.Failure(CaseErrors.InvalidDepartment);
+
+        if (transferredByUserId == Guid.Empty)
+            return Result.Failure(CaseErrors.InvalidActor);
+
+        if (!DepartmentId.HasValue)
+            return Result.Failure(CaseErrors.TransferRequiresRouting);
+
+        if (DepartmentId.Value == departmentId)
+            return Result.Failure(CaseErrors.SameDepartment);
+
+        if (Status is not (CaseStatuses.New or CaseStatuses.Assigned or CaseStatuses.InProgress))
+            return Result.Failure(CaseErrors.InvalidTransferState);
+
+        var previousDepartmentId = DepartmentId.Value;
+        var previousAssigneeUserId = AssignedToUserId;
+        var previousStatus = Status;
+
+        DepartmentId = departmentId;
+        AssignedToUserId = null;
+        Status = CaseStatuses.New;
+        RoutedUtc = transferredUtc;
+        UpdatedUtc = transferredUtc;
+
+        RaiseDomainEvent(new CaseTransferred(
+            Id,
+            previousDepartmentId,
+            departmentId,
+            previousAssigneeUserId,
+            previousStatus,
+            transferredByUserId,
+            transferredUtc));
+
+        if (previousStatus != Status)
+        {
+            RaiseDomainEvent(new CaseStatusChanged(
+                Id,
+                previousStatus,
+                Status,
+                transferredByUserId,
+                transferredUtc));
+        }
 
         return Result.Success();
     }
@@ -359,6 +451,24 @@ public sealed record CaseAssigned(
     Guid AssignedByUserId,
     DateTimeOffset AssignedUtc) : IDomainEvent;
 
+public sealed record CaseReassigned(
+    Guid CaseId,
+    Guid? DepartmentId,
+    Guid PreviousAssigneeUserId,
+    Guid AssigneeUserId,
+    string Status,
+    Guid ReassignedByUserId,
+    DateTimeOffset ReassignedUtc) : IDomainEvent;
+
+public sealed record CaseTransferred(
+    Guid CaseId,
+    Guid FromDepartmentId,
+    Guid ToDepartmentId,
+    Guid? PreviousAssigneeUserId,
+    string PreviousStatus,
+    Guid TransferredByUserId,
+    DateTimeOffset TransferredUtc) : IDomainEvent;
+
 public sealed record CaseStatusChanged(
     Guid CaseId,
     string FromStatus,
@@ -404,11 +514,31 @@ public static class CaseErrors
 
     public static readonly Error InvalidRoutingState = Error.Conflict(
         "Madar.InvalidRoutingState",
-        "يمكن توجيه الحالة فقط عندما تكون جديدة وغير مسندة.");
+        "يمكن توجيه الحالة فقط عندما تكون جديدة وغير مسندة وغير موجهة مسبقًا.");
+
+    public static readonly Error TransferRequiresRouting = Error.Conflict(
+        "Madar.Transfer.RequiresRouting",
+        "يجب أن تكون الحالة موجهة إلى قسم قبل نقلها إلى قسم آخر.");
+
+    public static readonly Error SameDepartment = Error.Conflict(
+        "Madar.Transfer.SameDepartment",
+        "الحالة موجودة بالفعل في القسم المحدد.");
+
+    public static readonly Error InvalidTransferState = Error.Conflict(
+        "Madar.Transfer.InvalidState",
+        "لا يمكن نقل الحالة بعد حلها أو إغلاقها.");
 
     public static readonly Error InvalidAssignee = Error.Validation(
         "Madar.InvalidAssignee",
         "الموظف المسند إليه غير صالح.");
+
+    public static readonly Error InvalidReassignmentState = Error.Conflict(
+        "Madar.Reassignment.InvalidState",
+        "يمكن إعادة إسناد الحالة فقط عندما تكون مسندة أو قيد المعالجة.");
+
+    public static readonly Error SameAssignee = Error.Conflict(
+        "Madar.Reassignment.SameAssignee",
+        "الحالة مسندة بالفعل إلى الموظف المحدد.");
 
     public static readonly Error InvalidActor = Error.Forbidden(
         "Madar.InvalidActor",

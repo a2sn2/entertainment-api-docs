@@ -69,12 +69,12 @@ else if (_case is not null)
 
         <AuthorizeView Roles="Supervisor,Administrator">
             <Authorized>
-                @if (_case.Status == "new")
+                @if (_case.Status == "new" && !_case.DepartmentId.HasValue)
                 {
                     <MudPaper Elevation="0" Outlined="true" Class="pa-6">
                         <MudText Typo="Typo.h5" GutterBottom="true">توجيه الحالة</MudText>
                         <MudText Typo="Typo.body2" Class="mb-3">
-                            التوجيه يضع الحالة في قائمة انتظار القسم مع بقائها جديدة حتى يتم استلامها أو إسنادها.
+                            التوجيه الأولي يضع الحالة في قائمة انتظار القسم مع بقائها جديدة. بعد ذلك يجب استخدام نقل الحالة لتغيير القسم.
                         </MudText>
                         @if (_departments.Count == 0)
                         {
@@ -101,7 +101,10 @@ else if (_case is not null)
                             </MudButton>
                         }
                     </MudPaper>
+                }
 
+                @if (_case.Status == "new")
+                {
                     <MudPaper Elevation="0" Outlined="true" Class="pa-6">
                         <MudText Typo="Typo.h5" GutterBottom="true">إسناد الحالة</MudText>
                         @if (_case.DepartmentId.HasValue)
@@ -134,6 +137,77 @@ else if (_case is not null)
                                        OnClick="AssignAsync"
                                        Class="mt-4">
                                 إسناد
+                            </MudButton>
+                        }
+                    </MudPaper>
+                }
+
+                @if (_case.DepartmentId.HasValue
+                    && _case.Status is "new" or "assigned" or "in-progress")
+                {
+                    <MudPaper Elevation="0" Outlined="true" Class="pa-6">
+                        <MudText Typo="Typo.h5" GutterBottom="true">نقل الحالة إلى قسم آخر</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-3">
+                            النقل يعيد الحالة إلى قائمة انتظار القسم الجديد ويلغي الإسناد الحالي، مع بقاء SLA والتعليقات والاعتمادات والسجل محفوظة.
+                        </MudText>
+                        @if (_departments.All(item => item.Id == _case.DepartmentId.Value))
+                        {
+                            <MudAlert Severity="Severity.Info">لا يوجد قسم آخر فعال متاح للنقل.</MudAlert>
+                        }
+                        else
+                        {
+                            <MudSelect T="Guid?"
+                                       Label="القسم الجديد"
+                                       Variant="Variant.Outlined"
+                                       @bind-Value="_selectedTransferDepartmentId"
+                                       Disabled="_acting">
+                                @foreach (var department in _departments.Where(item => item.Id != _case.DepartmentId.Value))
+                                {
+                                    <MudSelectItem T="Guid?" Value="@((Guid?)department.Id)">@department.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudButton Color="Color.Warning"
+                                       Variant="Variant.Outlined"
+                                       Disabled="_acting || !_selectedTransferDepartmentId.HasValue"
+                                       OnClick="TransferAsync"
+                                       Class="mt-4">
+                                نقل الحالة
+                            </MudButton>
+                        }
+                    </MudPaper>
+                }
+
+                @if (_case.Status is "assigned" or "in-progress")
+                {
+                    <MudPaper Elevation="0" Outlined="true" Class="pa-6">
+                        <MudText Typo="Typo.h5" GutterBottom="true">إعادة إسناد الحالة</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-3">
+                            إعادة الإسناد تحافظ على حالة المعالجة وSLA. إذا كانت الحالة موجهة إلى قسم فيجب أن يكون الموظف الجديد عضوًا فيه.
+                        </MudText>
+                        @if (_operators.Count == 0)
+                        {
+                            <MudAlert Severity="Severity.Info">لا يوجد موظفون بدور Operator متاحون.</MudAlert>
+                        }
+                        else
+                        {
+                            <MudSelect T="string"
+                                       Label="الموظف الجديد"
+                                       Variant="Variant.Outlined"
+                                       @bind-Value="_selectedOperatorId"
+                                       Disabled="_acting">
+                                @foreach (var item in _operators.Where(item => item.UserId != _case.AssignedToUserId))
+                                {
+                                    <MudSelectItem T="string" Value="@item.UserId.ToString("D")">
+                                        @item.DisplayName (@item.Email)
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudButton Color="Color.Warning"
+                                       Variant="Variant.Filled"
+                                       Disabled="_acting || string.IsNullOrWhiteSpace(_selectedOperatorId)"
+                                       OnClick="ReassignAsync"
+                                       Class="mt-4">
+                                إعادة الإسناد
                             </MudButton>
                         }
                     </MudPaper>
@@ -262,6 +336,7 @@ else if (_case is not null)
     private string? _actionError;
     private string? _selectedOperatorId;
     private Guid? _selectedDepartmentId;
+    private Guid? _selectedTransferDepartmentId;
 
     protected override async Task OnParametersSetAsync() => await LoadAsync();
 
@@ -280,6 +355,8 @@ else if (_case is not null)
 
             _case = caseResult.Value;
             _selectedDepartmentId = _case.DepartmentId;
+            _selectedTransferDepartmentId = null;
+            _selectedOperatorId = null;
             await LoadTimelineAsync();
 
             var departmentsResult = await ApiClient.ListDepartmentsAsync();
@@ -322,6 +399,21 @@ else if (_case is not null)
             new RouteCaseRequest(_selectedDepartmentId.Value)));
     }
 
+    private async Task TransferAsync()
+    {
+        if (!_selectedTransferDepartmentId.HasValue)
+        {
+            _actionError = "اختر قسمًا جديدًا لنقل الحالة.";
+            return;
+        }
+
+        await RunActionAsync(() => ApiClient.TransferCaseAsync(
+            CaseId,
+            new TransferCaseRequest(_selectedTransferDepartmentId.Value)));
+        _selectedTransferDepartmentId = null;
+        _selectedOperatorId = null;
+    }
+
     private Task ClaimAsync() =>
         RunActionAsync(() => ApiClient.ClaimCaseAsync(CaseId));
 
@@ -335,6 +427,19 @@ else if (_case is not null)
 
         await RunActionAsync(() =>
             ApiClient.AssignCaseAsync(CaseId, new AssignCaseRequest(userId)));
+    }
+
+    private async Task ReassignAsync()
+    {
+        if (!Guid.TryParse(_selectedOperatorId, out var userId))
+        {
+            _actionError = "اختر موظفًا جديدًا صالحًا للإسناد.";
+            return;
+        }
+
+        await RunActionAsync(() =>
+            ApiClient.ReassignCaseAsync(CaseId, new ReassignCaseRequest(userId)));
+        _selectedOperatorId = null;
     }
 
     private Task StartProgressAsync() =>
@@ -431,8 +536,10 @@ else if (_case is not null)
     {
         "madar.case.created" => "إنشاء الحالة",
         "madar.case.routed" => "توجيه الحالة إلى قسم",
+        "madar.case.transferred" => "نقل الحالة إلى قسم آخر",
         "madar.case.claimed" => "استلام الحالة من قائمة الانتظار",
         "madar.case.assigned" => "إسناد الحالة",
+        "madar.case.reassigned" => "إعادة إسناد الحالة",
         "madar.case.transitioned" => "تغيير الحالة",
         "madar.case.sla-breached" => "تجاوز SLA وتصعيد الحالة",
         "madar.case.comment-added" => "إضافة تعليق",

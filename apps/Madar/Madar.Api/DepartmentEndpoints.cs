@@ -64,6 +64,52 @@ public static class DepartmentEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict);
 
         endpoints.MapPost(
+                "/api/cases/{caseId:guid}/transfer",
+                async (
+                    Guid caseId,
+                    TransferCaseRequest request,
+                    ICaseRoutingManager manager,
+                    CancellationToken cancellationToken) =>
+                    (await manager.TransferAsync(
+                        caseId,
+                        request,
+                        cancellationToken))
+                    .ToHttpResult(Results.Ok))
+            .AddEndpointFilter<AntiforgeryEndpointFilter>()
+            .RequireAuthorization()
+            .RequireRateLimiting("write")
+            .WithTags("Case Routing")
+            .WithName("TransferMadarCase")
+            .Produces<CaseDto>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
+        endpoints.MapPost(
+                "/api/cases/{caseId:guid}/reassignment",
+                async (
+                    Guid caseId,
+                    ReassignCaseRequest request,
+                    ICaseRoutingManager manager,
+                    CancellationToken cancellationToken) =>
+                    (await manager.ReassignAsync(
+                        caseId,
+                        request,
+                        cancellationToken))
+                    .ToHttpResult(Results.Ok))
+            .AddEndpointFilter<AntiforgeryEndpointFilter>()
+            .RequireAuthorization()
+            .RequireRateLimiting("write")
+            .WithTags("Case Routing")
+            .WithName("ReassignMadarCase")
+            .Produces<CaseDto>()
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
+        endpoints.MapPost(
                 "/api/cases/{caseId:guid}/claim",
                 async (
                     Guid caseId,

@@ -46,6 +46,37 @@ public sealed class CaseNotificationCoordinatorTests
     }
 
     [Fact]
+    public async Task Reassignment_Delivered_UsesDistinctBoundedPurpose()
+    {
+        var caseId = Guid.NewGuid();
+        var targetUserId = Guid.NewGuid();
+        const string destination = "replacement@example.test";
+        var sender = new RecordingNotificationSender(
+            NotificationDeliveryResult.Delivered());
+        var audit = new RecordingAuditRecorder();
+        var coordinator = new CaseNotificationCoordinator(
+            new NotificationUserDirectory(targetUserId, destination),
+            sender,
+            audit,
+            new RecordingUnitOfWork());
+
+        await coordinator.NotifyReassignmentAsync(caseId, targetUserId);
+
+        var message = Assert.Single(sender.Messages);
+        Assert.Equal(MadarNotificationPurposes.CaseReassigned, message.Purpose);
+        Assert.Contains("إعادة إسناد", message.Title, StringComparison.Ordinal);
+        var auditEvent = Assert.Single(audit.Events);
+        Assert.Equal(MadarNotificationPurposes.CaseReassigned, auditEvent.Attributes["purpose"]);
+        Assert.Equal(targetUserId.ToString("D"), auditEvent.Attributes["targetUserId"]);
+        Assert.DoesNotContain(
+            auditEvent.Attributes.Values,
+            value => value.Contains(destination, StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(
+            auditEvent.Attributes.Values,
+            value => value.Contains(message.Body, StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Assignment_MissingDestination_IsNotConfiguredWithoutCallingProvider()
     {
         var caseId = Guid.NewGuid();

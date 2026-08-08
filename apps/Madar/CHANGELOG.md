@@ -2,7 +2,31 @@
 
 This product changelog records Madar-specific behavior. Repository-wide reusable FoundationKit changes remain documented in the root `CHANGELOG.md`.
 
-## [Unreleased] — v0.7 department administration
+## [Unreleased] — v0.8 controlled transfer and reassignment
+
+### Added
+
+- Supervisor/Administrator `madar.cases.transfer` and `madar.cases.reassign` product permissions; Operator remains unable to move work administratively.
+- Controlled transfer of already-routed `new`, `assigned`, or `in-progress` cases to a different active department, clearing the assignee and returning the case to `new` in the target queue.
+- Transfer invariants that reject unrouted, same-department, resolved, and closed cases without mutating persisted work.
+- Controlled reassignment of `assigned` / `in-progress` cases to a different eligible Operator while preserving lifecycle state, routing state, and SLA evidence.
+- Routed reassignment defense requiring the new Operator to be a member of the active case department.
+- `madar.case.transferred` and `madar.case.reassigned` persistent audit actions with bounded department/user/status identifiers only.
+- Reassignment notification through the existing case notification coordinator after the SQL business commit; transport failure cannot roll back the reassignment.
+- Authenticated, anti-CSRF, write-rate-limited `POST /api/cases/{caseId}/transfer` and `POST /api/cases/{caseId}/reassignment` endpoints.
+- Arabic case-details controls for transfer and reassignment, with server-side authorization and membership rules remaining authoritative.
+- Domain/application tests plus real SQL/E2E proof for progress → reassignment → cross-department transfer → target queue → claim, including SLA preservation and bounded timeline metadata.
+
+### Deliberately deferred
+
+- automatic/round-robin routing, capacity, presence, skills, and bulk reassignment;
+- transfer approval workflows or dedicated routing-history tables beyond the existing persistent audit timeline;
+- organization hierarchy, branches, teams, or multi-tenancy;
+- queue-specific business-hours/SLA policy;
+- WhatsApp/email ingestion and files/documents;
+- reusable FoundationKit organization/routing extraction until independent product evidence exists.
+
+## [v0.7] — department administration
 
 ### Added
 
