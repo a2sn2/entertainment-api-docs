@@ -87,6 +87,15 @@ public sealed class MadarApiClient(HttpClient httpClient)
             request,
             cancellationToken);
 
+    public Task<ApiResult<CaseSlaEvaluationResponse>> EvaluateCaseSlaAsync(
+        EvaluateCaseSlaRequest request,
+        CancellationToken cancellationToken = default) =>
+        SendProtectedAsync<CaseSlaEvaluationResponse>(
+            HttpMethod.Post,
+            CaseRoutes.EvaluateSla,
+            request,
+            cancellationToken);
+
     public Task<ApiResult<CaseTimelineEntryDto[]>> GetTimelineAsync(
         Guid caseId,
         CancellationToken cancellationToken = default) =>
