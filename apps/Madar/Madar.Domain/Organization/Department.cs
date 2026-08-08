@@ -20,6 +20,7 @@ public sealed class Department
         Name = name;
         IsActive = isActive;
         CreatedUtc = createdUtc;
+        UpdatedUtc = createdUtc;
     }
 
     public Guid Id { get; private set; }
@@ -32,6 +33,8 @@ public sealed class Department
 
     public DateTimeOffset CreatedUtc { get; private set; }
 
+    public DateTimeOffset UpdatedUtc { get; private set; }
+
     public byte[] RowVersion { get; private set; } = [];
 
     public static Result<Department> Create(
@@ -40,7 +43,7 @@ public sealed class Department
         DateTimeOffset createdUtc)
     {
         var normalizedCode = NormalizeCode(code);
-        var normalizedName = name?.Trim() ?? string.Empty;
+        var normalizedName = NormalizeName(name);
 
         if (normalizedCode.Length is < 2 or > 60
             || normalizedCode.Any(character =>
@@ -49,7 +52,7 @@ public sealed class Department
             return Result<Department>.Failure(DepartmentErrors.InvalidCode);
         }
 
-        if (normalizedName.Length is < 2 or > 120)
+        if (!IsValidName(normalizedName))
             return Result<Department>.Failure(DepartmentErrors.InvalidName);
 
         return Result<Department>.Success(
@@ -60,6 +63,30 @@ public sealed class Department
                 true,
                 createdUtc));
     }
+
+    public Result Update(
+        string? name,
+        bool isActive,
+        DateTimeOffset updatedUtc)
+    {
+        var normalizedName = NormalizeName(name);
+        if (!IsValidName(normalizedName))
+            return Result.Failure(DepartmentErrors.InvalidName);
+
+        if (Name == normalizedName && IsActive == isActive)
+            return Result.Success();
+
+        Name = normalizedName;
+        IsActive = isActive;
+        UpdatedUtc = updatedUtc;
+        return Result.Success();
+    }
+
+    private static bool IsValidName(string value) =>
+        value.Length is >= 2 and <= 120;
+
+    private static string NormalizeName(string? value) =>
+        value?.Trim() ?? string.Empty;
 
     private static string NormalizeCode(string? value) =>
         value?.Trim().ToLowerInvariant() ?? string.Empty;
