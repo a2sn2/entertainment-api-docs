@@ -36,6 +36,11 @@ services:
       Madar__Bootstrap__OperatorEmail: "${MADAR_OPERATOR_EMAIL:?MADAR_OPERATOR_EMAIL is required}"
       Madar__Bootstrap__OperatorPassword: "${MADAR_OPERATOR_PASSWORD:?MADAR_OPERATOR_PASSWORD is required}"
       Madar__Bootstrap__OperatorDisplayName: "مشغل مدار"
+      Madar__Sla__Enabled: "${MADAR_SLA_ENABLED:-false}"
+      Madar__Sla__Low: "${MADAR_SLA_LOW:-01:00:00}"
+      Madar__Sla__Medium: "${MADAR_SLA_MEDIUM:-01:00:00}"
+      Madar__Sla__High: "${MADAR_SLA_HIGH:-01:00:00}"
+      Madar__Sla__Critical: "${MADAR_SLA_CRITICAL:-01:00:00}"
     depends_on:
       madar-sqlserver:
         condition: service_healthy
