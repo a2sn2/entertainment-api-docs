@@ -113,10 +113,12 @@ public sealed class CaseApprovalTests
             fixture.AuditSink.Events,
             entry => entry.Action == "madar.case.approval-decided");
         Assert.Equal("approve", audit.Attributes["decision"]);
-        Assert.False(audit.Attributes.Values.Any(
-            value => value.Contains("سبب اعتماد داخلي", StringComparison.Ordinal)));
-        Assert.False(audit.Attributes.Keys.Any(
-            key => string.Equals(key, "notes", StringComparison.OrdinalIgnoreCase)));
+        Assert.DoesNotContain(
+            audit.Attributes.Values,
+            value => value.Contains("سبب اعتماد داخلي", StringComparison.Ordinal));
+        Assert.DoesNotContain(
+            audit.Attributes.Keys,
+            key => string.Equals(key, "notes", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
