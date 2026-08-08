@@ -190,8 +190,12 @@ public sealed class Case : AggregateRoot<Guid>
         if (routedByUserId == Guid.Empty)
             return Result.Failure(CaseErrors.InvalidActor);
 
-        if (Status != CaseStatuses.New || AssignedToUserId.HasValue)
+        if (Status != CaseStatuses.New
+            || AssignedToUserId.HasValue
+            || DepartmentId.HasValue)
+        {
             return Result.Failure(CaseErrors.InvalidRoutingState);
+        }
 
         DepartmentId = departmentId;
         RoutedUtc = routedUtc;
@@ -510,7 +514,7 @@ public static class CaseErrors
 
     public static readonly Error InvalidRoutingState = Error.Conflict(
         "Madar.InvalidRoutingState",
-        "يمكن توجيه الحالة فقط عندما تكون جديدة وغير مسندة.");
+        "يمكن توجيه الحالة فقط عندما تكون جديدة وغير مسندة وغير موجهة مسبقًا.");
 
     public static readonly Error TransferRequiresRouting = Error.Conflict(
         "Madar.Transfer.RequiresRouting",
