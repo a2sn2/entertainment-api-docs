@@ -2,9 +2,33 @@
 
 This product changelog records Madar-specific behavior. Repository-wide reusable FoundationKit changes remain documented in the root `CHANGELOG.md`.
 
-## [Unreleased] — v0.3 case collaboration
+## [Unreleased] — v0.4 sensitive-case approval gate
 
 ### Added
+
+- Product-owned `CaseApproval` persistence with requester/reviewer identities, pending/approved/rejected state, bounded decision notes, timestamps, and SQL Server rowversion.
+- Sensitive-case policy: `access-request` and `compliance-case` require the latest approval to be approved before `in-progress → resolved`.
+- Existing `FoundationKit.Approvals` reuse for permission-first decision eligibility, maker-checker enforcement, strict approve/reject normalization, and workflow-backed decision resolution.
+- New `madar.cases.approve` product permission granted to Supervisor and Administrator in the current role model.
+- Authenticated approval history/request/decision API under `/api/cases/{caseId}/approvals`, with anti-CSRF and write rate limiting on writes.
+- `madar.CaseApprovals` SQL table with deterministic case-history index, requester/reviewer foreign keys, and migration/snapshot coverage.
+- `madar.case.approval-requested` and `madar.case.approval-decided` audit actions with bounded metadata; decision notes remain product data and are excluded from audit attributes.
+- Arabic approval panel on the existing case-details route, including request, maker-checker decision, status, notes, and history.
+- Unit coverage for permission-first maker-checker behavior, rejection/re-request behavior, domain defense-in-depth, and audit-note exclusion.
+- SQL smoke coverage proving resolution is blocked before approval, a different authorized actor approves, the same case then resolves/closes, approval history persists, and decision notes do not leak into the audit timeline.
+
+### Deliberately deferred
+
+- multi-stage, parallel, or quorum approvals;
+- dynamic approver routing/delegation;
+- approval-triggered notifications;
+- approval SLA/background scheduling;
+- files/attachments;
+- edit/delete/versioning of approval records;
+- organization hierarchy/multi-tenancy;
+- changes to the public `FoundationKit.Approvals` API merely for Madar convenience.
+
+## [v0.3] — case collaboration
 
 - Product-owned append-only `CaseComment` model with case/author IDs, plain-text body, creation time, and SQL Server rowversion.
 - Body validation that trims input and accepts only 1..2000 characters.
@@ -15,17 +39,7 @@ This product changelog records Madar-specific behavior. Repository-wide reusable
 - `madar.case.comment-added` audit action containing bounded metadata only; comment text is deliberately excluded from audit attributes.
 - Typed Blazor API support and Arabic comments panel on the existing case-details route.
 - SQL smoke coverage proving assigned-operator add/list, body availability only through the authorized comments API, body absence from the audit timeline, and comment history after case closure.
-
-### Deliberately deferred
-
-- edit/delete/version history;
-- private/internal-note visibility tiers;
-- mentions/watchers/subscriptions;
-- notifications;
-- files/attachments;
-- rich text/HTML;
-- reactions/moderation;
-- reusable collaboration/comments package.
+- No edit/delete/version history, private-note tiers, mentions/watchers, notifications, attachments, rich text, reactions/moderation, or reusable comments package.
 
 ## [v0.2] — SLA deadlines and bounded escalation
 

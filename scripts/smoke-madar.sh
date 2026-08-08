@@ -205,4 +205,99 @@ comments_after_close="$(curl --fail --silent --show-error \
   "$base_url/api/cases/$case_id/comments")"
 python3 -c 'import json,sys; comment_id=sys.argv[1]; items=json.load(sys.stdin); assert any(item["id"] == comment_id for item in items), "Comment history disappeared after case close"' "$comment_id" <<< "$comments_after_close"
 
-echo "Madar readiness + SLA + comments + SQL/auth/case/audit smoke workflows passed for cases $sla_case_id and $case_id"
+sensitive_payload='{"title":"Privileged access review","description":"Access request used to prove maker-checker approval before sensitive case resolution.","caseType":"access-request","priority":"high"}'
+sensitive_case_json="$(curl --fail --silent --show-error \
+  -c "$admin_cookie" \
+  -b "$admin_cookie" \
+  -H 'Content-Type: application/json' \
+  -H "X-CSRF-TOKEN: $admin_token" \
+  -d "$sensitive_payload" \
+  "$base_url/api/cases/")"
+sensitive_case_id="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$sensitive_case_json")"
+python3 -c 'import json,sys; item=json.load(sys.stdin); assert item["caseType"] == "access-request"; assert item["status"] == "new"' <<< "$sensitive_case_json"
+
+sensitive_assigned="$(curl --fail --silent --show-error \
+  -c "$admin_cookie" \
+  -b "$admin_cookie" \
+  -H 'Content-Type: application/json' \
+  -H "X-CSRF-TOKEN: $admin_token" \
+  -d "$assign_payload" \
+  "$base_url/api/cases/$sensitive_case_id/assignment")"
+python3 -c 'import json,sys; item=json.load(sys.stdin); assert item["status"] == "assigned"' <<< "$sensitive_assigned"
+
+sensitive_in_progress="$(curl --fail --silent --show-error \
+  -c "$operator_cookie" \
+  -b "$operator_cookie" \
+  -H 'Content-Type: application/json' \
+  -H "X-CSRF-TOKEN: $operator_token" \
+  -d '{"trigger":"start-progress"}' \
+  "$base_url/api/cases/$sensitive_case_id/transition")"
+python3 -c 'import json,sys; item=json.load(sys.stdin); assert item["status"] == "in-progress"' <<< "$sensitive_in_progress"
+
+blocked_resolve_body="$workdir/blocked-resolve.json"
+blocked_resolve_status="$(curl --silent --show-error \
+  -o "$blocked_resolve_body" \
+  --write-out '%{http_code}' \
+  -c "$operator_cookie" \
+  -b "$operator_cookie" \
+  -H 'Content-Type: application/json' \
+  -H "X-CSRF-TOKEN: $operator_token" \
+  -d '{"trigger":"resolve"}' \
+  "$base_url/api/cases/$sensitive_case_id/transition")"
+test "$blocked_resolve_status" = "409"
+grep -q 'Madar.Approval.Required' "$blocked_resolve_body"
+
+approval_json="$(curl --fail --silent --show-error \
+  -c "$operator_cookie" \
+  -b "$operator_cookie" \
+  -H "X-CSRF-TOKEN: $operator_token" \
+  -X POST \
+  "$base_url/api/cases/$sensitive_case_id/approvals")"
+approval_id="$(python3 -c 'import json,sys; item=json.load(sys.stdin); print(item["id"])' <<< "$approval_json")"
+python3 -c 'import json,sys; case_id=sys.argv[1]; operator_id=sys.argv[2]; item=json.load(sys.stdin); assert item["caseId"] == case_id; assert item["requestedByUserId"] == operator_id; assert item["status"] == "pending"' "$sensitive_case_id" "$operator_id" <<< "$approval_json"
+
+approval_notes='Approval decision notes marker 63fb410e: authorized product data only.'
+approval_decision_payload="$(python3 -c 'import json,sys; print(json.dumps({"decision":"approve","notes":sys.argv[1]}))' "$approval_notes")"
+approved_json="$(curl --fail --silent --show-error \
+  -c "$admin_cookie" \
+  -b "$admin_cookie" \
+  -H 'Content-Type: application/json' \
+  -H "X-CSRF-TOKEN: $admin_token" \
+  -d "$approval_decision_payload" \
+  "$base_url/api/cases/$sensitive_case_id/approvals/$approval_id/decision")"
+python3 -c 'import json,sys; expected=sys.argv[1]; item=json.load(sys.stdin); assert item["status"] == "approved"; assert item["decisionNotes"] == expected; assert item["reviewedByUserId"] is not None; assert item["decidedUtc"] is not None' "$approval_notes" <<< "$approved_json"
+
+approval_history="$(curl --fail --silent --show-error \
+  -b "$operator_cookie" \
+  "$base_url/api/cases/$sensitive_case_id/approvals")"
+python3 -c 'import json,sys; approval_id=sys.argv[1]; expected=sys.argv[2]; items=json.load(sys.stdin); matches=[item for item in items if item["id"] == approval_id]; assert len(matches) == 1; assert matches[0]["status"] == "approved"; assert matches[0]["decisionNotes"] == expected' "$approval_id" "$approval_notes" <<< "$approval_history"
+
+sensitive_resolved="$(curl --fail --silent --show-error \
+  -c "$operator_cookie" \
+  -b "$operator_cookie" \
+  -H 'Content-Type: application/json' \
+  -H "X-CSRF-TOKEN: $operator_token" \
+  -d '{"trigger":"resolve"}' \
+  "$base_url/api/cases/$sensitive_case_id/transition")"
+python3 -c 'import json,sys; item=json.load(sys.stdin); assert item["status"] == "resolved"' <<< "$sensitive_resolved"
+
+sensitive_closed="$(curl --fail --silent --show-error \
+  -c "$admin_cookie" \
+  -b "$admin_cookie" \
+  -H 'Content-Type: application/json' \
+  -H "X-CSRF-TOKEN: $admin_token" \
+  -d '{"trigger":"close"}' \
+  "$base_url/api/cases/$sensitive_case_id/transition")"
+python3 -c 'import json,sys; item=json.load(sys.stdin); assert item["status"] == "closed"' <<< "$sensitive_closed"
+
+sensitive_timeline="$(curl --fail --silent --show-error \
+  -b "$admin_cookie" \
+  "$base_url/api/cases/$sensitive_case_id/timeline")"
+python3 -c 'import json,sys; marker=sys.argv[1]; items=json.load(sys.stdin); actions=[item["action"] for item in items]; assert actions.count("madar.case.approval-requested") == 1, actions; assert actions.count("madar.case.approval-decided") == 1, actions; serialized=json.dumps(items); assert marker not in serialized, "Approval decision notes leaked into audit timeline"' "$approval_notes" <<< "$sensitive_timeline"
+
+approval_history_after_close="$(curl --fail --silent --show-error \
+  -b "$operator_cookie" \
+  "$base_url/api/cases/$sensitive_case_id/approvals")"
+python3 -c 'import json,sys; approval_id=sys.argv[1]; items=json.load(sys.stdin); assert any(item["id"] == approval_id and item["status"] == "approved" for item in items), "Approval history disappeared after case close"' "$approval_id" <<< "$approval_history_after_close"
+
+echo "Madar readiness + SLA + comments + approvals + SQL/auth/case/audit smoke workflows passed for cases $sla_case_id, $case_id, and $sensitive_case_id"

@@ -42,7 +42,8 @@ public sealed class CaseManager(
     ICaseSlaPolicy slaPolicy,
     IUnitOfWork unitOfWork,
     IAuditRecorder auditRecorder,
-    IClock clock) : ICaseManager
+    IClock clock,
+    ICaseApprovalQueryService? approvalQueryService = null) : ICaseManager
 {
     public async Task<Result<CaseDto>> CreateAsync(
         CreateCaseRequest request,
@@ -198,6 +199,21 @@ public sealed class CaseManager(
                     && !authorization.HasPermission(MadarPermissions.ProgressAnyCase))
                 {
                     return Result<CaseDto>.Failure(CaseApplicationErrors.ProgressForbidden);
+                }
+
+                if (trigger == CaseTriggers.Resolve
+                    && CaseApprovalRequirement.IsRequired(item.CaseType))
+                {
+                    var latestApproval = approvalQueryService is null
+                        ? null
+                        : await approvalQueryService.GetLatestForCaseAsync(
+                            item.Id,
+                            cancellationToken);
+                    if (latestApproval?.Status != CaseApprovalStatuses.Approved)
+                    {
+                        return Result<CaseDto>.Failure(
+                            CaseApprovalApplicationErrors.ApprovalRequired);
+                    }
                 }
 
                 transition = trigger == CaseTriggers.StartProgress
