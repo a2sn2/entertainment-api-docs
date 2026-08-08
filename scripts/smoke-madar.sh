@@ -12,11 +12,6 @@ trap 'rm -rf "$workdir"' EXIT
 admin_cookie="$workdir/admin.cookies"
 operator_cookie="$workdir/operator.cookies"
 
-json_value() {
-  local expression="$1"
-  python3 -c "import json,sys; data=json.load(sys.stdin); print(${expression})"
-}
-
 csrf_token() {
   local cookie_file="$1"
   curl --fail --silent --show-error \
@@ -42,8 +37,16 @@ login() {
     "$base_url/api/auth/login"
 }
 
-status="$(curl --fail --silent --show-error "$base_url/health/live")"
-grep -q '"status":"healthy"' <<< "$status"
+live_json="$(curl --fail --silent --show-error "$base_url/health/live")"
+grep -q '"status":"healthy"' <<< "$live_json"
+
+ready_json="$(curl --fail --silent --show-error "$base_url/health/ready")"
+grep -q '"status":"ready"' <<< "$ready_json"
+grep -q '"service":"madar-api"' <<< "$ready_json"
+if grep -Eqi 'connection|string|password|server=|database=|sqlserver|data source' <<< "$ready_json"; then
+  echo "Madar readiness response exposed infrastructure-sensitive details." >&2
+  exit 1
+fi
 
 anonymous_status="$(curl --silent --output /dev/null --write-out '%{http_code}' "$base_url/api/cases")"
 test "$anonymous_status" = "401"
@@ -132,4 +135,4 @@ final_case="$(curl --fail --silent --show-error \
 final_status="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])' <<< "$final_case")"
 test "$final_status" = "closed"
 
-echo "Madar SQL/auth/case/audit smoke workflow passed for case $case_id"
+echo "Madar readiness + SQL/auth/case/audit smoke workflow passed for case $case_id"
