@@ -2,7 +2,27 @@
 
 This product changelog records Madar-specific behavior. Repository-wide reusable FoundationKit changes remain documented in the root `CHANGELOG.md`.
 
-## [Unreleased] — v0.4 sensitive-case approval gate
+## [Unreleased] — v0.5 operational case notifications
+
+### Added
+
+- Reuse of `FoundationKit.Notifications` for bounded provider-neutral notification messages/results and `FoundationKit.Notifications.Smtp` for the current optional email transport.
+- Product-owned Arabic notification copy for assignment, approval decision, and resolution events.
+- Identity-backed notification destination resolution without exposing recipient addresses through API contracts.
+- Optional SMTP configuration under `Madar:Notifications:Smtp`; an empty host/from-address is treated as `NotConfigured` by the existing provider contract.
+- `madar.case.notification-delivery` audit evidence containing only purpose, target user ID, and bounded delivery status; destination and body are deliberately excluded.
+- Notification delivery occurs only after the corresponding business transaction is saved, so SMTP `Failed` / `NotConfigured` outcomes do not roll back assignment, approval decision, or resolution.
+- Unit coverage for delivered, not-configured, failed, and audit-privacy behavior.
+
+### Deliberately deferred
+
+- background jobs, outbox delivery, retry/backoff, or delayed scheduling;
+- templates, preferences, recipient groups, fallback channels, or in-app inbox;
+- SMS, push, WhatsApp, or webhook providers;
+- SLA reminder scheduling;
+- changes to the public `FoundationKit.Notifications` API merely for Madar convenience.
+
+## [v0.4] — sensitive-case approval gate
 
 ### Added
 
@@ -21,7 +41,6 @@ This product changelog records Madar-specific behavior. Repository-wide reusable
 
 - multi-stage, parallel, or quorum approvals;
 - dynamic approver routing/delegation;
-- approval-triggered notifications;
 - approval SLA/background scheduling;
 - files/attachments;
 - edit/delete/versioning of approval records;
