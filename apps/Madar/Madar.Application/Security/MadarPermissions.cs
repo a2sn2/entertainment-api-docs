@@ -13,6 +13,7 @@ public static class MadarPermissions
     public const string CloseCases = "madar.cases.close";
     public const string EvaluateSla = "madar.cases.sla.evaluate";
     public const string ApproveCases = "madar.cases.approve";
+    public const string ManageDepartments = "madar.departments.manage";
 
     public static IReadOnlyList<PermissionDefinition> All { get; } =
     [
@@ -23,7 +24,8 @@ public static class MadarPermissions
         new(ProgressAnyCase, "Progress any assigned case"),
         new(CloseCases, "Close resolved cases"),
         new(EvaluateSla, "Evaluate case SLA breaches"),
-        new(ApproveCases, "Approve sensitive case resolution")
+        new(ApproveCases, "Approve sensitive case resolution"),
+        new(ManageDepartments, "Manage departments and operator memberships")
     ];
 
     public static RolePermissionMap CreateRolePermissionMap() =>
