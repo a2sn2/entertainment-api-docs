@@ -23,9 +23,7 @@
                 </MudButton>
             </Authorized>
         </AuthorizeView>
-        <MudButton Color="Color.Primary"
-                   Variant="Variant.Filled"
-                   OnClick="ToggleCreate">
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="ToggleCreate">
             @(_showCreate ? "إغلاق النموذج" : "حالة جديدة")
         </MudButton>
     </MudStack>
@@ -50,26 +48,16 @@
 
             <MudGrid>
                 <MudItem xs="12">
-                    <MudTextField T="string"
-                                  Label="العنوان"
-                                  Variant="Variant.Outlined"
-                                  @bind-Value="_title"
-                                  Disabled="_creating" />
+                    <MudTextField T="string" Label="العنوان" Variant="Variant.Outlined"
+                                  @bind-Value="_title" Disabled="_creating" />
                 </MudItem>
                 <MudItem xs="12">
-                    <MudTextField T="string"
-                                  Label="الوصف"
-                                  Lines="4"
-                                  Variant="Variant.Outlined"
-                                  @bind-Value="_description"
-                                  Disabled="_creating" />
+                    <MudTextField T="string" Label="الوصف" Lines="4" Variant="Variant.Outlined"
+                                  @bind-Value="_description" Disabled="_creating" />
                 </MudItem>
                 <MudItem xs="12" md="6">
-                    <MudSelect T="string"
-                               Label="نوع الحالة"
-                               Variant="Variant.Outlined"
-                               @bind-Value="_caseType"
-                               Disabled="_creating">
+                    <MudSelect T="string" Label="نوع الحالة" Variant="Variant.Outlined"
+                               @bind-Value="_caseType" Disabled="_creating">
                         @foreach (var option in CaseTypeOptions)
                         {
                             <MudSelectItem T="string" Value="@option.Value">@option.Label</MudSelectItem>
@@ -77,11 +65,8 @@
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12" md="6">
-                    <MudSelect T="string"
-                               Label="الأولوية"
-                               Variant="Variant.Outlined"
-                               @bind-Value="_priority"
-                               Disabled="_creating">
+                    <MudSelect T="string" Label="الأولوية" Variant="Variant.Outlined"
+                               @bind-Value="_priority" Disabled="_creating">
                         @foreach (var option in PriorityOptions)
                         {
                             <MudSelectItem T="string" Value="@option.Value">@option.Label</MudSelectItem>
@@ -90,11 +75,8 @@
                 </MudItem>
             </MudGrid>
 
-            <MudButton Color="Color.Primary"
-                       Variant="Variant.Filled"
-                       Disabled="_creating"
-                       OnClick="CreateAsync"
-                       Class="mt-5">
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="_creating"
+                       OnClick="CreateAsync" Class="mt-5">
                 @(_creating ? "جارٍ الإنشاء..." : "إنشاء الحالة")
             </MudButton>
         </MudPaper>
@@ -106,14 +88,11 @@
             <MudStack Spacing="3">
                 <div>
                     <MudText Typo="Typo.h5">قائمة انتظار القسم</MudText>
-                    <MudText Typo="Typo.body2">تظهر هنا الحالات الجديدة الموجهة للقسم ولم تُسند بعد.</MudText>
+                    <MudText Typo="Typo.body2">الحالات الجديدة الموجهة للقسم ولم تُسند بعد.</MudText>
                 </div>
 
-                <MudSelect T="Guid?"
-                           Label="القسم"
-                           Variant="Variant.Outlined"
-                           Value="_selectedDepartmentId"
-                           ValueChanged="SelectDepartmentAsync">
+                <MudSelect T="Guid?" Label="القسم" Variant="Variant.Outlined"
+                           Value="_selectedDepartmentId" ValueChanged="SelectDepartmentAsync">
                     @foreach (var department in _departments)
                     {
                         <MudSelectItem T="Guid?" Value="@((Guid?)department.Id)">@department.Name</MudSelectItem>
@@ -147,19 +126,21 @@
                             <MudTd DataLabel="وُجهت">@DisplayUtc(item.RoutedUtc)</MudTd>
                             <MudTd>
                                 <MudStack Row="true" Spacing="1">
-                                    <MudButton Size="Size.Small"
-                                               Variant="Variant.Text"
-                                               Href="@($"/cases/{item.Id:D}")">
-                                        فتح
-                                    </MudButton>
+                                    <AuthorizeView Roles="Supervisor,Administrator">
+                                        <Authorized>
+                                            <MudButton Size="Size.Small" Variant="Variant.Text"
+                                                       Href="@($"/cases/{item.Id:D}")">
+                                                فتح
+                                            </MudButton>
+                                        </Authorized>
+                                    </AuthorizeView>
                                     <AuthorizeView Roles="Operator">
                                         <Authorized>
-                                            <MudButton Size="Size.Small"
-                                                       Color="Color.Primary"
+                                            <MudButton Size="Size.Small" Color="Color.Primary"
                                                        Variant="Variant.Filled"
                                                        Disabled="_claimingCaseId.HasValue"
                                                        OnClick="@(() => ClaimAsync(item.Id))">
-                                                استلام
+                                                @(_claimingCaseId == item.Id ? "جارٍ الاستلام..." : "استلام")
                                             </MudButton>
                                         </Authorized>
                                     </AuthorizeView>
@@ -208,11 +189,8 @@
                 <MudTd DataLabel="الموعد">@DisplayUtc(item.SlaTargetUtc)</MudTd>
                 <MudTd DataLabel="آخر تحديث">@item.UpdatedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudTd>
                 <MudTd>
-                    <MudButton Size="Size.Small"
-                               Variant="Variant.Text"
-                               Href="@($"/cases/{item.Id:D}")">
-                        فتح
-                    </MudButton>
+                    <MudButton Size="Size.Small" Variant="Variant.Text"
+                               Href="@($"/cases/{item.Id:D}")">فتح</MudButton>
                 </MudTd>
             </RowTemplate>
         </MudTable>
@@ -319,8 +297,7 @@
         _loadingQueue = true;
         try
         {
-            var result = await ApiClient.GetDepartmentQueueAsync(
-                _selectedDepartmentId.Value);
+            var result = await ApiClient.GetDepartmentQueueAsync(_selectedDepartmentId.Value);
             if (result.IsFailure || result.Value is null)
             {
                 _queueError = result.Error ?? "تعذر تحميل قائمة انتظار القسم.";
@@ -369,8 +346,7 @@
         _slaMessage = null;
         try
         {
-            var result = await ApiClient.EvaluateCaseSlaAsync(
-                new EvaluateCaseSlaRequest(50));
+            var result = await ApiClient.EvaluateCaseSlaAsync(new EvaluateCaseSlaRequest(50));
             if (result.IsFailure || result.Value is null)
             {
                 _slaError = result.Error ?? "تعذر تقييم SLA للحالات.";
