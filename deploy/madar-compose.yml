@@ -41,6 +41,12 @@ services:
       Madar__Sla__Medium: "${MADAR_SLA_MEDIUM:-01:00:00}"
       Madar__Sla__High: "${MADAR_SLA_HIGH:-01:00:00}"
       Madar__Sla__Critical: "${MADAR_SLA_CRITICAL:-01:00:00}"
+      Madar__Notifications__Smtp__Host: "${MADAR_SMTP_HOST:-}"
+      Madar__Notifications__Smtp__Port: "${MADAR_SMTP_PORT:-587}"
+      Madar__Notifications__Smtp__EnableSsl: "${MADAR_SMTP_ENABLE_SSL:-true}"
+      Madar__Notifications__Smtp__Username: "${MADAR_SMTP_USERNAME:-}"
+      Madar__Notifications__Smtp__Password: "${MADAR_SMTP_PASSWORD:-}"
+      Madar__Notifications__Smtp__FromAddress: "${MADAR_SMTP_FROM_ADDRESS:-}"
     depends_on:
       madar-sqlserver:
         condition: service_healthy
