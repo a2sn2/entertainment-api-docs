@@ -9,7 +9,7 @@
     <MudStack Row="true" AlignItems="AlignItems.Center">
         <div>
             <MudText Typo="Typo.h3">الحالات التشغيلية</MudText>
-            <MudText Typo="Typo.body1">أنشئ حالة وتابع الإسناد ودورة المعالجة وSLA من مكان واحد.</MudText>
+            <MudText Typo="Typo.body1">أنشئ حالة وتابع التوجيه والإسناد ودورة المعالجة وSLA من مكان واحد.</MudText>
         </div>
         <MudSpacer />
         <AuthorizeView Roles="Supervisor,Administrator">
@@ -100,6 +100,78 @@
         </MudPaper>
     }
 
+    @if (_departments.Count > 0)
+    {
+        <MudPaper Elevation="0" Outlined="true" Class="pa-6">
+            <MudStack Spacing="3">
+                <div>
+                    <MudText Typo="Typo.h5">قائمة انتظار القسم</MudText>
+                    <MudText Typo="Typo.body2">تظهر هنا الحالات الجديدة الموجهة للقسم ولم تُسند بعد.</MudText>
+                </div>
+
+                <MudSelect T="Guid?"
+                           Label="القسم"
+                           Variant="Variant.Outlined"
+                           Value="_selectedDepartmentId"
+                           ValueChanged="SelectDepartmentAsync">
+                    @foreach (var department in _departments)
+                    {
+                        <MudSelectItem T="Guid?" Value="@((Guid?)department.Id)">@department.Name</MudSelectItem>
+                    }
+                </MudSelect>
+
+                @if (!string.IsNullOrWhiteSpace(_queueError))
+                {
+                    <MudAlert Severity="Severity.Error">@_queueError</MudAlert>
+                }
+                else if (_loadingQueue)
+                {
+                    <MudProgressLinear Indeterminate="true" />
+                }
+                else if (_queueCases.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info">لا توجد حالات بانتظار الاستلام في هذا القسم.</MudAlert>
+                }
+                else
+                {
+                    <MudTable Items="_queueCases" Hover="true" Dense="true" Elevation="0">
+                        <HeaderContent>
+                            <MudTh>العنوان</MudTh>
+                            <MudTh>الأولوية</MudTh>
+                            <MudTh>وُجهت</MudTh>
+                            <MudTh></MudTh>
+                        </HeaderContent>
+                        <RowTemplate Context="item">
+                            <MudTd DataLabel="العنوان">@item.Title</MudTd>
+                            <MudTd DataLabel="الأولوية">@DisplayPriority(item.Priority)</MudTd>
+                            <MudTd DataLabel="وُجهت">@DisplayUtc(item.RoutedUtc)</MudTd>
+                            <MudTd>
+                                <MudStack Row="true" Spacing="1">
+                                    <MudButton Size="Size.Small"
+                                               Variant="Variant.Text"
+                                               Href="@($"/cases/{item.Id:D}")">
+                                        فتح
+                                    </MudButton>
+                                    <AuthorizeView Roles="Operator">
+                                        <Authorized>
+                                            <MudButton Size="Size.Small"
+                                                       Color="Color.Primary"
+                                                       Variant="Variant.Filled"
+                                                       Disabled="_claimingCaseId.HasValue"
+                                                       OnClick="@(() => ClaimAsync(item.Id))">
+                                                استلام
+                                            </MudButton>
+                                        </Authorized>
+                                    </AuthorizeView>
+                                </MudStack>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+            </MudStack>
+        </MudPaper>
+    }
+
     @if (!string.IsNullOrWhiteSpace(_loadError))
     {
         <MudAlert Severity="Severity.Error">@_loadError</MudAlert>
@@ -120,6 +192,7 @@
                 <MudTh>النوع</MudTh>
                 <MudTh>الأولوية</MudTh>
                 <MudTh>الحالة</MudTh>
+                <MudTh>القسم</MudTh>
                 <MudTh>SLA</MudTh>
                 <MudTh>الموعد</MudTh>
                 <MudTh>آخر تحديث</MudTh>
@@ -130,6 +203,7 @@
                 <MudTd DataLabel="النوع">@DisplayCaseType(item.CaseType)</MudTd>
                 <MudTd DataLabel="الأولوية">@DisplayPriority(item.Priority)</MudTd>
                 <MudTd DataLabel="الحالة">@DisplayStatus(item.Status)</MudTd>
+                <MudTd DataLabel="القسم">@DisplayDepartment(item.DepartmentId)</MudTd>
                 <MudTd DataLabel="SLA">@DisplaySlaState(item.SlaState)</MudTd>
                 <MudTd DataLabel="الموعد">@DisplayUtc(item.SlaTargetUtc)</MudTd>
                 <MudTd DataLabel="آخر تحديث">@item.UpdatedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudTd>
@@ -166,11 +240,17 @@
     ];
 
     private readonly List<CaseDto> _cases = [];
+    private readonly List<DepartmentDto> _departments = [];
+    private readonly List<CaseDto> _queueCases = [];
     private bool _loading = true;
+    private bool _loadingQueue;
     private bool _showCreate;
     private bool _creating;
     private bool _evaluatingSla;
+    private Guid? _selectedDepartmentId;
+    private Guid? _claimingCaseId;
     private string? _loadError;
+    private string? _queueError;
     private string? _createError;
     private string? _slaError;
     private string? _slaMessage;
@@ -193,19 +273,89 @@
         _loadError = null;
         try
         {
-            var result = await ApiClient.ListCasesAsync();
-            if (result.IsFailure || result.Value is null)
+            var casesResult = await ApiClient.ListCasesAsync();
+            if (casesResult.IsFailure || casesResult.Value is null)
             {
-                _loadError = result.Error ?? "تعذر تحميل الحالات.";
+                _loadError = casesResult.Error ?? "تعذر تحميل الحالات.";
                 return;
             }
 
             _cases.Clear();
-            _cases.AddRange(result.Value);
+            _cases.AddRange(casesResult.Value);
+
+            var departmentsResult = await ApiClient.ListDepartmentsAsync();
+            _departments.Clear();
+            if (departmentsResult.IsSuccess && departmentsResult.Value is not null)
+            {
+                _departments.AddRange(departmentsResult.Value);
+                if (!_selectedDepartmentId.HasValue
+                    || !_departments.Any(item => item.Id == _selectedDepartmentId.Value))
+                {
+                    _selectedDepartmentId = _departments.FirstOrDefault()?.Id;
+                }
+            }
+
+            await LoadQueueAsync();
         }
         finally
         {
             _loading = false;
+        }
+    }
+
+    private async Task SelectDepartmentAsync(Guid? departmentId)
+    {
+        _selectedDepartmentId = departmentId;
+        await LoadQueueAsync();
+    }
+
+    private async Task LoadQueueAsync()
+    {
+        _queueCases.Clear();
+        _queueError = null;
+        if (!_selectedDepartmentId.HasValue)
+            return;
+
+        _loadingQueue = true;
+        try
+        {
+            var result = await ApiClient.GetDepartmentQueueAsync(
+                _selectedDepartmentId.Value);
+            if (result.IsFailure || result.Value is null)
+            {
+                _queueError = result.Error ?? "تعذر تحميل قائمة انتظار القسم.";
+                return;
+            }
+
+            _queueCases.AddRange(result.Value.Cases);
+        }
+        finally
+        {
+            _loadingQueue = false;
+        }
+    }
+
+    private async Task ClaimAsync(Guid caseId)
+    {
+        if (_claimingCaseId.HasValue)
+            return;
+
+        _claimingCaseId = caseId;
+        _queueError = null;
+        try
+        {
+            var result = await ApiClient.ClaimCaseAsync(caseId);
+            if (result.IsFailure)
+            {
+                _queueError = result.Error ?? "تعذر استلام الحالة.";
+                return;
+            }
+
+            await LoadAsync();
+        }
+        finally
+        {
+            _claimingCaseId = null;
         }
     }
 
@@ -266,6 +416,15 @@
         {
             _creating = false;
         }
+    }
+
+    private string DisplayDepartment(Guid? departmentId)
+    {
+        if (!departmentId.HasValue)
+            return "غير موجهة";
+
+        return _departments.FirstOrDefault(item => item.Id == departmentId.Value)?.Name
+            ?? departmentId.Value.ToString("D");
     }
 
     private static string DisplayCaseType(string value) => value switch
