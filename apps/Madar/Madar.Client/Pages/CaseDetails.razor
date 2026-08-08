@@ -102,6 +102,8 @@ else if (_case is not null)
             </Authorized>
         </AuthorizeView>
 
+        <CaseApprovalPanel Case="_case" />
+
         <MudPaper Elevation="0" Outlined="true" Class="pa-6">
             <MudText Typo="Typo.h5" GutterBottom="true">الإجراء التالي</MudText>
             @if (_case.Status == "assigned")
@@ -121,6 +123,12 @@ else if (_case is not null)
                            OnClick="ResolveAsync">
                     تسجيل الحل
                 </MudButton>
+                @if (_case.CaseType is "access-request" or "compliance-case")
+                {
+                    <MudText Typo="Typo.caption" Class="d-block mt-2">
+                        يتطلب هذا النوع اعتماد آخر طلب قبل تسجيل الحل.
+                    </MudText>
+                }
             }
             else if (_case.Status == "resolved")
             {
@@ -326,6 +334,8 @@ else if (_case is not null)
         "madar.case.transitioned" => "تغيير الحالة",
         "madar.case.sla-breached" => "تجاوز SLA وتصعيد الحالة",
         "madar.case.comment-added" => "إضافة تعليق",
+        "madar.case.approval-requested" => "طلب اعتماد الحالة",
+        "madar.case.approval-decided" => "قرار اعتماد الحالة",
         _ => value
     };
 
