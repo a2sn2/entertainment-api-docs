@@ -20,33 +20,35 @@ public sealed class CaseCommentStore(MadarDbContext dbContext)
     public Task<CaseCommentDto?> GetByIdAsync(
         Guid commentId,
         CancellationToken cancellationToken = default) =>
-        ProjectComments(
-                dbContext.CaseComments
-                    .AsNoTracking()
-                    .Where(item => item.Id == commentId))
-            .SingleOrDefaultAsync(cancellationToken);
+        (
+            from comment in dbContext.CaseComments.AsNoTracking()
+            join user in dbContext.Set<MadarUser>().AsNoTracking()
+                on comment.AuthorUserId equals user.Id
+            where comment.Id == commentId
+            select new CaseCommentDto(
+                comment.Id,
+                comment.CaseId,
+                comment.AuthorUserId,
+                user.DisplayName,
+                comment.Body,
+                comment.CreatedUtc)
+        ).SingleOrDefaultAsync(cancellationToken);
 
     public async Task<IReadOnlyList<CaseCommentDto>> ListForCaseAsync(
         Guid caseId,
         CancellationToken cancellationToken = default) =>
-        await ProjectComments(
-                dbContext.CaseComments
-                    .AsNoTracking()
-                    .Where(item => item.CaseId == caseId))
-            .OrderBy(item => item.CreatedUtc)
-            .ThenBy(item => item.Id)
-            .ToListAsync(cancellationToken);
-
-    private IQueryable<CaseCommentDto> ProjectComments(
-        IQueryable<CaseComment> comments) =>
-        from comment in comments
-        join user in dbContext.Set<MadarUser>().AsNoTracking()
-            on comment.AuthorUserId equals user.Id
-        select new CaseCommentDto(
-            comment.Id,
-            comment.CaseId,
-            comment.AuthorUserId,
-            user.DisplayName,
-            comment.Body,
-            comment.CreatedUtc);
+        await (
+            from comment in dbContext.CaseComments.AsNoTracking()
+            join user in dbContext.Set<MadarUser>().AsNoTracking()
+                on comment.AuthorUserId equals user.Id
+            where comment.CaseId == caseId
+            orderby comment.CreatedUtc, comment.Id
+            select new CaseCommentDto(
+                comment.Id,
+                comment.CaseId,
+                comment.AuthorUserId,
+                user.DisplayName,
+                comment.Body,
+                comment.CreatedUtc)
+        ).ToListAsync(cancellationToken);
 }
