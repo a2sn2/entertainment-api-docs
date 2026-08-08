@@ -25,7 +25,7 @@ param(
         "production-check")]
     [string]$Action = "help",
 
-    [ValidateSet("Athar", "Workbench", "All", "Repository")]
+    [ValidateSet("Athar", "Workbench", "Madar", "All", "Repository")]
     [string]$Target = "Athar",
 
     [ValidateSet("Auto", "Native", "Docker")]
@@ -44,6 +44,8 @@ $RepositoryRoot = $PSScriptRoot
 $SolutionFile = Join-Path $RepositoryRoot "FoundationKit.sln"
 $AtharManager = Join-Path $RepositoryRoot "scripts/athar-product.ps1"
 $AtharTunnel = Join-Path $RepositoryRoot "scripts/expose-athar-tunnel.ps1"
+$MadarManager = Join-Path $RepositoryRoot "scripts/madar-product.ps1"
+$MadarUrl = "http://localhost:8100"
 $LocalDirectory = Join-Path $RepositoryRoot ".local"
 $LogDirectory = Join-Path $LocalDirectory "logs"
 $ArtifactsDirectory = Join-Path $RepositoryRoot "artifacts"
@@ -171,6 +173,20 @@ function Invoke-AtharAction {
     }
 
     Invoke-ChildPowerShell -ScriptPath $AtharManager -Arguments $arguments
+}
+
+function Invoke-MadarAction {
+    param(
+        [Parameter(Mandatory)]
+        [ValidateSet("start", "stop", "status", "logs")]
+        [string]$MadarAction
+    )
+
+    if ($MadarAction -eq "start" -and $Mode -eq "Native") {
+        throw "Madar currently supports the unified manager through its Docker operational path only. Use -Mode Auto or -Mode Docker."
+    }
+
+    Invoke-ChildPowerShell -ScriptPath $MadarManager -Arguments @($MadarAction)
 }
 
 function Invoke-AtharExpose {
@@ -592,6 +608,10 @@ function Open-Workbench {
     Start-Process $url
 }
 
+function Open-Madar {
+    Start-Process $MadarUrl
+}
+
 function Show-WorkbenchLogs {
     Write-Section "Workbench logs"
     $executionMode = Resolve-WorkbenchMode -PreferStored
@@ -854,6 +874,7 @@ function Invoke-Doctor {
     Write-Host "Solution: $SolutionFile"
     Write-Host "Repository root: $RepositoryRoot"
     Write-Host "Local run guide: $(Join-Path $RepositoryRoot 'docs/LOCAL-RUN-WINDOWS-AR.md')"
+    Write-Host "Madar operations guide: $(Join-Path $RepositoryRoot 'docs/MADAR-OPERATIONS-AR.md')"
 
     if ($env:OS -eq "Windows_NT") {
         $sqlServices = @(Get-Service -Name 'MSSQLSERVER', 'MSSQL$*' -ErrorAction SilentlyContinue | Sort-Object Name)
@@ -869,7 +890,7 @@ function Invoke-Doctor {
         }
 
         if (Test-Command "Get-NetTCPConnection") {
-            foreach ($port in @(5057, 5068, 8080, 8090, 14333, 14334)) {
+            foreach ($port in @(5057, 5068, 8080, 8090, 8100, 14333, 14334, 14335)) {
                 $listener = Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue |
                     Select-Object -First 1
                 if ($null -eq $listener) {
@@ -898,7 +919,8 @@ function Invoke-Doctor {
     foreach ($health in @(
         @{ Name = "Athar"; Url = "http://127.0.0.1:8090/health/ready"; Port = 8090; PidFile = $atharPidFile },
         @{ Name = "Workbench Native"; Url = "http://127.0.0.1:5057/api/health"; Port = 5057; PidFile = $WorkbenchPidFile },
-        @{ Name = "Workbench Docker"; Url = "http://127.0.0.1:8080/api/health"; Port = 8080; PidFile = $null })) {
+        @{ Name = "Workbench Docker"; Url = "http://127.0.0.1:8080/api/health"; Port = 8080; PidFile = $null },
+        @{ Name = "Madar"; Url = "http://127.0.0.1:8100/health/ready"; Port = 8100; PidFile = $null })) {
         $isHealthy = Test-LocalHealthEndpoint -Url $health.Url
         if ($isHealthy) {
             Write-Host "[RUNNING] $($health.Name): $($health.Url)" -ForegroundColor Green
@@ -986,7 +1008,7 @@ Usage:
   powershell -NoProfile -ExecutionPolicy Bypass -File .\foundationkit.ps1 <action> [options]
 
 Product lifecycle actions:
-  start              Start Athar, Workbench, or both
+  start              Start Athar, Workbench, Madar, or the supported All set
   stop               Stop while preserving data
   restart            Stop and start again
   status             Show process, containers, and health
@@ -996,7 +1018,7 @@ Product lifecycle actions:
   expose             Create a temporary public HTTPS URL for Athar
   credentials        Show the local Athar administrator account
   backup             Back up the Athar database
-  reset              Remove runtime data; requires -Force
+  reset              Remove supported runtime data; requires -Force
 
 Repository actions:
   doctor             Check tools, .NET 8, SQL services, ports, Git state, and running applications
@@ -1008,24 +1030,27 @@ Repository actions:
   production-check   Run the automated baseline and print external gates
 
 Options:
-  -Target Athar|Workbench|All|Repository
+  -Target Athar|Workbench|Madar|All|Repository
   -Mode Auto|Native|Docker
   -Configuration Debug|Release
   -Force
 
 Examples:
   .\foundationkit.ps1 doctor
-  .\foundationkit.ps1 start -Target Athar -Mode Auto
+  .\foundationkit.ps1 start -Target Madar -Mode Docker
+  .\foundationkit.ps1 status -Target Madar
+  .\foundationkit.ps1 logs -Target Madar
+  .\foundationkit.ps1 start -Target All -Mode Auto
   .\foundationkit.ps1 start -Target All -Mode Native
   .\foundationkit.ps1 status -Target All
-  .\foundationkit.ps1 expose
   .\foundationkit.ps1 stop -Target All
   .\foundationkit.ps1 verify
   .\foundationkit.ps1 pack
   .\foundationkit.ps1 production-check
 
-Auto mode uses Docker when Docker Desktop is ready; otherwise it uses local .NET and SQL Server.
-See docs/LOCAL-RUN-WINDOWS-AR.md for the canonical first-run sequence.
+Auto mode uses Docker when Docker Desktop is ready; otherwise Athar and Workbench can use local .NET and SQL Server.
+Madar currently uses its Docker operational path. When -Target All -Mode Native is selected, Madar is skipped so the existing Athar/Workbench native flow remains compatible.
+See docs/LOCAL-RUN-WINDOWS-AR.md and docs/MADAR-OPERATIONS-AR.md for the canonical local-run paths.
 "@ | Write-Host
 }
 
@@ -1037,12 +1062,25 @@ function Invoke-StartTarget {
         "Workbench" {
             Start-Workbench
         }
+        "Madar" {
+            Invoke-MadarAction "start"
+        }
         "All" {
             Invoke-AtharAction "Start"
             Start-Workbench
+
+            if ($Mode -eq "Native") {
+                Write-Host "Madar is skipped for -Target All -Mode Native because its current operational path is Docker-only." -ForegroundColor Yellow
+            }
+            elseif (Test-DockerReady) {
+                Invoke-MadarAction "start"
+            }
+            else {
+                Write-Host "Madar was not started because Docker is unavailable. Athar and Workbench remain started through their supported path." -ForegroundColor Yellow
+            }
         }
         default {
-            throw "Start requires -Target Athar, Workbench, or All."
+            throw "Start requires -Target Athar, Workbench, Madar, or All."
         }
     }
 }
@@ -1055,12 +1093,21 @@ function Invoke-StopTarget {
         "Workbench" {
             Stop-Workbench
         }
+        "Madar" {
+            Invoke-MadarAction "stop"
+        }
         "All" {
+            if (Test-DockerReady) {
+                Invoke-MadarAction "stop"
+            }
+            else {
+                Write-Host "Docker is unavailable; Madar Docker resources were not changed." -ForegroundColor Yellow
+            }
             Stop-Workbench
             Invoke-AtharAction "Stop"
         }
         default {
-            throw "Stop requires -Target Athar, Workbench, or All."
+            throw "Stop requires -Target Athar, Workbench, Madar, or All."
         }
     }
 }
@@ -1073,14 +1120,19 @@ function Invoke-StatusTarget {
         "Workbench" {
             Show-WorkbenchStatus
         }
+        "Madar" {
+            Invoke-MadarAction "status"
+        }
         "All" {
             Write-Section "Athar status"
             Invoke-AtharAction "Status"
             Write-Section "Workbench status"
             Show-WorkbenchStatus
+            Write-Section "Madar status"
+            Invoke-MadarAction "status"
         }
         default {
-            throw "Status requires -Target Athar, Workbench, or All."
+            throw "Status requires -Target Athar, Workbench, Madar, or All."
         }
     }
 }
@@ -1093,12 +1145,16 @@ function Invoke-OpenTarget {
         "Workbench" {
             Open-Workbench
         }
+        "Madar" {
+            Open-Madar
+        }
         "All" {
             Invoke-AtharAction "Open"
             Open-Workbench
+            Open-Madar
         }
         default {
-            throw "Open requires -Target Athar, Workbench, or All."
+            throw "Open requires -Target Athar, Workbench, Madar, or All."
         }
     }
 }
@@ -1111,12 +1167,22 @@ function Invoke-LogsTarget {
         "Workbench" {
             Show-WorkbenchLogs
         }
+        "Madar" {
+            Invoke-MadarAction "logs"
+        }
         "All" {
             Show-AtharLogs
             Show-WorkbenchLogs
+            if (Test-DockerReady) {
+                Write-Section "Madar logs"
+                Invoke-MadarAction "logs"
+            }
+            else {
+                Write-Host "Docker is unavailable; Madar container logs cannot be read." -ForegroundColor Yellow
+            }
         }
         default {
-            throw "Logs requires -Target Athar, Workbench, or All."
+            throw "Logs requires -Target Athar, Workbench, Madar, or All."
         }
     }
 }
@@ -1131,14 +1197,18 @@ function Invoke-LanTarget {
             $port = if ($executionMode -eq "Docker") { 8080 } else { 5057 }
             Show-LanUrls -ProductName "Workbench" -Port $port
         }
+        "Madar" {
+            Show-LanUrls -ProductName "Madar" -Port 8100
+        }
         "All" {
             Invoke-AtharAction "Lan"
             $executionMode = Resolve-WorkbenchMode -PreferStored
             $port = if ($executionMode -eq "Docker") { 8080 } else { 5057 }
             Show-LanUrls -ProductName "Workbench" -Port $port
+            Show-LanUrls -ProductName "Madar" -Port 8100
         }
         default {
-            throw "LAN discovery requires -Target Athar, Workbench, or All."
+            throw "LAN discovery requires -Target Athar, Workbench, Madar, or All."
         }
     }
 }
@@ -1155,12 +1225,16 @@ function Invoke-ResetTarget {
         "Workbench" {
             Reset-Workbench
         }
+        "Madar" {
+            throw "Madar reset is intentionally not exposed by the unified manager yet. Use the documented Madar operational path and remove its Docker volume explicitly only when data destruction is intended."
+        }
         "All" {
             Reset-Workbench
             Invoke-AtharAction "Reset"
+            Write-Host "Madar data was preserved because unified destructive reset support is not enabled for Madar." -ForegroundColor Yellow
         }
         default {
-            throw "Reset requires -Target Athar, Workbench, or All."
+            throw "Reset requires -Target Athar, Workbench, Madar, or All."
         }
     }
 }
