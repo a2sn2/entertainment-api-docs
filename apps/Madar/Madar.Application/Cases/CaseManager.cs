@@ -40,10 +40,10 @@ public sealed class CaseManager(
     IRepository<Case, Guid> caseRepository,
     IUserDirectory userDirectory,
     ICaseSlaPolicy slaPolicy,
-    ICaseApprovalQueryService approvalQueryService,
     IUnitOfWork unitOfWork,
     IAuditRecorder auditRecorder,
-    IClock clock) : ICaseManager
+    IClock clock,
+    ICaseApprovalQueryService? approvalQueryService = null) : ICaseManager
 {
     public async Task<Result<CaseDto>> CreateAsync(
         CreateCaseRequest request,
@@ -204,9 +204,11 @@ public sealed class CaseManager(
                 if (trigger == CaseTriggers.Resolve
                     && CaseApprovalRequirement.IsRequired(item.CaseType))
                 {
-                    var latestApproval = await approvalQueryService.GetLatestForCaseAsync(
-                        item.Id,
-                        cancellationToken);
+                    var latestApproval = approvalQueryService is null
+                        ? null
+                        : await approvalQueryService.GetLatestForCaseAsync(
+                            item.Id,
+                            cancellationToken);
                     if (latestApproval?.Status != CaseApprovalStatuses.Approved)
                     {
                         return Result<CaseDto>.Failure(
