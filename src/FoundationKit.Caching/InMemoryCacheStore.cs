@@ -100,6 +100,15 @@ public sealed class InMemoryCacheStore : ICacheStore
         }
 
         var now = _timeProvider.GetUtcNow();
+        var maximumSafeTimeToLive = DateTimeOffset.MaxValue - now;
+        if (options.TimeToLive > maximumSafeTimeToLive)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(options),
+                "Cache time-to-live exceeds the DateTimeOffset range supported from the current provider time.");
+        }
+
+        var expiresUtc = now.Add(options.TimeToLive);
         var snapshot = value.ToArray();
 
         lock (_gate)
@@ -112,9 +121,7 @@ public sealed class InMemoryCacheStore : ICacheStore
                 EvictEarliestExpiryUnsafe();
             }
 
-            _entries[key.Value] = new CacheItem(
-                snapshot,
-                now.Add(options.TimeToLive));
+            _entries[key.Value] = new CacheItem(snapshot, expiresUtc);
         }
 
         return ValueTask.CompletedTask;
