@@ -72,6 +72,7 @@ jobs:
             "foundationkit.ps1",
             "scripts/pack.ps1",
             "scripts/athar-product.ps1",
+            "scripts/madar-product.ps1",
             "scripts/expose-athar-tunnel.ps1",
             "deploy/run-athar-published.ps1")
 
@@ -210,6 +211,11 @@ jobs:
           echo "MADAR_ADMIN_PASSWORD=$madar_admin_password" >> "$GITHUB_ENV"
           echo "MADAR_OPERATOR_EMAIL=operator@madar.test" >> "$GITHUB_ENV"
           echo "MADAR_OPERATOR_PASSWORD=$madar_operator_password" >> "$GITHUB_ENV"
+          echo "MADAR_SLA_ENABLED=true" >> "$GITHUB_ENV"
+          echo "MADAR_SLA_LOW=00:10:00" >> "$GITHUB_ENV"
+          echo "MADAR_SLA_MEDIUM=00:10:00" >> "$GITHUB_ENV"
+          echo "MADAR_SLA_HIGH=00:10:00" >> "$GITHUB_ENV"
+          echo "MADAR_SLA_CRITICAL=00:00:02" >> "$GITHUB_ENV"
 
       - name: Start Workbench stack
         run: docker compose -f deploy/docker-compose.yml up --build -d
@@ -303,10 +309,10 @@ jobs:
       - name: Start Madar stack
         run: docker compose -f deploy/madar-compose.yml up --build -d
 
-      - name: Wait for Madar
+      - name: Wait for Madar readiness
         run: |
           for attempt in {1..150}; do
-            if curl --fail --silent http://localhost:8100/health/live >/dev/null; then
+            if curl --fail --silent http://localhost:8100/health/ready >/dev/null; then
               exit 0
             fi
             sleep 2
@@ -329,6 +335,7 @@ jobs:
           grep -q "AssignMadarCase" <<< "$swagger"
           grep -q "TransitionMadarCase" <<< "$swagger"
           grep -q "GetMadarCaseTimeline" <<< "$swagger"
+          grep -q "EvaluateMadarCaseSla" <<< "$swagger"
 
       - name: Run Madar end-to-end workflow
         run: bash scripts/smoke-madar.sh
