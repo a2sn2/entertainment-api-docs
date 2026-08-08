@@ -13,6 +13,12 @@ public interface ICaseNotificationCoordinator
         Guid assigneeUserId,
         CancellationToken cancellationToken = default);
 
+    Task NotifyReassignmentAsync(
+        Guid caseId,
+        Guid assigneeUserId,
+        CancellationToken cancellationToken = default) =>
+        NotifyAssignmentAsync(caseId, assigneeUserId, cancellationToken);
+
     Task NotifyApprovalDecisionAsync(
         Guid caseId,
         Guid requesterUserId,
@@ -28,6 +34,7 @@ public interface ICaseNotificationCoordinator
 public static class MadarNotificationPurposes
 {
     public const string CaseAssigned = "madar.case.assigned";
+    public const string CaseReassigned = "madar.case.reassigned";
     public const string CaseApprovalDecided = "madar.case.approval-decided";
     public const string CaseResolved = "madar.case.resolved";
 }
@@ -48,6 +55,18 @@ public sealed class CaseNotificationCoordinator(
             MadarNotificationPurposes.CaseAssigned,
             "تم إسناد حالة إليك في مدار",
             $"تم إسناد الحالة {caseId:D} إليك. افتح مدار لمراجعة التفاصيل.",
+            cancellationToken);
+
+    public Task NotifyReassignmentAsync(
+        Guid caseId,
+        Guid assigneeUserId,
+        CancellationToken cancellationToken = default) =>
+        SendAsync(
+            caseId,
+            assigneeUserId,
+            MadarNotificationPurposes.CaseReassigned,
+            "تمت إعادة إسناد حالة إليك في مدار",
+            $"تمت إعادة إسناد الحالة {caseId:D} إليك. افتح مدار لمراجعة التفاصيل.",
             cancellationToken);
 
     public Task NotifyApprovalDecisionAsync(
