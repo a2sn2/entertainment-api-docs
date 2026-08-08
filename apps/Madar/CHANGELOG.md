@@ -2,7 +2,33 @@
 
 This product changelog records Madar-specific behavior. Repository-wide reusable FoundationKit changes remain documented in the root `CHANGELOG.md`.
 
-## [Unreleased] — v0.6 department queues and routing
+## [Unreleased] — v0.7 department administration
+
+### Added
+
+- Administrator-only `madar.departments.manage` permission for product-owned department and Operator-membership administration.
+- Department creation with normalized immutable code, bounded display name, active state, creation time, administrative `UpdatedUtc`, and existing SQL rowversion concurrency.
+- Department rename/activation/deactivation flow with a fail-closed guard that blocks deactivation while the department still owns any non-closed case.
+- Operator-membership list/add/remove flow backed by ASP.NET Core Identity role eligibility.
+- Deterministic duplicate-membership conflict before the database unique key becomes the user-facing failure mode.
+- Membership-removal guard that blocks removal while the Operator still owns a non-closed assignment in the department.
+- Bounded audit actions for department create/update and membership add/remove without copying email, case content, or other unnecessary PII into audit attributes.
+- Product-owned administration API under `/api/admin/departments`, protected by authentication, Application-layer permission checks, anti-CSRF, write rate limiting, and existing SQL concurrency handling.
+- Arabic Administrator UI at `/admin/departments` for department lifecycle and Operator membership management.
+- SQL migration adding `Departments.UpdatedUtc` while preserving existing departments by backfilling it from `CreatedUtc`.
+- Unit and SQL/E2E verification for permission gates, validation, deactivation protection, membership eligibility/duplicates, removal protection, persistence, audit evidence, and the existing routing integration.
+
+### Deliberately deferred
+
+- reusable `FoundationKit.Organization` extraction until independent product evidence exists;
+- organization trees, branches, teams, parent/child departments, and multi-tenancy;
+- arbitrary user/role administration;
+- transfer/reassignment workflow and rich routing history;
+- multiple queues per department, skills, capacity, presence, round-robin, or automatic assignment;
+- queue-specific business-hours/SLA policy;
+- WhatsApp/email ingestion and files/documents.
+
+## [v0.6] — department queues and routing
 
 ### Added
 
@@ -22,7 +48,6 @@ This product changelog records Madar-specific behavior. Repository-wide reusable
 - reusable `FoundationKit.Organization` extraction until independent product evidence exists;
 - organization trees, branches, teams, multiple queues per department, or multi-tenancy;
 - skill/round-robin/load/capacity/presence based automatic routing;
-- department-administration UI;
 - routing-history aggregate beyond bounded audit evidence;
 - queue-specific SLA/business-hours policy;
 - WhatsApp/email ingestion and files/documents.
