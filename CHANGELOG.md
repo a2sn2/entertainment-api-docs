@@ -21,6 +21,9 @@ All notable repository and package changes are documented here.
 - Blazor-oriented `ViewModelBase` and `ListViewModel<T>` for MVVM-style state ownership.
 - Arabic production-readiness gate and new-project guide.
 - Reserved `apps/` boundary for future real products.
+- Madar product foundation under `apps/Madar` as the first real application consumer, with Domain, Application, Infrastructure, Contracts, API, Blazor Client, and `tests/Madar.Tests` projects.
+- Madar's first product-owned `Case` aggregate with bounded case types/priorities, assignment events, and the deterministic `new -> assigned -> in-progress -> resolved -> closed` lifecycle using `FoundationKit.Workflow`.
+- Madar case contracts, application persistence/query ports, minimal API/Blazor host shells, and initial domain lifecycle tests; SQL persistence, authentication runtime wiring, SLA/escalation, and full case UI remain subsequent vertical-slice work.
 - `FoundationKit Atlas`, a creative Arabic GitHub Pages portal that documents every Workbench and Athar Blazor route, core package, API surface, document, and operational proof.
 - Pages manifest validation that compares documented UI routes with the actual Razor `@page` declarations.
 - Detailed Arabic Visual Studio 2026 guide for SQL Server, User Secrets, startup projects, user/admin workflows, and troubleshooting.
@@ -55,7 +58,8 @@ All notable repository and package changes are documented here.
 
 ### Changed
 
-- The repository now distinguishes reusable core, architecture Workbench, complete reference products, future real applications, and a dedicated static documentation portal.
+- The repository now distinguishes reusable core, architecture Workbench, the Athar reference product, real applications beginning with Madar, and a dedicated static documentation portal.
+- `FoundationKit.sln` and the normal solution build/test surface now include Madar while reusable package output remains seventeen NuGet packages plus seventeen symbol packages.
 - `FoundationKit.sln`, repository verification, CI, documentation, and package versions now include Athar.
 - CI publishes and tests both the Workbench and Athar against real SQL Server containers.
 - GitHub Pages now deploys the standalone Arabic repository atlas instead of presenting one product client as the entire repository.
