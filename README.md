@@ -194,7 +194,7 @@ Read [`examples/Athar/README.md`](examples/Athar/README.md).
 
 `apps/Madar` is the first real product developed under the repository's `apps/` boundary. It is an operational case-management and orchestration product intended to validate FoundationKit against a product domain that is materially different from Athar.
 
-Madar now has a repository-verified first vertical slice across Identity, authorization, SQL Server, API, Blazor, and auditing:
+Madar has a repository-verified first vertical slice across Identity, authorization, SQL Server, API, Blazor, and auditing:
 
 ```text
 Authenticate
@@ -210,13 +210,22 @@ new → assigned → in-progress → resolved → closed
 Persisted Audit Timeline
 ```
 
-The product reuses FoundationKit Domain/Application/Infrastructure/WebApi/Blazor primitives together with Security, Authorization, Auditing, and Workflow contracts while keeping its ASP.NET Core Identity model, permissions, SQL schema/migrations, case queries, API endpoints, audit sink, Docker topology, and Arabic UI inside `apps/Madar`.
+The product reuses FoundationKit Domain/Application/Infrastructure/WebApi/Blazor primitives together with Security, Authorization, Auditing, and Workflow contracts while keeping its ASP.NET Core Identity model, permissions, SQL schema/migrations, case queries, API endpoints, audit sink, readiness policy, Docker topology, and Arabic UI inside `apps/Madar`.
 
-Pull-request CI publishes Madar and verifies a real SQL Server workflow covering anonymous access rejection, anti-CSRF login, case creation, assignment, operator-scoped visibility, progression, resolution, supervisor/administrator close, and persisted audit history.
+Madar v0.1.1 closes operational repository gaps before product-depth work begins. The current readiness layer adds:
 
-This v0.1 slice does **not** claim SLA/escalation, configurable workflow design, files/documents, advanced search/reporting, external channels, organization hierarchy, multi-tenancy, background jobs, or production deployment approval.
+- `/health/live` for process liveness;
+- `/health/ready` for SQL connectivity + pending-migration validation without infrastructure disclosure;
+- bounded startup migration/connectivity retries;
+- a protected local Docker launcher and unified Windows-manager target;
+- Atlas/Pages coverage generated from the actual Madar Razor routes;
+- explicit Trivy image-gate and SARIF evidence for the Madar container.
 
-Read [`apps/Madar/README.md`](apps/Madar/README.md) and track the initial product slice in GitHub issue #71.
+Pull-request CI publishes Madar and verifies a real SQL Server workflow covering anonymous access rejection, anti-CSRF login, case creation, assignment, operator-scoped visibility, progression, resolution, supervisor/administrator close, persisted audit history, and readiness.
+
+This v0.1/v0.1.1 scope does **not** claim SLA/escalation, configurable workflow design, files/documents, advanced search/reporting, external channels, organization hierarchy, multi-tenancy, background jobs, or production deployment approval.
+
+Read [`apps/Madar/README.md`](apps/Madar/README.md) and [`docs/MADAR-OPERATIONS-AR.md`](docs/MADAR-OPERATIONS-AR.md). Issue #71 tracks the completed first slice; issue #74 tracks the operational readiness closure before v0.2 product-depth work.
 
 ---
 
@@ -269,24 +278,26 @@ Useful commands:
 ```powershell
 .\foundationkit.ps1 start -Target Athar -Mode Auto
 .\foundationkit.ps1 start -Target Workbench -Mode Auto
+.\foundationkit.ps1 start -Target Madar -Mode Docker
+.\foundationkit.ps1 status -Target Madar
+.\foundationkit.ps1 logs -Target Madar
 .\foundationkit.ps1 start -Target All -Mode Auto
 .\foundationkit.ps1 status -Target All
-.\foundationkit.ps1 logs -Target All
 .\foundationkit.ps1 stop -Target All
 .\foundationkit.ps1 verify
 .\foundationkit.ps1 pack
 .\foundationkit.ps1 production-check
 ```
 
-`doctor` checks the required commands, availability of a .NET 8 SDK, visible local SQL Server services on Windows, the main local ports, Git state, and running application health where available.
+`doctor` checks the required commands, availability of a .NET 8 SDK, visible local SQL Server services on Windows, the main local ports, Git state, and running application health where available, including Madar readiness on port `8100`.
 
-Workbench and Athar local credential/state files live under ignored `.local/` paths. The Windows manager restricts credential files to the current Windows account and refuses to continue if the ACL cannot be applied.
+Workbench, Athar, and Madar local credential/state files live under ignored `.local/` paths where applicable. The Windows launchers restrict credential files to the current Windows account and refuse to continue if required ACL protection cannot be applied.
 
 `pack` delegates to the canonical `scripts/pack.ps1` path. Package discovery/count validation therefore has one source of truth rather than a second hard-coded list in the manager.
 
-`Auto` uses Docker when Docker Desktop is ready and otherwise uses local .NET/SQL Server where supported.
+`Auto` uses Docker when Docker Desktop is ready and otherwise uses local .NET/SQL Server where supported. Madar currently has a Docker operational path only. To preserve the established Athar/Workbench native workflow, `-Target All -Mode Native` skips Madar with an explicit warning; `-Target All -Mode Auto` includes Madar when Docker is available.
 
-For the exact first-run sequence, SQL Server instance overrides, port map, and failure diagnostics, read [`docs/LOCAL-RUN-WINDOWS-AR.md`](docs/LOCAL-RUN-WINDOWS-AR.md). Madar currently uses its dedicated development/test Compose path documented in [`apps/Madar/README.md`](apps/Madar/README.md); unified-manager Madar support is not claimed yet.
+For the exact first-run sequence, SQL Server instance overrides, port map, and failure diagnostics, read [`docs/LOCAL-RUN-WINDOWS-AR.md`](docs/LOCAL-RUN-WINDOWS-AR.md). For Madar-specific readiness, local credentials, logs, and Docker semantics, read [`docs/MADAR-OPERATIONS-AR.md`](docs/MADAR-OPERATIONS-AR.md).
 
 ---
 
@@ -408,22 +419,23 @@ Pull-request CI verifies the repository as one system, including applicable stag
 - tracked-source secret scanning;
 - tracked-repository hygiene checks that reject local/generated/sensitive artifacts;
 - repository boundary checks;
-- JSON and Atlas validation;
+- JSON and Atlas validation, including actual Madar Razor routes;
 - container hardening checks for repository-owned application containers;
 - NuGet vulnerability audit;
 - CycloneDX dependency SBOM generation;
 - Release build with analyzers;
 - generated capability/catalog drift checks;
-- unit and architecture tests, including Madar Domain/Application behavior;
+- unit and architecture tests, including Madar Domain/Application behavior and database-startup retry logic;
 - Workbench, Athar, and Madar publish;
 - all reusable NuGet + symbol packages;
 - artifact SHA-256 evidence including Madar publish output;
 - Workbench SQL Server workflow;
 - Athar readiness, non-root, Arabic/API surface, E2E workflow, and isolated backup/restore;
-- Madar non-root runtime, Blazor/API surface, SQL Server migration, authentication/authorization, case lifecycle, and audit-timeline E2E workflow;
-- Trivy repository/container scanning;
+- Madar non-root runtime, Blazor/API surface, SQL Server migration/startup, liveness/readiness, authentication/authorization, case lifecycle, and audit-timeline E2E workflow;
+- Trivy repository plus Athar and Madar image scanning, with Madar SARIF evidence uploaded to code scanning;
 - black-box negative security tests;
-- CodeQL for C# and JavaScript/TypeScript.
+- CodeQL for C# and JavaScript/TypeScript;
+- Windows PowerShell 5.1 parsing and unified-manager diagnostics.
 
 Exact evidence belongs to the pull request/head that produced it. A green historical run is not proof for a newer security- or behavior-relevant head.
 
@@ -483,20 +495,21 @@ That stop rule is intentional: FoundationKit should be broadly useful without si
 Start here:
 
 1. [`docs/LOCAL-RUN-WINDOWS-AR.md`](docs/LOCAL-RUN-WINDOWS-AR.md) — Windows first run and diagnostics.
-2. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-3. [`docs/PACKAGES.md`](docs/PACKAGES.md)
-4. [`docs/FEATURES.md`](docs/FEATURES.md)
-5. [`docs/CAPABILITY-MODEL-V1.md`](docs/CAPABILITY-MODEL-V1.md)
-6. [`docs/CAPABILITY-ROADMAP-V1.md`](docs/CAPABILITY-ROADMAP-V1.md)
-7. [`docs/CAPABILITY-EXTRACTION-STATUS.md`](docs/CAPABILITY-EXTRACTION-STATUS.md)
-8. [`docs/COMPOSER-CLI-V1.md`](docs/COMPOSER-CLI-V1.md)
-9. [`docs/WORKBENCH.md`](docs/WORKBENCH.md)
-10. [`docs/DUAL-FULL-STACK.md`](docs/DUAL-FULL-STACK.md)
-11. [`docs/VISUAL-STUDIO-2026-AR.md`](docs/VISUAL-STUDIO-2026-AR.md)
-12. [`docs/ADDING-A-PROJECT-AR.md`](docs/ADDING-A-PROJECT-AR.md)
-13. [`docs/PRODUCTION-READINESS-AR.md`](docs/PRODUCTION-READINESS-AR.md)
-14. [`examples/Athar/README.md`](examples/Athar/README.md)
-15. [`apps/Madar/README.md`](apps/Madar/README.md)
+2. [`docs/MADAR-OPERATIONS-AR.md`](docs/MADAR-OPERATIONS-AR.md) — Madar local run, readiness, and operational diagnostics.
+3. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+4. [`docs/PACKAGES.md`](docs/PACKAGES.md)
+5. [`docs/FEATURES.md`](docs/FEATURES.md)
+6. [`docs/CAPABILITY-MODEL-V1.md`](docs/CAPABILITY-MODEL-V1.md)
+7. [`docs/CAPABILITY-ROADMAP-V1.md`](docs/CAPABILITY-ROADMAP-V1.md)
+8. [`docs/CAPABILITY-EXTRACTION-STATUS.md`](docs/CAPABILITY-EXTRACTION-STATUS.md)
+9. [`docs/COMPOSER-CLI-V1.md`](docs/COMPOSER-CLI-V1.md)
+10. [`docs/WORKBENCH.md`](docs/WORKBENCH.md)
+11. [`docs/DUAL-FULL-STACK.md`](docs/DUAL-FULL-STACK.md)
+12. [`docs/VISUAL-STUDIO-2026-AR.md`](docs/VISUAL-STUDIO-2026-AR.md)
+13. [`docs/ADDING-A-PROJECT-AR.md`](docs/ADDING-A-PROJECT-AR.md)
+14. [`docs/PRODUCTION-READINESS-AR.md`](docs/PRODUCTION-READINESS-AR.md)
+15. [`examples/Athar/README.md`](examples/Athar/README.md)
+16. [`apps/Madar/README.md`](apps/Madar/README.md)
 
 The GitHub Pages Atlas is generated from `site/portal-manifest.json` and provides a navigable view of the same repository surfaces.
 
