@@ -74,7 +74,7 @@ else if (_case is not null)
                     <MudPaper Elevation="0" Outlined="true" Class="pa-6">
                         <MudText Typo="Typo.h5" GutterBottom="true">توجيه الحالة</MudText>
                         <MudText Typo="Typo.body2" Class="mb-3">
-                            التوجيه يضع الحالة في قائمة انتظار القسم مع بقائها جديدة حتى يتم استلامها أو إسنادها.
+                            التوجيه الأولي يضع الحالة في قائمة انتظار القسم مع بقائها جديدة. بعد ذلك يجب استخدام نقل الحالة لتغيير القسم.
                         </MudText>
                         @if (_departments.Count == 0)
                         {
@@ -101,7 +101,10 @@ else if (_case is not null)
                             </MudButton>
                         }
                     </MudPaper>
+                }
 
+                @if (_case.Status == "new")
+                {
                     <MudPaper Elevation="0" Outlined="true" Class="pa-6">
                         <MudText Typo="Typo.h5" GutterBottom="true">إسناد الحالة</MudText>
                         @if (_case.DepartmentId.HasValue)
