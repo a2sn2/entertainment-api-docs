@@ -106,10 +106,11 @@ Providers remain outside business capabilities and are selected explicitly.
 
 ## Phase I — Project Composer
 
-- [x] `FoundationKit.Composer` CLI project/reference tooling.
+- [x] `FoundationKit.Composer` reference CLI tooling.
 - [x] Capability/profile discovery.
 - [x] Strict manifest validation.
 - [x] Dependency explanation/current composition diagnostics.
+- [x] Machine maturity and human documentation aligned with the implemented validate/explain surface.
 - [ ] `foundationkit new` interactive composer.
 - [ ] Deterministic project generation.
 - [ ] Generated architecture/decision report.
@@ -166,22 +167,22 @@ The repository currently has extracted reusable/reference packages for:
 - Localization v1 (`FoundationKit.Localization`);
 - Caching v1 (`FoundationKit.Caching`).
 
-Athar provides current consumer evidence for the security, identity, authorization, workflow, narrow approval, notification, and SMTP-provider surfaces. Workbench provides runtime consumer evidence for Settings, Feature Management, Localization, and the Caching-backed embedded catalog read path. The capability maturity values remain conservative and do not imply production certification.
+Together with the five base packages, the current reusable output is seventeen NuGet packages plus seventeen symbol packages. Athar provides consumer evidence for security/identity/authorization/workflow/approval/notification/SMTP surfaces. Workbench provides runtime consumer evidence for Settings, Feature Management, Localization, and Caching. Capability maturity remains conservative and does not imply production certification.
 
 ## Current continuation boundary
 
-Issue #64 continues the consumer-driven extraction cycle for general-purpose system capabilities while preserving the same stop rule: no empty package and no invented organizational/product policy.
+The autonomous extraction cycle has reached its consumer/policy stop boundary. Caching v1 is merged, and the repository consistency sweep aligns the current implementation, machine metadata, human catalog, Atlas, root README, unified package manager, and CI checks.
 
-After Caching v1, there is **no additional reusable package candidate currently justified by both a provider-neutral boundary and a real independent consumer**. The next autonomous repository step is a consistency sweep across tooling maturity, package counts, generated metadata, and human documentation. Further runtime capability extraction should wait for real product semantics or provider decisions rather than inventing them.
+After that consistency pull request is verified and merged, there is **no additional reusable package candidate currently justified by both a provider-neutral boundary and a real independent consumer**. Further runtime extraction should wait for real product semantics or provider decisions rather than inventing them.
 
 The following items remain **not ready for package extraction** until a concrete consumer proves their semantics:
 
 - **Files / Documents** — Athar/Workbench currently have no reusable upload/storage/document lifecycle consumer.
 - **Background Jobs** — there is no delayed/scheduled/recurring work runtime consumer yet.
 - **Messaging** — the existing in-process domain-event dispatcher is not integration-event/outbox/inbox delivery.
-- **Idempotency** — Athar has owner-scoped `ClientRequestId` lookup plus a unique database constraint, but no reusable reservation/store/replay contract is proven yet.
-- **Concurrency** — Athar has SQL Server `rowversion` plus 409 conflict handling, but no reusable public precondition/token contract is proven yet.
+- **Idempotency** — Athar has product-specific duplicate-write protection, but no independent reusable reservation/store/replay contract.
+- **Concurrency** — Athar has SQL Server `rowversion` plus 409 behavior, but no reusable provider-neutral public token/precondition contract.
 - **Organization / Multi-Tenancy** — the reusable core must not invent hierarchy, tenant identity, or isolation topology before a product requires them.
 - **Search / Reporting / Privacy / Retention / Money / Numbering** — reusable semantics are not yet proven by a real reference consumer.
 
-Provider/vendor choices, legal retention, rollout targeting policy, tenancy topology, business organization semantics, distributed-cache consistency, and cache data-classification policy remain explicit owner/organization decisions rather than defaults embedded into FoundationKit.
+Provider/vendor choices, legal retention, rollout targeting policy, tenancy topology, business organization semantics, distributed-cache consistency, and data-classification policy remain explicit owner/organization decisions rather than defaults embedded into FoundationKit.

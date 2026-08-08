@@ -416,9 +416,9 @@
       "id": "tooling-cli",
       "displayName": "FoundationKit CLI",
       "kind": "tooling",
-      "maturity": "planned",
+      "maturity": "referenceOnly",
       "category": "Tooling",
-      "description": "Interactive project composer driven by the capability graph and project manifest.",
+      "description": "Current Composer reference tooling for strict manifest validation, capability/profile discovery, and dependency explanation; interactive project generation remains future work.",
       "dependencies": [
         "kernel"
       ]

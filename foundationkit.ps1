@@ -718,31 +718,16 @@ function Invoke-Verify {
 }
 
 function Invoke-Pack {
-    Invoke-Restore
     Write-Section "Pack reusable FoundationKit packages"
 
-    $output = Join-Path $ArtifactsDirectory "packages"
-    New-Item -ItemType Directory -Force -Path $output | Out-Null
+    $packScript = Join-Path $RepositoryRoot "scripts/pack.ps1"
+    Invoke-ChildPowerShell `
+        -ScriptPath $packScript `
+        -Arguments @(
+            "-Configuration", $Configuration,
+            "-Output", "artifacts/packages")
 
-    $projects = @(
-        "src/FoundationKit.Domain/FoundationKit.Domain.csproj",
-        "src/FoundationKit.Application/FoundationKit.Application.csproj",
-        "src/FoundationKit.Infrastructure/FoundationKit.Infrastructure.csproj",
-        "src/FoundationKit.WebApi/FoundationKit.WebApi.csproj",
-        "src/FoundationKit.Blazor/FoundationKit.Blazor.csproj")
-
-    foreach ($relativeProject in $projects) {
-        Invoke-CheckedCommand `
-            -FilePath "dotnet" `
-            -Arguments @(
-                "pack",
-                (Join-Path $RepositoryRoot $relativeProject),
-                "--configuration", $Configuration,
-                "--output", $output) `
-            -FailureMessage "Package creation failed for $relativeProject."
-    }
-
-    Write-Host "Packages: $output" -ForegroundColor Green
+    Write-Host "Packages: $(Join-Path $ArtifactsDirectory 'packages')" -ForegroundColor Green
 }
 
 function Invoke-Doctor {
@@ -887,7 +872,7 @@ Repository actions:
   build              Restore and build the full solution
   test               Restore, build, and test the full solution
   verify             Test plus architecture, catalog, Pages, and JS checks
-  pack               Create the five reusable NuGet packages
+  pack               Create all reusable NuGet and symbol packages
   production-check   Run the automated baseline and print external gates
 
 Options:
@@ -904,6 +889,7 @@ Examples:
   .\foundationkit.ps1 expose
   .\foundationkit.ps1 stop -Target All
   .\foundationkit.ps1 verify
+  .\foundationkit.ps1 pack
   .\foundationkit.ps1 production-check
 
 Auto mode uses Docker when Docker Desktop is ready; otherwise it uses local .NET and SQL Server.

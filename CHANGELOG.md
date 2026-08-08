@@ -49,6 +49,7 @@ All notable repository and package changes are documented here.
 - Workbench runtime adoption of Localization through the same platform-reference endpoint, proving `ar-YE` as `RightToLeft` and `UTC` as the configured time-zone identity in the SQL integration smoke workflow.
 - `FoundationKit.Caching` reference capability with bounded byte-cache contracts, explicit TTL/hit/miss/remove semantics, caller cancellation, defensive snapshots, and a BCL-only bounded in-memory provider.
 - Workbench adoption of Caching on the existing embedded capability-catalog read path, with direct consumer tests and repeated `/api/catalog` SQL-smoke coverage proving miss/fill then hit behavior.
+- Repository consistency verification that derives the reusable package set from `src/FoundationKit.*` and fails if the human catalog or Atlas package cards drift from the actual projects.
 
 ### Changed
 
@@ -58,6 +59,10 @@ All notable repository and package changes are documented here.
 - GitHub Pages now deploys the standalone Arabic repository atlas instead of presenting one product client as the entire repository.
 - Reusable package output increases to seventeen NuGet packages plus seventeen symbol packages after adding Caching to the Localization, Settings/Feature Management, and earlier reusable capability family.
 - Capability extraction guidance requires a concrete consumer and a reusable independent boundary before creating a new package; Files/Documents, Jobs, Messaging, Idempotency, Concurrency, Organization, Multi-Tenancy, Search, Reporting, Privacy, Retention, Money, and Numbering remain Planned/ReferenceOnly where current evidence is product-specific or incomplete.
+- `tooling-cli` maturity now reflects the implemented Composer validation/discovery/explanation surface as `ReferenceOnly`; interactive project generation remains explicitly Planned.
+- The unified `foundationkit.ps1 pack` path delegates to canonical `scripts/pack.ps1` instead of maintaining a stale five-package list.
+- The human package catalog, generated `FEATURES.md`, Atlas package cards, and root README now describe the same seventeen reusable projects.
+- CI PowerShell syntax validation now includes the unified manager and canonical pack script and aggregates parser errors across all checked scripts.
 
 ## [0.1.0] - 2026-08-06
 

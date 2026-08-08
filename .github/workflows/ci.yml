@@ -58,25 +58,32 @@ jobs:
           export ATHAR_ADMIN_PASSWORD="ConfigOnlyAdmin!$(openssl rand -hex 16)Aa1"
           docker compose -f deploy/athar-compose.yml config >/dev/null
 
-      - name: Validate experimental product PowerShell
+      - name: Validate repository PowerShell
         shell: pwsh
         run: |
-          $tokens = $null
-          $errors = $null
-          [System.Management.Automation.Language.Parser]::ParseFile(
+          $allErrors = @()
+          $scripts = @(
+            "foundationkit.ps1",
+            "scripts/pack.ps1",
             "scripts/athar-product.ps1",
-            [ref]$tokens,
-            [ref]$errors) | Out-Null
-          [System.Management.Automation.Language.Parser]::ParseFile(
             "scripts/expose-athar-tunnel.ps1",
-            [ref]$tokens,
-            [ref]$errors) | Out-Null
-          [System.Management.Automation.Language.Parser]::ParseFile(
-            "deploy/run-athar-published.ps1",
-            [ref]$tokens,
-            [ref]$errors) | Out-Null
-          if ($errors.Count -gt 0) {
-            $errors | Format-List | Out-String | Write-Error
+            "deploy/run-athar-published.ps1")
+
+          foreach ($script in $scripts) {
+            $tokens = $null
+            $parseErrors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              $script,
+              [ref]$tokens,
+              [ref]$parseErrors) | Out-Null
+
+            if ($parseErrors.Count -gt 0) {
+              $allErrors += $parseErrors
+            }
+          }
+
+          if ($allErrors.Count -gt 0) {
+            $allErrors | Format-List | Out-String | Write-Error
             exit 1
           }
 

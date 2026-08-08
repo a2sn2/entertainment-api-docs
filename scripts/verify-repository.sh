@@ -46,9 +46,10 @@ required_files=(
   ".github/CODEOWNERS" ".github/pull_request_template.md"
   ".github/workflows/ci.yml" ".github/workflows/codeql.yml" ".github/workflows/security-scan.yml"
   ".github/workflows/pages.yml" ".github/workflows/windows-launcher-check.yml"
-  "catalog/foundationkit.catalog.json"
+  "catalog/foundationkit.catalog.json" "catalog/foundationkit.capabilities.json"
   "docs/FEATURES.md" "docs/WORKBENCH.md" "docs/DUAL-FULL-STACK.md"
-  "docs/PRODUCTION-READINESS-AR.md" "docs/ADDING-A-PROJECT-AR.md"
+  "docs/CAPABILITY-MODEL-V1.md" "docs/CAPABILITY-ROADMAP-V1.md" "docs/CAPABILITY-EXTRACTION-STATUS.md"
+  "docs/COMPOSER-CLI-V1.md" "docs/PRODUCTION-READINESS-AR.md" "docs/ADDING-A-PROJECT-AR.md"
   "docs/security/POLICY-IMPLEMENTATION-REGISTER.md" "docs/security/RISK-REGISTER.md"
   "docs/security/THREAT-MODEL.md" "docs/security/SECURITY-DECISIONS.md"
   "docs/security/CHANGE-AND-RELEASE-EVIDENCE.md" "docs/security/PII-DATA-INVENTORY.md"
@@ -89,11 +90,12 @@ required_files=(
   "deploy/docker-compose.yml" "deploy/athar-compose.yml" "deploy/athar-production.example.yml"
   "scripts/athar-product.ps1" "scripts/expose-athar-tunnel.ps1" "scripts/smoke-athar.sh"
   "scripts/run-athar.ps1" "scripts/run-athar.sh" "scripts/stop-athar.ps1" "scripts/stop-athar.sh"
-  "scripts/verify-pages.py" "scripts/verify-athar-restore.sh"
+  "scripts/pack.ps1" "scripts/pack.sh" "scripts/verify-pages.py" "scripts/verify-athar-restore.sh"
   "scripts/security/scan-repository.py" "scripts/security/generate-sbom.py"
   "scripts/security/check-container-hardening.py" "scripts/security/negative-athar.sh"
   "site/index.html" "site/styles.css" "site/app.js" "site/portal-manifest.json" "site/favicon.svg"
   "src/FoundationKit.Application/Models/EntityDto.cs" "src/FoundationKit.Blazor/Mvvm/ViewModelBase.cs"
+  "tools/FoundationKit.Composer/FoundationKit.Composer.csproj" "tools/FoundationKit.Composer/ComposerCli.cs"
 )
 
 for required_file in "${required_files[@]}"; do
@@ -102,6 +104,57 @@ for required_file in "${required_files[@]}"; do
     exit 1
   fi
 done
+
+if ! grep -q 'scripts/pack.ps1' foundationkit.ps1; then
+  echo "The unified manager must delegate packaging to scripts/pack.ps1." >&2
+  exit 1
+fi
+if grep -q 'src/FoundationKit.Domain/FoundationKit.Domain.csproj' foundationkit.ps1; then
+  echo "The unified manager must not maintain a second hard-coded reusable-package list." >&2
+  exit 1
+fi
+
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+root = Path('.')
+project_ids = sorted(
+    project.parent.name
+    for project in root.glob('src/FoundationKit.*/FoundationKit.*.csproj')
+)
+
+with (root / 'catalog/foundationkit.catalog.json').open(encoding='utf-8') as handle:
+    human_catalog = json.load(handle)
+human_ids = sorted(package['packageId'] for package in human_catalog['packages'])
+
+if human_ids != project_ids:
+    missing = sorted(set(project_ids) - set(human_ids))
+    extra = sorted(set(human_ids) - set(project_ids))
+    raise SystemExit(
+        'Human catalog package drift detected. '
+        f'Missing={missing}; Extra={extra}')
+
+with (root / 'site/portal-manifest.json').open(encoding='utf-8') as handle:
+    portal = json.load(handle)
+portal_sources = sorted(
+    page['source']
+    for page in portal['pages']
+    if page.get('kind') == 'package'
+)
+expected_sources = sorted(f'src/{package_id}' for package_id in project_ids)
+
+if portal_sources != expected_sources:
+    missing = sorted(set(expected_sources) - set(portal_sources))
+    extra = sorted(set(portal_sources) - set(expected_sources))
+    raise SystemExit(
+        'Atlas package drift detected. '
+        f'Missing={missing}; Extra={extra}')
+
+print(
+    f'Reusable package consistency passed: {len(project_ids)} projects, '
+    f'{len(human_ids)} catalog packages, {len(portal_sources)} Atlas package pages.')
+PY
 
 workbench_api="samples/FoundationKit.Workbench/FoundationKit.Workbench.Api.csproj"
 workbench_client="samples/FoundationKit.Workbench.Client/FoundationKit.Workbench.Client.csproj"
@@ -199,4 +252,4 @@ fi
 python3 scripts/verify-pages.py
 python3 scripts/security/check-container-hardening.py
 
-echo "FoundationKit, Workbench, Athar, security evidence, and Pages portal verification passed."
+echo "FoundationKit, Workbench, Athar, capability metadata, security evidence, and Pages portal verification passed."

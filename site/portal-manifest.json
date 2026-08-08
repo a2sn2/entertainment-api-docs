@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "title": "FoundationKit Atlas",
-  "subtitle": "خريطة عربية تفاعلية للكور والأمثلة والمنتج المرجعي",
+  "subtitle": "خريطة عربية تفاعلية للكور والقدرات والأمثلة والمنتج المرجعي",
   "repository": "a2sn2/foundationkit-dotnet",
   "notice": "هذه البوابة توثيق ومعاينة ثابتة. التشغيل الحقيقي للواجهات وواجهات API وقاعدة البيانات يتم محليًا أو على بيئة مستضافة تدعم ASP.NET Core وSQL Server.",
   "groups": [
@@ -9,19 +9,19 @@
       "id": "overview",
       "title": "الصورة الكاملة",
       "icon": "◎",
-      "summary": "ابدأ من هنا لفهم لماذا يوجد كور قابل لإعادة الاستخدام، وWorkbench تعليمي، ومنصة أثَر كمنتج عربي كامل."
+      "summary": "ابدأ من هنا لفهم الكور القابل لإعادة الاستخدام والقدرات الاختيارية وWorkbench التعليمي ومنصة أثَر كمنتج عربي كامل."
     },
     {
       "id": "core",
       "title": "FoundationKit Core",
       "icon": "◇",
-      "summary": "خمسة مشاريع عامة تمنح أي منتج جديد أساس النطاق والتطبيق والبنية التحتية وWeb API وBlazor دون فرض قواعد منتج محدد."
+      "summary": "سبع عشرة حزمة قابلة لإعادة الاستخدام: خمس طبقات أساس مستقرة وقدرات اختيارية تُضاف حسب حاجة المنتج دون تحويل الكور إلى نظام واحد ضخم."
     },
     {
       "id": "workbench",
       "title": "Workbench",
       "icon": "⌘",
-      "summary": "مثال معماري يشرح مسار المستخدم ومسار الإدارة وكيف يلتقيان في دورة طلب واحدة."
+      "summary": "مثال معماري يشرح مسار المستخدم ومسار الإدارة وكيف يلتقيان في دورة طلب واحدة، ويثبت بعض القدرات العامة في Runtime."
     },
     {
       "id": "athar",
@@ -33,13 +33,13 @@
       "id": "docs",
       "title": "الأدلة والوثائق",
       "icon": "≡",
-      "summary": "ترتيب قراءة واضح للمعمارية والتشغيل والأمان وإضافة مشروع جديد."
+      "summary": "ترتيب قراءة واضح للمعمارية والقدرات والتشغيل والأمان وإضافة مشروع جديد."
     },
     {
       "id": "operations",
       "title": "التشغيل والتحقق",
       "icon": "✓",
-      "summary": "الأدوات التي تثبت أن الحل يُبنى ويُختبر ويعمل مع SQL Server بدل الاكتفاء بصورة واجهة."
+      "summary": "الأدوات التي تثبت أن الحل يُبنى ويُختبر ويعمل مع SQL Server، مع Composer مرجعي للتحقق من تراكيب القدرات وشرحها."
     }
   ],
   "pages": [
@@ -52,14 +52,14 @@
       "source": "README.md",
       "kind": "guide",
       "runtime": "static",
-      "benefit": "تلخص الفرق بين الكور العام، المثال المعماري، والمنتج المرجعي المكتمل.",
+      "benefit": "تلخص الفرق بين الكور العام والقدرات الاختيارية والمثال المعماري والمنتج المرجعي المكتمل.",
       "details": [
-        "src يحتوي الحزم القابلة لإعادة الاستخدام.",
-        "samples يحتوي Workbench لفهم المسارات.",
+        "src يحتوي 17 حزمة قابلة لإعادة الاستخدام.",
+        "samples يحتوي Workbench لفهم المسارات وإثبات بعض القدرات.",
         "examples/Athar يحتوي المنتج العربي الكامل.",
         "apps محجوز للمنتجات الفعلية القادمة."
       ],
-      "flow": ["FoundationKit Core", "Workbench", "Athar", "Future Apps"],
+      "flow": ["FoundationKit Core", "Optional Capabilities", "Workbench", "Athar", "Future Apps"],
       "preview": "overview"
     },
     {
@@ -130,6 +130,174 @@
       "benefit": "يوفر عميل API مرنًا ونتائج Typed وحالة Async وViewModelBase لتقليل منطق الاتصال داخل صفحات Razor.",
       "details": ["ApiClientBase", "ApiResult<T>", "AsyncState<T>", "ViewModelBase", "ListViewModel<T>"],
       "flow": ["Razor", "ViewModel", "Typed Client", "API"],
+      "preview": "core"
+    },
+    {
+      "id": "core-auditing",
+      "group": "core",
+      "title": "Auditing",
+      "label": "تدقيق اختياري",
+      "route": "src/FoundationKit.Auditing",
+      "source": "src/FoundationKit.Auditing",
+      "kind": "package",
+      "runtime": "library",
+      "benefit": "عقود تدقيق محايدة عن قاعدة البيانات وSIEM مع حدود للبيانات الوصفية الحساسة.",
+      "details": ["IAuditRecorder", "IAuditSink", "AuditRecorder"],
+      "flow": ["Audit Intent", "Recorder", "Consumer Sink"],
+      "preview": "core"
+    },
+    {
+      "id": "core-security",
+      "group": "core",
+      "title": "Security",
+      "label": "أمان مشترك",
+      "route": "src/FoundationKit.Security",
+      "source": "src/FoundationKit.Security",
+      "kind": "package",
+      "runtime": "library",
+      "benefit": "اتفاقيات proxy موثوق وrate-limit partitioning وضمان MFA دون امتلاك هوية المنتج.",
+      "details": ["TrustedProxyOptions", "FoundationRateLimitPartitions", "FoundationAuthenticationAssurance"],
+      "flow": ["Request", "Security Convention", "Consumer Policy"],
+      "preview": "security"
+    },
+    {
+      "id": "core-identity",
+      "group": "core",
+      "title": "Identity",
+      "label": "دورة الحساب",
+      "route": "src/FoundationKit.Identity",
+      "source": "src/FoundationKit.Identity",
+      "kind": "package",
+      "runtime": "library",
+      "benefit": "سياسات حساب وإشعارات ومتطلبات step-up مع بقاء user store وIdP داخل المنتج.",
+      "details": ["AccountSecurityOptions", "IAccountNotificationSender", "IdentityStepUpPolicy"],
+      "flow": ["Account Policy", "Step-up Requirement", "Product Identity"],
+      "preview": "security"
+    },
+    {
+      "id": "core-authorization",
+      "group": "core",
+      "title": "Authorization",
+      "label": "صلاحيات وملكية",
+      "route": "src/FoundationKit.Authorization",
+      "source": "src/FoundationKit.Authorization",
+      "kind": "package",
+      "runtime": "library",
+      "benefit": "أدوار وصلاحيات وملكية موارد بعقود قابلة لإعادة الاستخدام دون فرض تخزين أو أدوار منتج ثابتة.",
+      "details": ["PermissionDefinition", "RolePermissionMap", "IAuthorizationEvaluator"],
+      "flow": ["Subject", "Permission", "Decision"],
+      "preview": "security"
+    },
+    {
+      "id": "core-workflow",
+      "group": "core",
+      "title": "Workflow",
+      "label": "انتقالات الحالة",
+      "route": "src/FoundationKit.Workflow",
+      "source": "src/FoundationKit.Workflow",
+      "kind": "package",
+      "runtime": "library",
+      "benefit": "تعريف انتقالات حالة حتمية ورفض التعارضات مع نية تدقيق منفصلة.",
+      "details": ["WorkflowDefinition", "WorkflowTransitionDefinition", "WorkflowTransitionAudit"],
+      "flow": ["State", "Trigger", "Transition", "Audit Intent"],
+      "preview": "core"
+    },
+    {
+      "id": "core-approvals",
+      "group": "core",
+      "title": "Approvals",
+      "label": "Maker-Checker",
+      "route": "src/FoundationKit.Approvals",
+      "source": "src/FoundationKit.Approvals",
+      "kind": "package",
+      "runtime": "library",
+      "benefit": "قرار approve/reject ضيق مع permission gate وmaker-checker وسير عمل وتدقيق.",
+      "details": ["ApprovalDecision", "ApprovalPolicy", "ApprovalDecisionAudit"],
+      "flow": ["Permission", "Maker-Checker", "Decision", "Workflow"],
+      "preview": "core"
+    },
+    {
+      "id": "core-notifications",
+      "group": "core",
+      "title": "Notifications",
+      "label": "إشعارات عامة",
+      "route": "src/FoundationKit.Notifications",
+      "source": "src/FoundationKit.Notifications",
+      "kind": "package",
+      "runtime": "library",
+      "benefit": "رسائل ونتائج توصيل محايدة عن القناة دون إعادة محتوى حساس في التشخيصات.",
+      "details": ["NotificationMessage", "INotificationSender", "NotificationDeliveryResult"],
+      "flow": ["Message", "Sender Port", "Delivery Result"],
+      "preview": "core"
+    },
+    {
+      "id": "core-notifications-smtp",
+      "group": "core",
+      "title": "Notifications.Smtp",
+      "label": "مزود SMTP",
+      "route": "src/FoundationKit.Notifications.Smtp",
+      "source": "src/FoundationKit.Notifications.Smtp",
+      "kind": "package",
+      "runtime": "library",
+      "benefit": "مهايئ SMTP ضيق فوق عقود الإشعارات مع بقاء الأسرار وسياسة النقل لدى المستهلك.",
+      "details": ["SmtpNotificationOptions", "SmtpNotificationSender", "ISmtpNotificationObserver"],
+      "flow": ["Notification", "SMTP Adapter", "Relay"],
+      "preview": "core"
+    },
+    {
+      "id": "core-settings",
+      "group": "core",
+      "title": "Settings",
+      "label": "إعدادات هرمية",
+      "route": "src/FoundationKit.Settings",
+      "source": "src/FoundationKit.Settings",
+      "kind": "package",
+      "runtime": "library",
+      "benefit": "حل حتمي لإعدادات محدودة عبر scopes يحددها المستهلك دون التحول إلى مخزن أسرار.",
+      "details": ["SettingKey", "ISettingReader", "SettingReader", "InMemorySettingSource"],
+      "flow": ["Scope", "Source", "Fallback", "Resolved Setting"],
+      "preview": "core"
+    },
+    {
+      "id": "core-feature-management",
+      "group": "core",
+      "title": "Feature Management",
+      "label": "Feature flags",
+      "route": "src/FoundationKit.FeatureManagement",
+      "source": "src/FoundationKit.FeatureManagement",
+      "kind": "package",
+      "runtime": "library",
+      "benefit": "قرارات Boolean مدعومة بالإعدادات مع fail-closed للقيم غير الصالحة.",
+      "details": ["FeatureDefinition", "IFeatureEvaluator", "SettingBackedFeatureEvaluator", "FeatureDecision"],
+      "flow": ["Feature", "Setting", "Decision"],
+      "preview": "core"
+    },
+    {
+      "id": "core-localization",
+      "group": "core",
+      "title": "Localization",
+      "label": "Culture & RTL",
+      "route": "src/FoundationKit.Localization",
+      "source": "src/FoundationKit.Localization",
+      "kind": "package",
+      "runtime": "library",
+      "benefit": "ثقافات canonical واتجاه RTL/LTR وfallback حتمي ومعرّف منطقة زمنية محايد.",
+      "details": ["CultureDefinition", "SupportedCultureSet", "TimeZoneId", "LocalizationContext"],
+      "flow": ["Requested Culture", "Fallback", "Resolved Culture", "Direction"],
+      "preview": "core"
+    },
+    {
+      "id": "core-caching",
+      "group": "core",
+      "title": "Caching",
+      "label": "Byte cache",
+      "route": "src/FoundationKit.Caching",
+      "source": "src/FoundationKit.Caching",
+      "kind": "package",
+      "runtime": "library",
+      "benefit": "عقود byte-cache محدودة مع TTL وhit/miss/remove ومزود ذاكرة مرجعي دون فرض Redis.",
+      "details": ["CacheKey", "ICacheStore", "InMemoryCacheStore", "CacheReadResult"],
+      "flow": ["Key", "Get/Set", "TTL", "Hit or Miss"],
       "preview": "core"
     },
     {
@@ -337,7 +505,7 @@
       "kind": "document",
       "runtime": "static",
       "benefit": "مرجع مولّد من الكتالوج يبين ما هو منفذ فعلًا في كل حزمة عامة.",
-      "details": ["Canonical catalog", "Implemented capabilities", "Public types"],
+      "details": ["17 reusable packages", "Canonical catalog", "Implemented capabilities", "Public types"],
       "flow": ["Catalog JSON", "Generator", "FEATURES.md"],
       "preview": "document"
     },
@@ -378,7 +546,7 @@
       "source": "docs/WORKBENCH.md",
       "kind": "document",
       "runtime": "static",
-      "benefit": "يشرح الإعدادات والاتصال بقاعدة البيانات والمسارات وكيفية اختبار دورة الطلب.",
+      "benefit": "يشرح الإعدادات والاتصال بقاعدة البيانات والمسارات وكيفية اختبار دورة الطلب والقدرات المرجعية.",
       "details": ["Connection string", "Migrations", "API routes", "Smoke flow"],
       "flow": ["Configure", "Run", "Verify"],
       "preview": "document"
@@ -426,6 +594,20 @@
       "preview": "document"
     },
     {
+      "id": "operations-composer",
+      "group": "operations",
+      "title": "FoundationKit Composer",
+      "label": "Composer CLI v1",
+      "route": "tools/FoundationKit.Composer",
+      "source": "tools/FoundationKit.Composer",
+      "kind": "tool",
+      "runtime": "local-and-ci",
+      "benefit": "يسرد القدرات والملفات الشخصية ويتحقق من manifest ويشرح الاعتمادات دون الادعاء بتوليد مشروع جديد.",
+      "details": ["capabilities", "profiles", "validate", "validate --require-stable", "explain", "Project generation: not implemented"],
+      "flow": ["Manifest", "Validate", "Resolve Dependencies", "Explain"],
+      "preview": "tool"
+    },
+    {
       "id": "operations-ci",
       "group": "operations",
       "title": "GitHub Actions CI",
@@ -434,8 +616,8 @@
       "source": ".github/workflows/ci.yml",
       "kind": "automation",
       "runtime": "github",
-      "benefit": "يبني الحل ويشغّل الاختبارات وينشر التطبيقين مؤقتًا ثم يختبر Workbench وأثَر مع SQL Server حقيقي.",
-      "details": ["Restore", "Build", "Tests", "Publish", "Pack", "SQL integration"],
+      "benefit": "يبني الحل ويشغّل الاختبارات وينشر التطبيقين مؤقتًا ثم يختبر Workbench وأثَر مع SQL Server حقيقي ويغلف الحزم العامة.",
+      "details": ["Restore", "Build", "Tests", "Publish", "17+17 Pack", "SQL integration"],
       "flow": ["Commit", "Build", "Tests", "Docker SQL", "Result"],
       "preview": "pipeline"
     },

@@ -152,6 +152,126 @@ Reusable loading, value, error, execution, and reset state.
 
 Public surface: `AsyncState<T>`
 
+## FoundationKit.Auditing
+
+Provider-neutral audit contracts with bounded context and metadata.
+
+### Audit recording
+
+Records audit intent and events through a sink-neutral boundary.
+
+Public surface: `IAuditRecorder`, `AuditRecorder`, `IAuditSink`
+
+## FoundationKit.Security
+
+Reusable trusted-proxy, rate-limit partitioning, and MFA assurance conventions.
+
+### Shared security conventions
+
+Security primitives without owning product identity or operational policy.
+
+Public surface: `TrustedProxyOptions`, `FoundationRateLimitPartitions`, `FoundationAuthenticationAssurance`
+
+## FoundationKit.Identity
+
+Account policy, notification ports, and step-up requirements without selecting a user store or identity provider.
+
+### Account lifecycle boundary
+
+Policies, notifications, and additional-factor requirements for sensitive account operations.
+
+Public surface: `AccountSecurityOptions`, `IAccountNotificationSender`, `IdentityStepUpPolicy`
+
+## FoundationKit.Authorization
+
+Role, permission, and resource-ownership primitives independent from product persistence.
+
+### Permission and ownership evaluation
+
+Explicit permission and owned-resource evaluation without a universal administrator bypass.
+
+Public surface: `PermissionDefinition`, `RolePermissionMap`, `IAuthorizationEvaluator`
+
+## FoundationKit.Workflow
+
+Deterministic state-transition definitions with provider-neutral audit integration.
+
+### Deterministic workflow transitions
+
+Deterministic transition resolution that rejects ambiguous or unknown transitions.
+
+Public surface: `WorkflowDefinition`, `WorkflowTransitionDefinition`, `WorkflowTransitionAudit`
+
+## FoundationKit.Approvals
+
+Approve/reject decisions with permission gates, maker-checker enforcement, workflow resolution, and audit intent.
+
+### Maker-checker approval
+
+A narrow reusable approval decision without inventing advanced routing or quorum semantics.
+
+Public surface: `ApprovalDecision`, `ApprovalPolicy`, `ApprovalDecisionAudit`
+
+## FoundationKit.Notifications
+
+Channel-neutral notification messages and delivery results.
+
+### Notification delivery boundary
+
+Generic delivery contracts whose diagnostics do not expose recipient or message content.
+
+Public surface: `NotificationMessage`, `INotificationSender`, `NotificationDeliveryResult`
+
+## FoundationKit.Notifications.Smtp
+
+A narrow SMTP adapter over generic notification contracts without owning production secrets or policy.
+
+### SMTP delivery
+
+Validated SMTP transport with bounded results and a sensitive-safe observer.
+
+Public surface: `SmtpNotificationOptions`, `SmtpNotificationSender`, `ISmtpNotificationObserver`
+
+## FoundationKit.Settings
+
+Deterministic hierarchical setting resolution across caller-defined scopes.
+
+### Setting resolution
+
+Sources, scopes, and deterministic fallback without becoming a secret store.
+
+Public surface: `SettingKey`, `ISettingReader`, `SettingReader`, `InMemorySettingSource`
+
+## FoundationKit.FeatureManagement
+
+Deterministic settings-backed Boolean feature decisions with fail-closed invalid configuration.
+
+### Feature enablement decisions
+
+Explicit enablement without percentage rollout, experiments, or user targeting.
+
+Public surface: `FeatureDefinition`, `IFeatureEvaluator`, `SettingBackedFeatureEvaluator`, `FeatureDecision`
+
+## FoundationKit.Localization
+
+Culture, text-direction, fallback, and opaque time-zone identity independent from translation and OS providers.
+
+### Culture, direction, and time-zone identity
+
+Canonical cultures, RTL/LTR directionality, and deterministic fallback without selecting a translation store.
+
+Public surface: `CultureDefinition`, `SupportedCultureSet`, `TimeZoneId`, `LocalizationContext`
+
+## FoundationKit.Caching
+
+Bounded byte-cache contracts with TTL, hit/miss/remove semantics, and an in-memory reference provider.
+
+### Provider-neutral cache boundary
+
+Cache remains an acceleration boundary and does not force Redis or distributed-consistency semantics.
+
+Public surface: `CacheKey`, `ICacheStore`, `InMemoryCacheStore`, `CacheReadResult`
+
 ## Project ideas
 
 - **Internal operations platform** — Tasks, approvals, dashboards, and operational workflows backed by a structured API and product-owned persistence.
