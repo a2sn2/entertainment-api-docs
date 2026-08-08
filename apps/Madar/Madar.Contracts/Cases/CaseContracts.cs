@@ -10,6 +10,10 @@ public sealed record AssignCaseRequest(Guid AssigneeUserId);
 
 public sealed record RouteCaseRequest(Guid DepartmentId);
 
+public sealed record TransferCaseRequest(Guid DepartmentId);
+
+public sealed record ReassignCaseRequest(Guid AssigneeUserId);
+
 public sealed record TransitionCaseRequest(string Trigger);
 
 public sealed record EvaluateCaseSlaRequest(int Limit = 50);
@@ -50,9 +54,13 @@ public static class CaseRoutes
 
     public static string Route(Guid caseId) => $"{ById(caseId)}/route";
 
+    public static string Transfer(Guid caseId) => $"{ById(caseId)}/transfer";
+
     public static string Claim(Guid caseId) => $"{ById(caseId)}/claim";
 
     public static string Assign(Guid caseId) => $"{ById(caseId)}/assignment";
+
+    public static string Reassign(Guid caseId) => $"{ById(caseId)}/reassignment";
 
     public static string Transition(Guid caseId) => $"{ById(caseId)}/transition";
 }
