@@ -112,6 +112,62 @@ public sealed class MadarApiClient(HttpClient httpClient)
                 DepartmentRoutes.Queue(departmentId)),
             cancellationToken);
 
+    public Task<ApiResult<DepartmentAdminDto[]>> ListAdminDepartmentsAsync(
+        CancellationToken cancellationToken = default) =>
+        SendAsync<DepartmentAdminDto[]>(
+            new HttpRequestMessage(
+                HttpMethod.Get,
+                DepartmentAdminRoutes.Root),
+            cancellationToken);
+
+    public Task<ApiResult<DepartmentAdminDto>> CreateDepartmentAsync(
+        CreateDepartmentRequest request,
+        CancellationToken cancellationToken = default) =>
+        SendProtectedAsync<DepartmentAdminDto>(
+            HttpMethod.Post,
+            DepartmentAdminRoutes.Root,
+            request,
+            cancellationToken);
+
+    public Task<ApiResult<DepartmentAdminDto>> UpdateDepartmentAsync(
+        Guid departmentId,
+        UpdateDepartmentRequest request,
+        CancellationToken cancellationToken = default) =>
+        SendProtectedAsync<DepartmentAdminDto>(
+            HttpMethod.Put,
+            DepartmentAdminRoutes.ById(departmentId),
+            request,
+            cancellationToken);
+
+    public Task<ApiResult<DepartmentMemberDto[]>> ListDepartmentMembersAsync(
+        Guid departmentId,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<DepartmentMemberDto[]>(
+            new HttpRequestMessage(
+                HttpMethod.Get,
+                DepartmentAdminRoutes.Members(departmentId)),
+            cancellationToken);
+
+    public Task<ApiResult<DepartmentMemberDto>> AddDepartmentMemberAsync(
+        Guid departmentId,
+        AddDepartmentMemberRequest request,
+        CancellationToken cancellationToken = default) =>
+        SendProtectedAsync<DepartmentMemberDto>(
+            HttpMethod.Post,
+            DepartmentAdminRoutes.Members(departmentId),
+            request,
+            cancellationToken);
+
+    public Task<ApiResult> RemoveDepartmentMemberAsync(
+        Guid departmentId,
+        Guid userId,
+        CancellationToken cancellationToken = default) =>
+        SendProtectedAsync(
+            HttpMethod.Delete,
+            DepartmentAdminRoutes.Member(departmentId, userId),
+            new { },
+            cancellationToken);
+
     public Task<ApiResult<CaseDto>> TransitionCaseAsync(
         Guid caseId,
         TransitionCaseRequest request,
@@ -195,6 +251,38 @@ public sealed class MadarApiClient(HttpClient httpClient)
                 HttpMethod.Get,
                 MadarSecurityRoutes.Operators),
             cancellationToken);
+
+    private async Task<ApiResult> SendProtectedAsync(
+        HttpMethod method,
+        string route,
+        object body,
+        CancellationToken cancellationToken)
+    {
+        var tokenResult = await EnsureAntiforgeryTokenAsync(cancellationToken);
+        if (tokenResult.IsFailure || tokenResult.Value is null)
+        {
+            return ApiResult.Failure(
+                tokenResult.ErrorDetails
+                ?? new ApiError(
+                    "Security.TokenUnavailable",
+                    "تعذر إنشاء رمز حماية الطلب.",
+                    tokenResult.StatusCode));
+        }
+
+        using var request = new HttpRequestMessage(method, route)
+        {
+            Content = JsonContent.Create(body)
+        };
+        request.Headers.TryAddWithoutValidation(
+            "X-CSRF-TOKEN",
+            tokenResult.Value);
+
+        var response = await SendAsync(request, cancellationToken);
+        if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            _antiforgeryToken = null;
+
+        return response;
+    }
 
     private async Task<ApiResult<TResponse>> SendProtectedAsync<TResponse>(
         HttpMethod method,
