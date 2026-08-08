@@ -15,5 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\apps\Madar\Madar.Domain\Madar.Domain.csproj" />
     <ProjectReference Include="..\..\apps\Madar\Madar.Contracts\Madar.Contracts.csproj" />
+    <ProjectReference Include="..\..\apps\Madar\Madar.Application\Madar.Application.csproj" />
+    <ProjectReference Include="..\..\apps\Madar\Madar.Infrastructure\Madar.Infrastructure.csproj" />
   </ItemGroup>
 </Project>
