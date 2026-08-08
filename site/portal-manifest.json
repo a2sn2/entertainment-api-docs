@@ -562,6 +562,21 @@
       "preview": "workbench-admin"
     },
     {
+      "id": "madar-department-administration",
+      "group": "madar",
+      "app": "madar",
+      "title": "إدارة الأقسام والعضويات",
+      "label": "/admin/departments",
+      "route": "/admin/departments",
+      "source": "apps/Madar/Madar.Client/Pages/DepartmentAdministration.razor",
+      "kind": "ui",
+      "runtime": "local-write",
+      "benefit": "تتيح لمسؤول مدار إنشاء الأقسام التشغيلية وتفعيلها أو تعطيلها وإدارة عضوية موظفي Operator مع حواجز تمنع إخفاء العمل المفتوح.",
+      "details": ["Administrator-only", "Stable department code", "Active-state guard", "Operator memberships", "Audit evidence"],
+      "flow": ["Administrator", "Department Manager", "SQL Server", "Routing Membership"],
+      "preview": "workbench-admin"
+    },
+    {
       "id": "madar-swagger",
       "group": "madar",
       "app": "madar",
