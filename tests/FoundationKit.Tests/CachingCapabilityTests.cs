@@ -104,6 +104,24 @@ public sealed class CachingCapabilityTests
     }
 
     [Fact]
+    public async Task Provider_rejects_ttl_that_exceeds_DateTimeOffset_range()
+    {
+        var clock = new ManualTimeProvider(DateTimeOffset.MaxValue.AddMinutes(-5));
+        var store = new InMemoryCacheStore(
+            new InMemoryCacheOptions
+            {
+                MaximumTimeToLive = TimeSpan.FromHours(1)
+            },
+            clock);
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () =>
+            await store.SetAsync(
+                new CacheKey("tests/overflow"),
+                new byte[] { 1 },
+                new CacheEntryOptions(TimeSpan.FromMinutes(10))));
+    }
+
+    [Fact]
     public async Task Caller_cancellation_remains_cancellation()
     {
         var store = new InMemoryCacheStore();
