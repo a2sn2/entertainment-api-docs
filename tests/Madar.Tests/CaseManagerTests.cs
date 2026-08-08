@@ -83,18 +83,18 @@ public sealed class CaseManagerTests
     {
         var operatorUserId = Guid.NewGuid();
         var creator = Guid.NewGuid();
-        var item = CreateCase(creator, DateTimeOffset.Parse("2026-08-08T09:00:00Z"));
+        var item = CreateCase(creator, Utc(9));
         Assert.True(item.Assign(
             operatorUserId,
             Guid.NewGuid(),
-            DateTimeOffset.Parse("2026-08-08T09:01:00Z")).IsSuccess);
+            Utc(9, 1)).IsSuccess);
 
         var assignedOperator = TestCurrentUser.Authenticated(
             MadarRoles.Operator,
             operatorUserId);
         var assignedFixture = CreateFixture(assignedOperator);
         assignedFixture.Repository.Seed(item);
-        assignedFixture.Clock.UtcNow = DateTimeOffset.Parse("2026-08-08T09:02:00Z");
+        assignedFixture.Clock.UtcNow = Utc(9, 2);
 
         var started = await assignedFixture.Manager.TransitionAsync(
             item.Id,
@@ -103,11 +103,11 @@ public sealed class CaseManagerTests
         Assert.True(started.IsSuccess);
         Assert.Equal(CaseStatuses.InProgress, started.Value.Status);
 
-        var otherItem = CreateCase(creator, DateTimeOffset.Parse("2026-08-08T10:00:00Z"));
+        var otherItem = CreateCase(creator, Utc(10));
         Assert.True(otherItem.Assign(
             operatorUserId,
             Guid.NewGuid(),
-            DateTimeOffset.Parse("2026-08-08T10:01:00Z")).IsSuccess);
+            Utc(10, 1)).IsSuccess);
 
         var otherOperator = TestCurrentUser.Authenticated(MadarRoles.Operator);
         var otherFixture = CreateFixture(otherOperator);
@@ -166,7 +166,7 @@ public sealed class CaseManagerTests
         var unitOfWork = new FakeUnitOfWork();
         var clock = new TestClock
         {
-            UtcNow = DateTimeOffset.Parse("2026-08-08T09:00:00Z")
+            UtcNow = Utc(9)
         };
         var auditSink = new CollectingAuditSink();
         var authorization = new RolePermissionAuthorizationEvaluator(
@@ -206,6 +206,9 @@ public sealed class CaseManagerTests
         Assert.True(result.IsSuccess);
         return result.Value;
     }
+
+    private static DateTimeOffset Utc(int hour, int minute = 0) =>
+        new(2026, 8, 8, hour, minute, 0, TimeSpan.Zero);
 
     private sealed record Fixture(
         CaseManager Manager,
