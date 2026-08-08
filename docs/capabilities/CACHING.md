@@ -29,9 +29,10 @@ The reference provider:
 
 1. rejects non-positive or unbounded TTL values;
 2. enforces a configurable maximum TTL;
-3. removes expired entries when they are read or before writes;
-4. enforces a configurable maximum entry count and value size;
-5. when capacity is full after expired-item cleanup, evicts the entry with the earliest expiry, with ordinal key ordering as the deterministic tie-break.
+3. rejects a TTL that would exceed the `DateTimeOffset` range from the current `TimeProvider` instant rather than allowing an expiration overflow;
+4. removes expired entries when they are read or before writes;
+5. enforces a configurable maximum entry count and value size;
+6. when capacity is full after expired-item cleanup, evicts the entry with the earliest expiry, with ordinal key ordering as the deterministic tie-break.
 
 This eviction policy is reference-provider behavior, not a requirement that every future distributed provider implement the same internal algorithm.
 
