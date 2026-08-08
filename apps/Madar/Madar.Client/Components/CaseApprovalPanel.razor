@@ -65,13 +65,13 @@
                                 <MudButton Color="Color.Success"
                                            Variant="Variant.Filled"
                                            Disabled="_acting"
-                                           OnClick="@(() => DecideAsync("approve"))">
+                                           OnClick="ApproveAsync">
                                     موافقة
                                 </MudButton>
                                 <MudButton Color="Color.Error"
                                            Variant="Variant.Outlined"
                                            Disabled="_acting"
-                                           OnClick="@(() => DecideAsync("reject"))">
+                                           OnClick="RejectAsync">
                                     رفض
                                 </MudButton>
                             </MudStack>
@@ -201,6 +201,10 @@
             _acting = false;
         }
     }
+
+    private Task ApproveAsync() => DecideAsync("approve");
+
+    private Task RejectAsync() => DecideAsync("reject");
 
     private async Task DecideAsync(string decision)
     {
