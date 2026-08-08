@@ -14,6 +14,7 @@ Set-StrictMode -Version Latest
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $ComposeFile = Join-Path $RepoRoot 'deploy\madar-compose.yml'
+$ComposeProject = 'madar-product'
 $LocalRoot = Join-Path $RepoRoot '.local'
 $ConfigPath = Join-Path $LocalRoot 'madar-product.env'
 
@@ -35,19 +36,20 @@ function New-RandomSecret {
 function Protect-LocalFile {
     param([Parameter(Mandatory = $true)][string]$Path)
 
-    if (-not $IsWindows -and $PSVersionTable.PSVersion.Major -ge 6) {
-        return
-    }
-
     if ($env:OS -ne 'Windows_NT') {
         return
     }
 
-    $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-    & icacls $Path /inheritance:r | Out-Null
-    & icacls $Path /grant:r "$identity`:(R,W)" | Out-Null
-    if ($LASTEXITCODE -ne 0) {
-        throw "Unable to restrict Madar local credential file ACL: $Path"
+    try {
+        $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
+        $sid = $identity.User.Value
+        & icacls $Path /inheritance:r /grant:r "*$sid`:(F)" *> $null
+        if ($LASTEXITCODE -ne 0) {
+            throw "icacls returned exit code $LASTEXITCODE."
+        }
+    }
+    catch {
+        throw "Unable to restrict Madar local credential file ACL: $Path. $($_.Exception.Message)"
     }
 }
 
@@ -81,11 +83,12 @@ function Initialize-LocalConfig {
 
     $existing = Get-LocalConfig
     if ($null -ne $existing) {
+        Protect-LocalFile -Path $ConfigPath
         return $existing
     }
 
     New-Item -ItemType Directory -Path $LocalRoot -Force | Out-Null
-    $values = [ordered]@{
+    $values = @{
         MADAR_SQL_PASSWORD      = New-RandomSecret
         MADAR_ADMIN_EMAIL       = 'admin@madar.local'
         MADAR_ADMIN_PASSWORD    = New-RandomSecret
@@ -95,23 +98,38 @@ function Initialize-LocalConfig {
 
     $content = @(
         '# Local Madar development credentials. Do not commit this file.'
-        ($values.GetEnumerator() | ForEach-Object { '{0}={1}' -f $_.Key, $_.Value })
+        ($values.GetEnumerator() | Sort-Object Key | ForEach-Object { '{0}={1}' -f $_.Key, $_.Value })
     )
     [System.IO.File]::WriteAllLines($ConfigPath, $content, [System.Text.UTF8Encoding]::new($false))
     Protect-LocalFile -Path $ConfigPath
     return $values
 }
 
+function Get-ComposeEnvironment {
+    $config = Get-LocalConfig
+    if ($null -ne $config) {
+        return $config
+    }
+
+    return @{
+        MADAR_SQL_PASSWORD = 'unused'
+        MADAR_ADMIN_EMAIL = 'unused@madar.local'
+        MADAR_ADMIN_PASSWORD = 'unused'
+        MADAR_OPERATOR_EMAIL = 'unused@madar.local'
+        MADAR_OPERATOR_PASSWORD = 'unused'
+    }
+}
+
 function Invoke-WithMadarEnvironment {
     param(
-        [Parameter(Mandatory = $true)][hashtable]$Values,
+        [Parameter(Mandatory = $true)][System.Collections.IDictionary]$Values,
         [Parameter(Mandatory = $true)][scriptblock]$Script
     )
 
     $original = @{}
     foreach ($name in $Values.Keys) {
-        $original[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
-        [Environment]::SetEnvironmentVariable($name, [string]$Values[$name], 'Process')
+        $original[$name] = [Environment]::GetEnvironmentVariable([string]$name, 'Process')
+        [Environment]::SetEnvironmentVariable([string]$name, [string]$Values[$name], 'Process')
     }
 
     try {
@@ -119,14 +137,37 @@ function Invoke-WithMadarEnvironment {
     }
     finally {
         foreach ($name in $Values.Keys) {
-            [Environment]::SetEnvironmentVariable($name, $original[$name], 'Process')
+            [Environment]::SetEnvironmentVariable([string]$name, $original[$name], 'Process')
         }
     }
 }
 
 function Test-DockerReady {
-    & docker info --format '{{.ServerVersion}}' 2>$null | Out-Null
+    if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+        return $false
+    }
+
+    & docker info --format '{{.ServerVersion}}' *> $null
+    if ($LASTEXITCODE -ne 0) {
+        return $false
+    }
+
+    & docker compose version *> $null
     return $LASTEXITCODE -eq 0
+}
+
+function Invoke-MadarCompose {
+    param(
+        [Parameter(Mandatory = $true)][System.Collections.IDictionary]$Values,
+        [Parameter(Mandatory = $true)][string[]]$Arguments
+    )
+
+    Invoke-WithMadarEnvironment -Values $Values -Script {
+        & docker compose --project-name $ComposeProject -f $ComposeFile @Arguments
+        if ($LASTEXITCODE -ne 0) {
+            throw "Madar Docker Compose command failed with exit code $LASTEXITCODE."
+        }
+    }
 }
 
 function Get-Health {
@@ -138,6 +179,21 @@ function Get-Health {
     catch {
         return $null
     }
+}
+
+function Wait-MadarReady {
+    param([int]$Attempts = 90)
+
+    for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+        $ready = Get-Health -Path '/health/ready'
+        if ($null -ne $ready -and $ready.status -eq 'ready') {
+            return
+        }
+
+        Start-Sleep -Seconds 2
+    }
+
+    throw "Madar did not become ready at $BaseUrl before the timeout."
 }
 
 function Show-Status {
@@ -165,27 +221,19 @@ if (-not (Test-Path $ComposeFile)) {
 
 switch ($Action) {
     'start' {
-        if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-            throw 'Docker is required for the current Madar operational launcher.'
-        }
         if (-not (Test-DockerReady)) {
-            throw 'Docker Desktop/Engine is not ready.'
+            throw 'Docker Desktop/Engine with Docker Compose is required and must be ready.'
         }
 
         $config = Initialize-LocalConfig
-        Invoke-WithMadarEnvironment -Values $config -Script {
-            & docker compose -f $ComposeFile up --build -d
-            if ($LASTEXITCODE -ne 0) {
-                throw 'Madar Docker startup failed.'
-            }
-        }
+        Invoke-MadarCompose -Values $config -Arguments @('up', '--build', '-d')
 
-        for ($attempt = 1; $attempt -le 90; $attempt++) {
-            $ready = Get-Health -Path '/health/ready'
-            if ($null -ne $ready -and $ready.status -eq 'ready') {
-                break
-            }
-            Start-Sleep -Seconds 2
+        try {
+            Wait-MadarReady
+        }
+        catch {
+            Invoke-MadarCompose -Values $config -Arguments @('logs', '--no-color', '--tail=250')
+            throw
         }
 
         Show-Status
@@ -193,7 +241,7 @@ switch ($Action) {
         Write-Host 'Local development accounts:' -ForegroundColor Cyan
         Write-Host ("  Administrator: {0}" -f $config['MADAR_ADMIN_EMAIL'])
         Write-Host ("  Operator:      {0}" -f $config['MADAR_OPERATOR_EMAIL'])
-        Write-Host "Credentials are stored in $ConfigPath with local-only ACLs where supported."
+        Write-Host "Credentials are stored in $ConfigPath with local-only ACLs on Windows."
     }
 
     'status' {
@@ -201,38 +249,21 @@ switch ($Action) {
     }
 
     'logs' {
-        if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-            throw 'Docker is required to read Madar container logs.'
+        if (-not (Test-DockerReady)) {
+            throw 'Docker Desktop/Engine with Docker Compose is required to read Madar logs.'
         }
-        & docker compose -f $ComposeFile logs --no-color --tail=250
-        if ($LASTEXITCODE -ne 0) {
-            throw 'Unable to read Madar Docker logs.'
-        }
+
+        $config = Get-ComposeEnvironment
+        Invoke-MadarCompose -Values $config -Arguments @('logs', '--no-color', '--tail=250')
     }
 
     'stop' {
-        if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-            throw 'Docker is required to stop the Madar Compose topology.'
+        if (-not (Test-DockerReady)) {
+            throw 'Docker Desktop/Engine with Docker Compose is required to stop Madar.'
         }
 
-        $config = Get-LocalConfig
-        if ($null -eq $config) {
-            $config = @{
-                MADAR_SQL_PASSWORD = 'unused'
-                MADAR_ADMIN_EMAIL = 'unused@madar.local'
-                MADAR_ADMIN_PASSWORD = 'unused'
-                MADAR_OPERATOR_EMAIL = 'unused@madar.local'
-                MADAR_OPERATOR_PASSWORD = 'unused'
-            }
-        }
-
-        Invoke-WithMadarEnvironment -Values $config -Script {
-            & docker compose -f $ComposeFile down --remove-orphans
-            if ($LASTEXITCODE -ne 0) {
-                throw 'Madar Docker stop failed.'
-            }
-        }
-
-        Write-Host 'Madar stopped.' -ForegroundColor Green
+        $config = Get-ComposeEnvironment
+        Invoke-MadarCompose -Values $config -Arguments @('down', '--remove-orphans')
+        Write-Host 'Madar stopped. SQL data was preserved.' -ForegroundColor Green
     }
 }
