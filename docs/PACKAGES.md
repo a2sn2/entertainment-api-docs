@@ -293,6 +293,27 @@ Localization v1 does not own resource/translation storage, browser language nego
 
 See `docs/capabilities/LOCALIZATION.md` for the full boundary and consumer evidence.
 
+## FoundationKit.Caching
+
+Public building blocks:
+
+- `CacheKey`;
+- `CacheEntryOptions`;
+- `CacheReadResult`;
+- `ICacheStore`;
+- `InMemoryCacheOptions`;
+- `InMemoryCacheStore`.
+
+The package is BCL-only and has no direct FoundationKit package dependency. It deliberately stores bytes rather than arbitrary objects, keeping serialization, schema/versioning, compression, encryption, and domain mapping in the consumer.
+
+Keys and in-memory provider limits are bounded; TTL must be finite and positive. Cache reads return explicit hit/miss results, values are defensively copied, cancellation remains cancellation, and remove is idempotent. The reference in-memory provider cleans expired entries and uses deterministic earliest-expiry eviction when capacity is reached.
+
+Workbench is the first runtime consumer. Its existing `CatalogService` uses `ICacheStore` to cache the embedded capability-catalog bytes for 15 minutes. `CatalogCachingTests` proves a miss/fill followed by a cache hit, and the SQL integration smoke flow reads the catalog twice before continuing the user/admin workflow.
+
+Caching v1 does not own Redis/distributed-provider selection, distributed coherence or locks, object serialization conventions, tag invalidation, refresh-ahead, stale-while-revalidate, or product data-classification rules.
+
+See `docs/capabilities/CACHING.md` for the full boundary and consumer evidence.
+
 ## Capability catalog contract
 
 The human-facing implemented feature list is maintained in `catalog/foundationkit.catalog.json`. Every catalog capability must correspond to existing tested behavior and public surface. The catalog generator rejects unknown idea references and any status other than `implemented`.
