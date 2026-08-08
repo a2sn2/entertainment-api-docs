@@ -1,0 +1,307 @@
+@page "/cases/{CaseId:guid}"
+@attribute [Authorize]
+@inject MadarApiClient ApiClient
+
+<PageTitle>تفاصيل الحالة | مدار</PageTitle>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else if (!string.IsNullOrWhiteSpace(_error))
+{
+    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+}
+else if (_case is not null)
+{
+    <MudStack Spacing="4" dir="rtl">
+        <MudStack Row="true" AlignItems="AlignItems.Center">
+            <div>
+                <MudText Typo="Typo.h3">@_case.Title</MudText>
+                <MudText Typo="Typo.body2">@_case.Id.ToString("D")</MudText>
+            </div>
+            <MudSpacer />
+            <MudButton Href="/cases" Variant="Variant.Outlined">العودة للحالات</MudButton>
+        </MudStack>
+
+        @if (!string.IsNullOrWhiteSpace(_actionError))
+        {
+            <MudAlert Severity="Severity.Error">@_actionError</MudAlert>
+        }
+
+        <MudPaper Elevation="0" Outlined="true" Class="pa-6">
+            <MudGrid>
+                <MudItem xs="12" md="8">
+                    <MudText Typo="Typo.overline">الوصف</MudText>
+                    <MudText Typo="Typo.body1">@_case.Description</MudText>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudStack Spacing="2">
+                        <MudText><b>الحالة:</b> @DisplayStatus(_case.Status)</MudText>
+                        <MudText><b>النوع:</b> @DisplayCaseType(_case.CaseType)</MudText>
+                        <MudText><b>الأولوية:</b> @DisplayPriority(_case.Priority)</MudText>
+                        <MudText><b>المنشئ:</b> @_case.CreatedByUserId.ToString("D")</MudText>
+                        <MudText><b>المسند إليه:</b> @(_case.AssignedToUserId?.ToString("D") ?? "غير مسندة")</MudText>
+                        <MudText><b>أُنشئت:</b> @_case.CreatedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudText>
+                        <MudText><b>آخر تحديث:</b> @_case.UpdatedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</MudText>
+                    </MudStack>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <AuthorizeView Roles="Supervisor,Administrator">
+            <Authorized>
+                @if (_case.Status == "new")
+                {
+                    <MudPaper Elevation="0" Outlined="true" Class="pa-6">
+                        <MudText Typo="Typo.h5" GutterBottom="true">إسناد الحالة</MudText>
+                        @if (_operators.Count == 0)
+                        {
+                            <MudAlert Severity="Severity.Info">لا يوجد موظفون بدور Operator متاحون للإسناد.</MudAlert>
+                        }
+                        else
+                        {
+                            <MudSelect T="string"
+                                       Label="الموظف"
+                                       Variant="Variant.Outlined"
+                                       @bind-Value="_selectedOperatorId"
+                                       Disabled="_acting">
+                                @foreach (var item in _operators)
+                                {
+                                    <MudSelectItem T="string" Value="@item.UserId.ToString("D")">
+                                        @item.DisplayName (@item.Email)
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudButton Color="Color.Primary"
+                                       Variant="Variant.Filled"
+                                       Disabled="_acting || string.IsNullOrWhiteSpace(_selectedOperatorId)"
+                                       OnClick="AssignAsync"
+                                       Class="mt-4">
+                                إسناد
+                            </MudButton>
+                        }
+                    </MudPaper>
+                }
+            </Authorized>
+        </AuthorizeView>
+
+        <MudPaper Elevation="0" Outlined="true" Class="pa-6">
+            <MudText Typo="Typo.h5" GutterBottom="true">الإجراء التالي</MudText>
+            @if (_case.Status == "assigned")
+            {
+                <MudButton Color="Color.Primary"
+                           Variant="Variant.Filled"
+                           Disabled="_acting"
+                           OnClick="StartProgressAsync">
+                    بدء المعالجة
+                </MudButton>
+            }
+            else if (_case.Status == "in-progress")
+            {
+                <MudButton Color="Color.Success"
+                           Variant="Variant.Filled"
+                           Disabled="_acting"
+                           OnClick="ResolveAsync">
+                    تسجيل الحل
+                </MudButton>
+            }
+            else if (_case.Status == "resolved")
+            {
+                <AuthorizeView Roles="Supervisor,Administrator">
+                    <Authorized>
+                        <MudButton Color="Color.Success"
+                                   Variant="Variant.Filled"
+                                   Disabled="_acting"
+                                   OnClick="CloseAsync">
+                            إغلاق الحالة
+                        </MudButton>
+                    </Authorized>
+                    <NotAuthorized>
+                        <MudAlert Severity="Severity.Info">بانتظار المشرف لإغلاق الحالة.</MudAlert>
+                    </NotAuthorized>
+                </AuthorizeView>
+            }
+            else if (_case.Status == "closed")
+            {
+                <MudAlert Severity="Severity.Success">الحالة مغلقة ولا توجد إجراءات إضافية في v0.1.</MudAlert>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info">يجب إسناد الحالة قبل بدء المعالجة.</MudAlert>
+            }
+        </MudPaper>
+
+        <MudPaper Elevation="0" Outlined="true" Class="pa-6">
+            <MudText Typo="Typo.h5" GutterBottom="true">السجل الزمني</MudText>
+            @if (_timeline.Count == 0)
+            {
+                <MudText Typo="Typo.body2">لا توجد أحداث مسجلة.</MudText>
+            }
+            else
+            {
+                <MudTable Items="_timeline" Dense="true" Elevation="0">
+                    <HeaderContent>
+                        <MudTh>الوقت</MudTh>
+                        <MudTh>الحدث</MudTh>
+                        <MudTh>المنفذ</MudTh>
+                        <MudTh>التفاصيل</MudTh>
+                    </HeaderContent>
+                    <RowTemplate Context="entry">
+                        <MudTd>@entry.OccurredAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
+                        <MudTd>@DisplayTimelineAction(entry.Action)</MudTd>
+                        <MudTd>@(entry.ActorId ?? "النظام")</MudTd>
+                        <MudTd>@DisplayAttributes(entry.Attributes)</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudPaper>
+    </MudStack>
+}
+
+@code {
+    [Parameter]
+    public Guid CaseId { get; set; }
+
+    private readonly List<CaseTimelineEntryDto> _timeline = [];
+    private readonly List<OperatorOptionDto> _operators = [];
+    private CaseDto? _case;
+    private bool _loading = true;
+    private bool _acting;
+    private string? _error;
+    private string? _actionError;
+    private string? _selectedOperatorId;
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            var caseResult = await ApiClient.GetCaseAsync(CaseId);
+            if (caseResult.IsFailure || caseResult.Value is null)
+            {
+                _error = caseResult.Error ?? "تعذر تحميل الحالة.";
+                return;
+            }
+
+            _case = caseResult.Value;
+            await LoadTimelineAsync();
+
+            var operatorsResult = await ApiClient.GetOperatorsAsync();
+            _operators.Clear();
+            if (operatorsResult.IsSuccess && operatorsResult.Value is not null)
+                _operators.AddRange(operatorsResult.Value);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task LoadTimelineAsync()
+    {
+        var result = await ApiClient.GetTimelineAsync(CaseId);
+        _timeline.Clear();
+        if (result.IsSuccess && result.Value is not null)
+            _timeline.AddRange(result.Value);
+    }
+
+    private async Task AssignAsync()
+    {
+        if (!Guid.TryParse(_selectedOperatorId, out var userId))
+        {
+            _actionError = "اختر موظفًا صالحًا للإسناد.";
+            return;
+        }
+
+        await RunActionAsync(() =>
+            ApiClient.AssignCaseAsync(CaseId, new AssignCaseRequest(userId)));
+    }
+
+    private Task StartProgressAsync() =>
+        RunActionAsync(() => ApiClient.TransitionCaseAsync(
+            CaseId,
+            new TransitionCaseRequest("start-progress")));
+
+    private Task ResolveAsync() =>
+        RunActionAsync(() => ApiClient.TransitionCaseAsync(
+            CaseId,
+            new TransitionCaseRequest("resolve")));
+
+    private Task CloseAsync() =>
+        RunActionAsync(() => ApiClient.TransitionCaseAsync(
+            CaseId,
+            new TransitionCaseRequest("close")));
+
+    private async Task RunActionAsync(Func<Task<FoundationKit.Blazor.Api.ApiResult<CaseDto>>> action)
+    {
+        if (_acting)
+            return;
+
+        _acting = true;
+        _actionError = null;
+        try
+        {
+            var result = await action();
+            if (result.IsFailure || result.Value is null)
+            {
+                _actionError = result.Error ?? "تعذر تنفيذ العملية.";
+                return;
+            }
+
+            _case = result.Value;
+            await LoadTimelineAsync();
+        }
+        finally
+        {
+            _acting = false;
+        }
+    }
+
+    private static string DisplayCaseType(string value) => value switch
+    {
+        "customer-complaint" => "شكوى عميل",
+        "operational-incident" => "حادث تشغيلي",
+        "internal-service-request" => "طلب خدمة داخلي",
+        "access-request" => "طلب صلاحية",
+        "compliance-case" => "حالة امتثال",
+        "technical-escalation" => "تصعيد تقني",
+        "operational-exception" => "استثناء تشغيلي",
+        _ => value
+    };
+
+    private static string DisplayPriority(string value) => value switch
+    {
+        "low" => "منخفضة",
+        "medium" => "متوسطة",
+        "high" => "عالية",
+        "critical" => "حرجة",
+        _ => value
+    };
+
+    private static string DisplayStatus(string value) => value switch
+    {
+        "new" => "جديدة",
+        "assigned" => "مسندة",
+        "in-progress" => "قيد المعالجة",
+        "resolved" => "تم الحل",
+        "closed" => "مغلقة",
+        _ => value
+    };
+
+    private static string DisplayTimelineAction(string value) => value switch
+    {
+        "madar.case.created" => "إنشاء الحالة",
+        "madar.case.assigned" => "إسناد الحالة",
+        "madar.case.transitioned" => "تغيير الحالة",
+        _ => value
+    };
+
+    private static string DisplayAttributes(IReadOnlyDictionary<string, string> attributes) =>
+        attributes.Count == 0
+            ? "—"
+            : string.Join("، ", attributes.Select(pair => $"{pair.Key}: {pair.Value}"));
+}

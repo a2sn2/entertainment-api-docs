@@ -10,6 +10,7 @@
     <ProjectReference Include="..\Madar.Application\Madar.Application.csproj" />
     <ProjectReference Include="..\Madar.Contracts\Madar.Contracts.csproj" />
     <ProjectReference Include="..\..\..\src\FoundationKit.Infrastructure\FoundationKit.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\src\FoundationKit.Auditing\FoundationKit.Auditing.csproj" />
     <ProjectReference Include="..\..\..\src\FoundationKit.Identity\FoundationKit.Identity.csproj" />
     <ProjectReference Include="..\..\..\src\FoundationKit.Notifications\FoundationKit.Notifications.csproj" />
   </ItemGroup>

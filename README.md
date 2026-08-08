@@ -12,7 +12,7 @@ Optional capabilities and provider adapters
 Consumers
 ├── Workbench — executable architecture/reference consumer
 ├── Athar — complete Arabic reference product
-└── Madar — first real product under apps/ (in development)
+└── Madar — first real product under apps/ with a working v0.1 vertical slice
 ```
 
 The current reusable output is **17 NuGet packages + 17 symbol packages**. Package existence does not mean every capability is `Stable`; maturity is tracked explicitly in the capability model.
@@ -28,7 +28,7 @@ foundationkit-dotnet/
 ├─ src/                         reusable FoundationKit packages
 ├─ samples/                     FoundationKit Workbench
 ├─ examples/Athar/              complete Arabic reference product
-├─ apps/Madar/                  first real product, currently in development
+├─ apps/Madar/                  first real product, v0.1 in development
 ├─ tools/
 │  ├─ FoundationKit.CatalogGenerator
 │  └─ FoundationKit.Composer
@@ -194,13 +194,27 @@ Read [`examples/Athar/README.md`](examples/Athar/README.md).
 
 `apps/Madar` is the first real product developed under the repository's `apps/` boundary. It is an operational case-management and orchestration product intended to validate FoundationKit against a product domain that is materially different from Athar.
 
-The current Madar foundation includes six runtime projects plus `tests/Madar.Tests`, a product-owned `Case` aggregate, bounded case types and priorities, and a deterministic lifecycle built with `FoundationKit.Workflow`:
+Madar now has a repository-verified first vertical slice across Identity, authorization, SQL Server, API, Blazor, and auditing:
 
 ```text
+Authenticate
+  ↓
+Create Case
+  ↓
+Persist + List / View
+  ↓
+Assign Operator
+  ↓
 new → assigned → in-progress → resolved → closed
+  ↓
+Persisted Audit Timeline
 ```
 
-The current API and Blazor projects are foundation shells. Authentication/authorization runtime wiring, Madar SQL Server persistence and migrations, case endpoints/UI, audit persistence, SLA/escalation, search/reporting, documents, external channels, and multi-tenancy are **not** claimed as implemented yet.
+The product reuses FoundationKit Domain/Application/Infrastructure/WebApi/Blazor primitives together with Security, Authorization, Auditing, and Workflow contracts while keeping its ASP.NET Core Identity model, permissions, SQL schema/migrations, case queries, API endpoints, audit sink, Docker topology, and Arabic UI inside `apps/Madar`.
+
+Pull-request CI publishes Madar and verifies a real SQL Server workflow covering anonymous access rejection, anti-CSRF login, case creation, assignment, operator-scoped visibility, progression, resolution, supervisor/administrator close, and persisted audit history.
+
+This v0.1 slice does **not** claim SLA/escalation, configurable workflow design, files/documents, advanced search/reporting, external channels, organization hierarchy, multi-tenancy, background jobs, or production deployment approval.
 
 Read [`apps/Madar/README.md`](apps/Madar/README.md) and track the initial product slice in GitHub issue #71.
 
@@ -272,7 +286,7 @@ Workbench and Athar local credential/state files live under ignored `.local/` pa
 
 `Auto` uses Docker when Docker Desktop is ready and otherwise uses local .NET/SQL Server where supported.
 
-For the exact first-run sequence, SQL Server instance overrides, port map, and failure diagnostics, read [`docs/LOCAL-RUN-WINDOWS-AR.md`](docs/LOCAL-RUN-WINDOWS-AR.md).
+For the exact first-run sequence, SQL Server instance overrides, port map, and failure diagnostics, read [`docs/LOCAL-RUN-WINDOWS-AR.md`](docs/LOCAL-RUN-WINDOWS-AR.md). Madar currently uses its dedicated development/test Compose path documented in [`apps/Madar/README.md`](apps/Madar/README.md); unified-manager Madar support is not claimed yet.
 
 ---
 
@@ -347,7 +361,11 @@ Workbench migrations live under:
 samples/FoundationKit.Workbench/Infrastructure/Migrations/
 ```
 
-Athar migrations live under its product infrastructure project. Madar will own its migrations under its product infrastructure project when SQL persistence is implemented.
+Athar migrations live under its product infrastructure project. Madar migrations now live under:
+
+```text
+apps/Madar/Madar.Infrastructure/Migrations/
+```
 
 **EF migrations are the schema source of truth.** Documentation must not be treated as a substitute for migration/model inspection.
 
@@ -391,22 +409,21 @@ Pull-request CI verifies the repository as one system, including applicable stag
 - tracked-repository hygiene checks that reject local/generated/sensitive artifacts;
 - repository boundary checks;
 - JSON and Atlas validation;
-- container hardening checks;
+- container hardening checks for repository-owned application containers;
 - NuGet vulnerability audit;
 - CycloneDX dependency SBOM generation;
 - Release build with analyzers;
 - generated capability/catalog drift checks;
-- unit and architecture tests, including Madar when its projects are present in the solution;
-- Workbench and Athar publish;
+- unit and architecture tests, including Madar Domain/Application behavior;
+- Workbench, Athar, and Madar publish;
 - all reusable NuGet + symbol packages;
-- artifact SHA-256 evidence;
+- artifact SHA-256 evidence including Madar publish output;
 - Workbench SQL Server workflow;
 - Athar readiness, non-root, Arabic/API surface, E2E workflow, and isolated backup/restore;
+- Madar non-root runtime, Blazor/API surface, SQL Server migration, authentication/authorization, case lifecycle, and audit-timeline E2E workflow;
 - Trivy repository/container scanning;
 - black-box negative security tests;
 - CodeQL for C# and JavaScript/TypeScript.
-
-Madar SQL/E2E verification will be added when its persistence and runtime vertical slice are implemented; the current foundation does not claim those checks yet.
 
 Exact evidence belongs to the pull request/head that produced it. A green historical run is not proof for a newer security- or behavior-relevant head.
 
@@ -457,7 +474,7 @@ The following areas need a real product/provider decision or stronger consumer e
 - project generation and visual composition;
 - AI abstractions after real provider-neutral consumer requirements exist.
 
-That stop rule is intentional: FoundationKit should be broadly useful without silently embedding one company's hierarchy, one product's policy, or one vendor's infrastructure. Madar is now one of the concrete product consumers that can provide evidence for future extraction decisions.
+That stop rule is intentional: FoundationKit should be broadly useful without silently embedding one company's hierarchy, one product's policy, or one vendor's infrastructure. Madar is now a concrete second product-domain consumer that can provide evidence for future extraction decisions.
 
 ---
 

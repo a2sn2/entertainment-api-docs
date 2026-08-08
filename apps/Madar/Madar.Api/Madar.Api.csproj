@@ -12,10 +12,13 @@
     <ProjectReference Include="..\Madar.Infrastructure\Madar.Infrastructure.csproj" />
     <ProjectReference Include="..\Madar.Contracts\Madar.Contracts.csproj" />
     <ProjectReference Include="..\Madar.Client\Madar.Client.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\..\src\FoundationKit.Application\FoundationKit.Application.csproj" />
+    <ProjectReference Include="..\..\..\src\FoundationKit.Infrastructure\FoundationKit.Infrastructure.csproj" />
     <ProjectReference Include="..\..\..\src\FoundationKit.WebApi\FoundationKit.WebApi.csproj" />
     <ProjectReference Include="..\..\..\src\FoundationKit.Security\FoundationKit.Security.csproj" />
     <ProjectReference Include="..\..\..\src\FoundationKit.Identity\FoundationKit.Identity.csproj" />
     <ProjectReference Include="..\..\..\src\FoundationKit.Authorization\FoundationKit.Authorization.csproj" />
+    <ProjectReference Include="..\..\..\src\FoundationKit.Auditing\FoundationKit.Auditing.csproj" />
   </ItemGroup>
 
   <ItemGroup>
