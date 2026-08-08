@@ -105,6 +105,10 @@ public sealed class Case : AggregateRoot<Guid>
 
     public string Status { get; private set; } = CaseStatuses.New;
 
+    public Guid? DepartmentId { get; private set; }
+
+    public DateTimeOffset? RoutedUtc { get; private set; }
+
     public Guid? AssignedToUserId { get; private set; }
 
     public DateTimeOffset CreatedUtc { get; private set; }
@@ -173,6 +177,33 @@ public sealed class Case : AggregateRoot<Guid>
             @case.CreatedUtc));
 
         return Result<Case>.Success(@case);
+    }
+
+    public Result RouteToDepartment(
+        Guid departmentId,
+        Guid routedByUserId,
+        DateTimeOffset routedUtc)
+    {
+        if (departmentId == Guid.Empty)
+            return Result.Failure(CaseErrors.InvalidDepartment);
+
+        if (routedByUserId == Guid.Empty)
+            return Result.Failure(CaseErrors.InvalidActor);
+
+        if (Status != CaseStatuses.New || AssignedToUserId.HasValue)
+            return Result.Failure(CaseErrors.InvalidRoutingState);
+
+        DepartmentId = departmentId;
+        RoutedUtc = routedUtc;
+        UpdatedUtc = routedUtc;
+
+        RaiseDomainEvent(new CaseRouted(
+            Id,
+            departmentId,
+            routedByUserId,
+            routedUtc));
+
+        return Result.Success();
     }
 
     public Result Assign(
@@ -316,6 +347,12 @@ public sealed record CaseCreated(
     string Priority,
     DateTimeOffset CreatedUtc) : IDomainEvent;
 
+public sealed record CaseRouted(
+    Guid CaseId,
+    Guid DepartmentId,
+    Guid RoutedByUserId,
+    DateTimeOffset RoutedUtc) : IDomainEvent;
+
 public sealed record CaseAssigned(
     Guid CaseId,
     Guid AssigneeUserId,
@@ -360,6 +397,14 @@ public static class CaseErrors
     public static readonly Error InvalidSlaTarget = Error.Validation(
         "Madar.InvalidSlaTarget",
         "موعد SLA يجب أن يكون بعد وقت إنشاء الحالة.");
+
+    public static readonly Error InvalidDepartment = Error.Validation(
+        "Madar.InvalidDepartment",
+        "القسم التشغيلي غير صالح.");
+
+    public static readonly Error InvalidRoutingState = Error.Conflict(
+        "Madar.InvalidRoutingState",
+        "يمكن توجيه الحالة فقط عندما تكون جديدة وغير مسندة.");
 
     public static readonly Error InvalidAssignee = Error.Validation(
         "Madar.InvalidAssignee",
