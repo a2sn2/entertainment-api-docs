@@ -43,7 +43,8 @@ public sealed class CaseManager(
     IUnitOfWork unitOfWork,
     IAuditRecorder auditRecorder,
     IClock clock,
-    ICaseApprovalQueryService? approvalQueryService = null) : ICaseManager
+    ICaseApprovalQueryService? approvalQueryService = null,
+    ICaseNotificationCoordinator? notificationCoordinator = null) : ICaseManager
 {
     public async Task<Result<CaseDto>> CreateAsync(
         CreateCaseRequest request,
@@ -170,6 +171,15 @@ public sealed class CaseManager(
             cancellationToken);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        if (notificationCoordinator is not null)
+        {
+            await notificationCoordinator.NotifyAssignmentAsync(
+                item.Id,
+                request.AssigneeUserId,
+                cancellationToken);
+        }
+
         return await ReloadAsync(item.Id, cancellationToken);
     }
 
@@ -251,6 +261,17 @@ public sealed class CaseManager(
             cancellationToken);
 
         await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        if (trigger == CaseTriggers.Resolve
+            && item.CreatedByUserId != userId
+            && notificationCoordinator is not null)
+        {
+            await notificationCoordinator.NotifyResolutionAsync(
+                item.Id,
+                item.CreatedByUserId,
+                cancellationToken);
+        }
+
         return await ReloadAsync(item.Id, cancellationToken);
     }
 

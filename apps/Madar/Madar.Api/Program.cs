@@ -28,6 +28,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddFoundationInfrastructure();
 builder.Services.AddFoundationWebApi();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddMadarNotifications(builder.Configuration);
 
 builder.Services.AddScoped<CurrentUserAccessor>();
 builder.Services.AddScoped<ICurrentUser>(serviceProvider =>
@@ -37,10 +38,12 @@ builder.Services.AddScoped<IAuthorizationSubject>(serviceProvider =>
 builder.Services.AddSingleton(MadarPermissions.CreateRolePermissionMap());
 builder.Services.AddScoped<IAuthorizationEvaluator, RolePermissionAuthorizationEvaluator>();
 
+builder.Services.AddScoped<ICaseNotificationCoordinator, CaseNotificationCoordinator>();
 builder.Services.AddScoped<ICaseManager, CaseManager>();
 builder.Services.AddScoped<ICaseSlaManager, CaseSlaManager>();
 builder.Services.AddScoped<ICaseCommentManager, CaseCommentManager>();
-builder.Services.AddScoped<ICaseApprovalManager, CaseApprovalManager>();
+builder.Services.AddScoped<CaseApprovalManager>();
+builder.Services.AddScoped<ICaseApprovalManager, NotifyingCaseApprovalManager>();
 builder.Services.AddScoped<CaseQueryService>();
 builder.Services.AddScoped<ICaseQueryService>(serviceProvider =>
     serviceProvider.GetRequiredService<CaseQueryService>());

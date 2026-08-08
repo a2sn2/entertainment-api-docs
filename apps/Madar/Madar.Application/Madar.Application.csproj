@@ -12,5 +12,6 @@
     <ProjectReference Include="..\..\..\src\FoundationKit.Approvals\FoundationKit.Approvals.csproj" />
     <ProjectReference Include="..\..\..\src\FoundationKit.Authorization\FoundationKit.Authorization.csproj" />
     <ProjectReference Include="..\..\..\src\FoundationKit.Auditing\FoundationKit.Auditing.csproj" />
+    <ProjectReference Include="..\..\..\src\FoundationKit.Notifications\FoundationKit.Notifications.csproj" />
   </ItemGroup>
 </Project>

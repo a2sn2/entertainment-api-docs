@@ -10,4 +10,9 @@ public interface IUserDirectory
         Guid userId,
         CancellationToken cancellationToken = default) =>
         await ExistsAsync(userId, cancellationToken).ConfigureAwait(false);
+
+    Task<string?> GetNotificationDestinationAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<string?>(null);
 }
