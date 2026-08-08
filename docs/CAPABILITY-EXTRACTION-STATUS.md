@@ -21,7 +21,7 @@ This document records the current consumer-driven capability extraction status. 
 | Localization v1 | `FoundationKit.Localization` | Workbench platform reference | ReferenceOnly |
 | Caching v1 | `FoundationKit.Caching` | Workbench embedded catalog read path | ReferenceOnly |
 
-Caching v1 is implemented on PR #67 and must not be treated as merged until that PR's exact final head passes every required repository gate. When verified, the reusable package output is expected to be seventeen FoundationKit NuGet packages plus seventeen symbol packages.
+The reusable package output is currently **seventeen FoundationKit NuGet packages plus seventeen symbol packages**. Maturity remains capability-specific and must not be inferred from package existence alone.
 
 ## Verified merge evidence
 
@@ -33,15 +33,16 @@ The capability sequence is merged through pull-request gates rather than direct 
 - SMTP provider v1 — PR #62, merged to `main` at `d12f34fe...`.
 - Consumer-driven extraction closure — PR #63, merged to `main` at `5141f572...`.
 - Settings + Feature Management — PR #65, merged to `main` at `72f15909...`.
-- Localization v1 — PR #66, merged to `main` at `64660c48...`; its final-head CI `31223314887`, Security Scan `31223315171`, and CodeQL `31223315164` all succeeded.
+- Localization v1 — PR #66, merged to `main` at `64660c48...`.
+- Caching v1 — PR #67, merged to `main` at `9af7c2b1...`.
 
-PR #65 verified its exact final source head with CI `31221346528`, Security Scan `31221346353`, and CodeQL `31221346445`, including zero build warnings/errors, Workbench SQL/runtime capability assertions, Athar E2E/non-root, and isolated backup/restore verification.
+PR #67 verified its exact final source head `283b432f...` with CI `31240105512`, Security Scan `31240105492`, and CodeQL `31240105490`: 355 tracked text files scanned, 198 NuGet components in the SBOM, zero build warnings/errors, 190 automated tests, 17 NuGet + 17 symbol packages, Workbench SQL/cache-path assertions, Athar E2E/non-root, and isolated backup/restore verification.
 
 These automated results are technical repository evidence. They are not independent organizational approval, Production Approval, ISO certification, or formal Segregation-of-Duties evidence.
 
 ## General-purpose continuation — Issue #64
 
-Issue #64 continues the cycle with a stricter goal: build broadly useful system capabilities until the next useful step requires a real owner/product/organizational decision.
+Issue #64 established the rule for the general-purpose extraction cycle: build broadly useful system capabilities until the next useful step requires a real owner/product/organizational decision.
 
 The rule remains consumer-first:
 
@@ -76,15 +77,29 @@ Important boundary: Localization v1 does not select a translation/resource provi
 
 ### Caching v1
 
-The reusable package provides a bounded normalized `CacheKey`, explicit positive finite TTL, explicit hit/miss results, provider-neutral get/set/remove operations, caller cancellation, and a bounded BCL-only in-memory reference provider. The reference provider copies values defensively, removes expired entries, and uses deterministic earliest-expiry eviction when its configured capacity is reached.
+The reusable package provides a bounded normalized `CacheKey`, explicit positive finite TTL, explicit hit/miss results, provider-neutral get/set/remove operations, caller cancellation, DateTimeOffset overflow protection, and a bounded BCL-only in-memory reference provider.
 
-Workbench is the first real consumer: `CatalogService` caches the existing embedded capability-catalog byte payload. The SQL integration smoke flow reads `/api/catalog` twice so the live host exercises the initial miss/fill path followed by the cache-hit path before continuing the existing SQL workflow.
+Workbench is the first real consumer: `CatalogService` caches the existing embedded capability-catalog byte payload. `CatalogCachingTests` proves two gets and one set across two reads, while the SQL integration smoke flow reads `/api/catalog` twice before continuing the SQL user/admin workflow.
 
 Important boundary: Caching v1 does not select Redis or another production cache provider, define distributed coherence/locking, serialize arbitrary objects, make cache state authoritative, provide tag invalidation/refresh-ahead/stale-while-revalidate, or classify which sensitive data a product may cache.
 
+## Repository consistency closure
+
+After Caching v1, the remaining repository-only task was a consistency sweep rather than another capability extraction. The sweep aligns the repository with the already implemented baseline:
+
+- `tooling-cli` now represents the existing Composer v1 as `ReferenceOnly`, while interactive project generation remains explicitly future work;
+- the root manager delegates packaging to canonical `scripts/pack.ps1` instead of maintaining a second five-package list;
+- the human catalog and generated `FEATURES.md` describe all seventeen reusable package projects;
+- the Atlas package surface mirrors the same seventeen source package projects and documents Composer as tooling, not a package generator;
+- the root README describes the current composable baseline instead of the original five-package snapshot;
+- repository verification now derives the reusable package set from `src/FoundationKit.*` and fails when the human catalog or Atlas package cards drift from it;
+- CI parses the unified manager and canonical pack script in addition to the product/deployment PowerShell scripts.
+
+This implementation is not treated as finally verified until the consistency pull request passes CI, Security Scan, CodeQL, generated-file checks, package output, and integration workflows on its exact final head.
+
 ## Current autonomous boundary
 
-After Caching v1, no additional package is currently justified by both a reusable provider-neutral boundary and a real independent consumer. The remaining autonomous work is a repository consistency sweep; further capability extraction should wait for real product semantics or provider choices.
+No additional reusable package is currently justified by both a provider-neutral boundary and a real independent consumer. After the consistency sweep is verified and merged, further runtime capability extraction should wait for real product semantics or provider choices rather than inventing them.
 
 ## Capabilities that still require stronger consumer evidence or owner semantics
 
@@ -108,24 +123,13 @@ Status: **Planned — do not rename the existing domain-event dispatcher into Me
 
 ### Idempotency
 
-Athar has real reference behavior:
-
-- an owner-scoped `ClientRequestId` is checked before initiative creation;
-- the database has a unique `(OwnerUserId, ClientRequestId)` constraint as the final duplicate-write guard;
-- integration/smoke coverage exercises the behavior.
-
-What is not yet proven is a reusable reservation/store/completion/replay contract that another consumer can use independently of Athar's initiative schema.
+Athar has real owner-scoped `ClientRequestId` behavior plus a unique database constraint, but no reusable reservation/store/completion/replay contract is proven independently of Athar's initiative schema.
 
 Status: **ReferenceOnly behavior — no package extraction yet**.
 
 ### Concurrency
 
-Athar has real reference behavior:
-
-- SQL Server `rowversion` is configured as an EF concurrency token;
-- concurrent update conflicts are translated to HTTP 409 behavior.
-
-What is not yet proven is a reusable client-visible precondition/token contract, provider-neutral comparison primitive, or second consumer that justifies a separate package.
+Athar has real SQL Server `rowversion` plus HTTP 409 handling, but no reusable client-visible precondition/token contract or second consumer that justifies a separate package.
 
 Status: **ReferenceOnly behavior — no package extraction yet**.
 
@@ -137,7 +141,7 @@ Status: **Planned — owner/product model required before runtime extraction**.
 
 ### Search / Reporting / Privacy / Retention / Money / Numbering
 
-These remain catalog/roadmap vocabulary until a real consumer establishes their semantics and their required provider/policy boundaries.
+These remain catalog/roadmap vocabulary until a real consumer establishes their semantics and required provider/policy boundaries.
 
 Status: **Planned — no extraction yet**.
 
