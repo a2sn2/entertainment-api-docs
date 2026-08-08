@@ -1,12 +1,12 @@
 # Madar
 
-> Status: **v0.1–v0.6 are implemented and repository-verified; v0.7 department administration is in development**. Repository evidence demonstrates the implemented product behavior for the exact verified commit; it is not Production Approval or an external security certification.
+> Status: **v0.1–v0.7 are implemented and repository-verified; v0.8 controlled transfer/reassignment is in development**. Repository evidence demonstrates the implemented product behavior for the exact verified commit; it is not Production Approval or an external security certification.
 
 Madar is an operational case-management and orchestration product built on FoundationKit. It is intentionally separate from the reusable FoundationKit packages, the Workbench architecture sample, and the Athar reference product.
 
 ## Product purpose
 
-Madar turns operational work into traceable cases that can be created, routed, assigned, progressed through controlled states, audited, governed by SLA expectations, collaborated on, approved where sensitive, and accompanied by bounded operational notifications.
+Madar turns operational work into traceable cases that can be created, routed, assigned, transferred, reassigned, progressed through controlled states, audited, governed by SLA expectations, collaborated on, approved where sensitive, and accompanied by bounded operational notifications.
 
 Representative case types include customer complaints, operational incidents, internal service requests, access requests, compliance cases, technical escalations, and operational exceptions.
 
@@ -53,7 +53,8 @@ v0.3   Append-only case comments
 v0.4   Maker-checker approval gate for sensitive case resolution
 v0.5   Bounded operational notifications
 v0.6   Department queues + routing + operator claim flow
-v0.7   Department administration + safe Operator membership   ← current
+v0.7   Department administration + safe Operator membership
+v0.8   Controlled transfer + reassignment                    ← current
 ```
 
 The deterministic lifecycle remains:
@@ -72,6 +73,18 @@ Department queue
 assigned
      ↓
 in-progress → resolved → closed
+```
+
+Transfer is an explicit operational reset of active work, not a hidden state transition:
+
+```text
+Department A
+new / assigned / in-progress
+     ↓ transfer
+Department B
+new + unassigned
+     ↓ claim / assign
+assigned
 ```
 
 ## Department routing model
@@ -133,6 +146,32 @@ madar.department.member-removed
 
 See [`../../docs/MADAR-DEPARTMENT-ADMINISTRATION-AR.md`](../../docs/MADAR-DEPARTMENT-ADMINISTRATION-AR.md).
 
+## v0.8 controlled transfer and reassignment
+
+v0.8 closes the operational gap between initial routing and day-to-day supervision without adding a generic routing engine.
+
+The product permissions are:
+
+```text
+madar.cases.transfer
+madar.cases.reassign
+```
+
+and are granted to `Supervisor` and `Administrator`, not `Operator`.
+
+Reassignment is available for `assigned` and `in-progress` cases. It preserves lifecycle status and SLA evidence. The new assignee must be a different eligible Operator, and for routed cases must be a member of the active case department. The successful business change is committed before the existing assignment notification coordinator is invoked.
+
+Transfer is available only for already-routed `new`, `assigned`, or `in-progress` cases. The target must be a different active department. A transfer clears the assignee, resets status to `new`, updates routing time, and places the case in the target queue while preserving content, creator, priority, SLA evidence, comments, approvals, and prior audit history.
+
+Bounded timeline actions are:
+
+```text
+madar.case.reassigned
+madar.case.transferred
+```
+
+See [`../../docs/MADAR-CASE-TRANSFER-AR.md`](../../docs/MADAR-CASE-TRANSFER-AR.md).
+
 ## Existing SLA behavior
 
 When SLA is enabled, Madar snapshots an absolute target at case creation:
@@ -155,7 +194,7 @@ Madar still does not choose a reusable jobs/scheduler package from this evidence
 
 - Comments are product-owned append-only case collaboration data.
 - `access-request` and `compliance-case` use a maker-checker approval gate before resolution; Madar reuses `FoundationKit.Approvals` rather than duplicating generic approval decision semantics.
-- Assignment, approval decision, and cross-user resolution can trigger bounded best-effort notifications through `FoundationKit.Notifications` and the current optional SMTP provider.
+- Assignment, reassignment, approval decision, and cross-user resolution can trigger bounded best-effort notifications through `FoundationKit.Notifications` and the current optional SMTP provider.
 - Notification transport failure does not undo an already-saved business operation, and notification destination/body are excluded from audit metadata.
 
 ## FoundationKit reuse
@@ -174,7 +213,7 @@ Madar currently reuses:
 - `FoundationKit.Approvals` — generic approval eligibility/decision semantics;
 - `FoundationKit.Notifications` and `.Smtp` — bounded notification contract/current provider.
 
-Madar does **not** introduce `FoundationKit.Organization` in v0.7. Department routing and administration remain product-owned until another independent product demonstrates a sufficiently general organization contract.
+Madar does **not** introduce `FoundationKit.Organization` or a reusable routing/history package in v0.8. Department routing, administration, transfer, and reassignment remain product-owned until another independent product demonstrates a sufficiently general contract.
 
 ## Authentication and authorization
 
@@ -184,7 +223,7 @@ Madar uses ASP.NET Core Identity with secure cookie authentication, anti-CSRF va
 |---|---|
 | `Requester` | create cases and see cases they created |
 | `Operator` | see assigned cases, see member department queues, claim queued cases, progress own assignments |
-| `Supervisor` | read all cases, route/assign/progress/close, evaluate SLA, make approval decisions |
+| `Supervisor` | read all cases, route/assign/reassign/transfer/progress/close, evaluate SLA, make approval decisions |
 | `Administrator` | receives all currently defined Madar permissions, including department/membership administration |
 
 Application code makes fine-grained authorization decisions. Infrastructure does not infer permissions merely from a user ID.
@@ -214,7 +253,7 @@ Current migrations include:
 20260808180000_AddDepartmentAdministration
 ```
 
-The routing migration adds the two organization tables plus nullable case `DepartmentId`/`RoutedUtc`, FK constraints, and queue/membership indexes. The v0.7 migration adds non-null `Departments.UpdatedUtc`, backfilled from `CreatedUtc` for existing records, while retaining SQL rowversion concurrency.
+The routing migration adds the two organization tables plus nullable case `DepartmentId`/`RoutedUtc`, FK constraints, and queue/membership indexes. The v0.7 migration adds non-null `Departments.UpdatedUtc`, backfilled from `CreatedUtc` for existing records, while retaining SQL rowversion concurrency. v0.8 requires no migration because transfer/reassignment reuse the existing case routing/assignment columns and persistent audit table.
 
 ## Bootstrap and local run
 
@@ -260,6 +299,8 @@ POST /api/cases
 GET  /api/cases/{caseId}
 POST /api/cases/{caseId}/assignment
 POST /api/cases/{caseId}/route
+POST /api/cases/{caseId}/transfer
+POST /api/cases/{caseId}/reassignment
 POST /api/cases/{caseId}/claim
 POST /api/cases/{caseId}/transition
 GET  /api/cases/{caseId}/timeline
@@ -288,22 +329,23 @@ All writes use the normal anti-CSRF/write-rate-limit path. Application handlers 
 /                         product landing page
 /login                    cookie-authentication login
 /cases                    cases + department queue + create + SLA evaluation
-/cases/{CaseId:guid}      details + route/claim/assign + lifecycle + collaboration + audit
+/cases/{CaseId:guid}      details + route/claim/assign/reassign/transfer + lifecycle + collaboration + audit
 /admin/departments        Administrator department + Operator membership management
 ```
 
-The administration route is role-gated in the client and remains permission-gated again in the Application layer.
+The administration route is role-gated in the client and remains permission-gated again in the Application layer. Transfer/reassignment controls are also role-gated for clarity, while Application authorization remains the source of truth.
 
 ## Automated verification
 
 The repository gate is expected to cover:
 
 - Release solution build with warnings as errors;
-- Madar domain/application routing, department administration, and membership tests;
+- Madar domain/application routing, transfer/reassignment, department administration, and membership tests;
 - migration/snapshot/readiness correctness;
 - authenticated API/Swagger surface for routing and department administration;
 - existing Workbench and Athar regressions;
-- existing Madar v0.1–v0.6 SQL/E2E flows;
+- existing Madar v0.1–v0.7 SQL/E2E flows;
+- dedicated Madar SQL transfer/reassignment proof covering route → assign → progress → reassign → transfer → target queue → claim → persisted audit/SQL state;
 - dedicated Madar SQL administration proof covering create → membership → guarded deactivation/removal → close → cleanup → persisted audit metadata;
 - Security Scan and CodeQL;
 - unchanged reusable 17 NuGet + 17 symbol package output.
@@ -315,10 +357,11 @@ Exact evidence belongs to the exact PR head that produced it. A previous green r
 - production organization tree / branch/team hierarchy;
 - multi-tenancy;
 - arbitrary product user/role administration;
-- transfer/reassignment workflow and rich transfer history;
+- transfer approval workflow and bulk reassignment;
+- dedicated routing-history aggregate/table beyond the persistent audit timeline;
 - multiple queues per department;
 - skill-based, round-robin, capacity, presence, or automatic routing;
-- reusable `FoundationKit.Organization` extraction;
+- reusable `FoundationKit.Organization` or generic routing package extraction;
 - routing-specific business-hours/SLA policy;
 - durable notification outbox/retries/background scheduler;
 - documents/files;
@@ -338,4 +381,5 @@ When Madar reveals a missing capability, first decide whether the behavior is pr
 - #80 — v0.4 approvals: complete.
 - #82 — v0.5 notifications: complete.
 - #84 — v0.6 department queues/routing: complete.
-- #86 — v0.7 department administration: current work.
+- #86 — v0.7 department administration: complete.
+- #88 — v0.8 controlled transfer/reassignment: current work.
